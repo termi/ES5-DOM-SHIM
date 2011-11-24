@@ -7,41 +7,17 @@
 // ==/ClosureCompiler==
 /**
  * module
- * @version 3.1.7
- *  changeLog: 
+ * @version 3.2
+ *  changeLog: 3.2   [24.11.2011 18:00] push it to github 
 			   3.1.7 [23.11.2011 01:20] + Продолжаю переносить из github.com/Raynos/DOM-shim со своими изменениями: compareDocumentPosition (своя), getElementsByClassName, importNode (исправил), new Event(...) (исправил), new CustomEvent(...) (исправил)
-										+ Сделал разрые event.initEvent (initUIEvent, initMouseEvent etc) для разных типов событий
-			   3.1.6 [22.11.2011 15:00] * Переделал DOM-shim для IE < 8 -> Теперь в ielt8.htc (почти) только ссылки на функции в этом файле через объект window._ielt8_Element_proto
-			   3.1.5 [22.11.2011 02:10] + document.createEvent, addEventListener, removeEventListener and dispatchEvent for IE < 9
-										+ Объект Events помечен как устаревший
-			   3.1.4 [16.11.2011 13:00] - Убрал классы loader и imageLoader в отдельный файл lib/Utils.Loaders.js
-			   3.1.3 [16.11.2011 02:20] * Исправил вызов createDocumentFragment для IE6 | Обновил класс DOMStringCollection - теперь его прототип не new Array
-			   3.1.2 [14.11.2011 02:00] * Обновил es5-shim до актуальной версии в https://github.com/kriskowal/es5-shim/blob/master/es5-shim.js с некоторыми изменениями
-										* В связи с добавлением Object.defineProperty и Object.defineProperties, избавился от собственный Object.addProperty and Object.addProperties
-										* Сделал inherit вместо extend. extend now is deprecate
-			   3.1.1 [13.11.2011 12:00] [Bug*] Исправил функцию $A: при работе с числами и строками не брался индекс iterable[i]
-			   3.0.2 [01.11.2011 17:00] Исправляю substr(-n) для IE < 9 | Исправил ошибки bubbleEventListener
-			   3.0.1 [31.10.2011 06:11] Изменил функцию bubbleEventListener - теперь в callback первый параметром передаётся event, вторым - элемент на котором найден аттрибут, третьим - значение аттрибута
- 			   3     [17.10.2011 02:05] Рефакторинг.
- 										* Вместо использования функций (типа addCssClass и insertAfter) расширяю Element.prototype. Поддержка IE < 8 через a.ielt8.js и a.ielt8.htc
- 										- Перенёс некоторые утилитные функции в соответствующие модули Utils
-										- Убрал window.global = window - заменил на closure
- 			   2.8   [23.09.2011 03:12] Some bug fixing and exported some functions($$, $$0, $A, $K, _cloneElement, insertAfter)
-			   2.7   [21.09.2011 03:55] Major bug fix in Array.prototype.forEach (add var for local variable i)
-			   2.6.5 [15.09.2011 02:43] Доюавил эмуляцию document.readyState для браузеров, в которых нету document.readyState
- 			   2.6.4 [03.08.2011 02:40] Добавил много TODO в комментарии, заменил browser.msieV на browser.msie
-			   2.6.3 [13.07.2011 02:27] Переписал Определение браузера. Добавил определение ipad, ipod, iphone. Изменения в функциях
-			   2.6.2 [21.06.2011 16:30] [Bug*]Не объявлялась глобальная переменная global в "strict mode"
-			   2.6.1 [25.05.2011 12:57] Добавил новую глобальную переменную global для замены вызова global во всех модулях
-			   2.6   [24.05.2011 21:00] Добавил функцию для наследования классов extend и функции Object.keys и Object.create. Переписал методы loader_interface и imageLoader. loader_interface переименовал в loader
-			   2.5.2 [18.05.2011 13:00] Убрал isCssTransition из Site за ненадобностью.
-			   2.5.1 [16.05.2011 17:32] Не использую сокращение w = global (@deprecated), т.к. оно создаёт проблемы при компиляции в GCC. GCC прописывает вместо w, например, букву n, далее он вместо выражения w.someParam, подставляет n.n (тут вторая n идёт просто по очереди в алфавите) при этом (n.n === n) <-- и тут создаётся путаница
- 			   2.5   [11.05.2011 12:21] Добавил функцию bubbleEventListener
-			   2.4   [07.05.2011 ##:##] Исправил баги $$ и $$N
+			   --deleted--
+ * TODO:: end comments
+ *        delete 'deprecated', Site obj and Log obj, and isNumber
+ *        querySelector and querySelectorAll for DocumentFragment
+ *        dateTime prop for IE < 8
+ *        export isHTMLElement ?
  */
- 
-/** @const @type {boolean} */
-var __SUPPORT_EXPERIMENTAL__ = false;
+
 
 /** @define {boolean} */
 var IS_DEBUG = false;
@@ -64,15 +40,14 @@ function(global) {
 // d.<prop> весто document.<prop> будет выполнятся на ~10% медленнее
 // пруф: http://habrahabr.ru/blogs/javascript/100828/#comment_3186840
 var /** @const @deprecated */w = global;
-var /** @const */d = document;
+var /** @const @deprecated */d = document;
 
 /*  ======================================================================================  */
 /*  ==================================  Function prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
 /**
  * From prototypejs (prototypejs.org)
- * Создаёт функцию с определёнными объектом this и параметрами вызова
- * ENG: Wraps the function in another, locking its execution scope to an object specified by thisObj.
+ * Wraps the function in another, locking its execution scope to an object specified by thisObj.
  * @param {Object} object
  * @param {...} var_args
  * @return {Function}
@@ -181,9 +156,6 @@ browser["msie"] = browser.msie;
 /** @type {Node}
  * @const */
 browser.testElement = document.createElement('div');
-/** @type {boolean}
- * @const */
-browser.traversal = typeof browser.testElement.childElementCount != 'undefined';
 /** @type {boolean}
  * @const */
 browser.isPlaceholder = typeof document.createElement("INPUT").placeholder != "undefined";
@@ -997,8 +969,8 @@ if(!("classList" in browser.testElement)) {
 }
 
 
-// Traversal ONLY for IE8 and FF3.0 | Traversal for IE < 8 in a.ielt8.js and a.ielt8.htc
-if(!browser.traversal)Object.defineProperties(elementProto, {
+// Traversal for IE < 9 and other
+if(typeof browser.testElement.childElementCount != 'undefined')Object.defineProperties(elementProto, {
 	"firstElementChild" : {
 		"get" : function() {
 		    var node = this;
@@ -1461,8 +1433,8 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 	
 	if(_type == "DOMContentLoaded") {
 		//IE
-		d.write("<script id=\"__ie_onload\" defer=\"defer\" src=\"javascript:void(0)\"><\/script>");
-		var a = d.getElementById("__ie_onload");
+		document.write("<script id=\"__ie_onload\" defer=\"defer\" src=\"javascript:void(0)\"><\/script>");
+		var a = document.getElementById("__ie_onload");
 		a.onreadystatechange = function(e) {
 			var n = this;
 			if(n.readyState == "complete")commonHandle.call(this, {"type" : _type});
@@ -1853,7 +1825,7 @@ global["forEach"] = function forEach(obj, iterator, context) {
     return obj;
 }
 /**
- * Повторение строки
+ * String repeat
  * @param {!string} str Исходная строка
  * @param {!number} count Кол-во повторений
  * @return {string} Результирующая строка
@@ -1867,7 +1839,7 @@ var repeatString = global["repeatString"] = function(str, count) {
 }
 
 /**
- * Создание произвольной строки
+ * Random string
  * !!! ВНИМАНИЕ !!! Результирующая строка ~ в 5% случаев будет длинной length - 1
  * @param {!number} length Размер строки
  * @return {string}
@@ -1892,6 +1864,7 @@ function randomString(length) {
 */
 
 /**
+ * toArray function for Array-like collection, number and string
  * Преобразует 'Array-like коллекцию с числовыми ключами'/число/строку в массив.
  * Можно задать выборку через start и end. Трактовка start и end аналогичная функции Array::slice
  *  Если start отрицателен, то он будет трактоваться как arrayObj.length+start (т.е. start'ый элемент с конца массива). 
@@ -1951,7 +1924,6 @@ var $A = global["$A"] = function(iterable, start, end, forse) {
 				iterable.charAt(_start) : //typeof iterable == "string"
 				iterable[_start] //typeof iterable == "object" with 'length' prop
 		);
-        //for(var i = -1, l = iterable.length, v ; v = iterable[++i], i < l ; )if(v != void 0)results.push(v);
 		
 		return results;
 	}
@@ -1967,6 +1939,7 @@ var $A = global["$A"] = function(iterable, start, end, forse) {
 }
 
 /**
+ * Object.keys-like function for Array-like collection, number and string
  * Достаёт ключи объекта/массива и возвращяет их в виде массива
  * @param {Object|Array|number|string} iterable
  * @param {boolean=} forse Для typeof iterable == "object" смотреть свойства в цепочки прототипов объекта
@@ -2000,7 +1973,7 @@ var $K = global["$K"] = function(iterable, forse) {
 	return results;
 }
 
-/* JSON JavaScript implementation */
+/* Minimum JSON JavaScript implementation */
 /* Реализуем минимальную функциональность JSON */
 if(!global.JSON)global.JSON = {
 	parse : function(text) {
@@ -2091,13 +2064,14 @@ global["bubbleEventListener"] = function bubbleEventListener(attribute, namedFun
 /*  ========================================  DOM  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
 /**
+ * document.getElementById alias
  * Получение элемента по ID и добавление в него объекта-контейнера '_'. '_' можно использовать для хранения переменных,
  *  связанных с данным элементом, чтобы не захламлять пространство имён объекта
  * @param {!string|HTMLElement} id
  * @return {HTMLElement} найденный элемент
  */
 var $ = global["$"] = function(id) {
-	if(typeof id == 'string')id = d.getElementById(id);
+	if(typeof id == 'string')id = document.getElementById(id);
 	
 	//if(id && !id._)id._ = {};
 	
@@ -2124,8 +2098,9 @@ var $ = global["$"] = function(id) {
  * @param {Document|HTMLElement|Node|Array.<HTMLElement>=} roots Список элементов в которых мы будем искать
  * @param {boolean=} isFirst ищем только первый
  * @return {Array.<HTMLElement>}
- * @version 1.5.5
- *  changeLog: 1.5.5 [24.11.2011 00:00] * $$(">*", document), $$("~*", document), $$("+*", document) теперь вернёт [] - пустой результат
+ * @version 2
+ *  changeLog: 2     [24.11.2011 02:00] * Вынес querySelectorAll implementation в a.ielt8.js
+ *             1.5.5 [24.11.2011 00:00] * $$(">*", document), $$("~*", document), $$("+*", document) теперь вернёт [] - пустой результат
 										- нестандартные псевдо-классы ":parent" и ":text-only" больше не поддерживаются
  *			   1.5.4 [11.07.2011 13:58] [*Bug]Включил поддержку символа "-" в названиях класса и идентификатора
  *			   1.5.3 [25.05.2011 13:42] [*Bug]Исправил баг с CSS-аттрибут-селектором '&='
@@ -2195,7 +2170,7 @@ $$N.uid_for_id = 0;
  * @param {Document|HTMLElement|Node|Array.<HTMLElement>=} roots Список элементов в которых мы будем искать
  * @param {boolean=} isFirst ищем только первый
  * @return {Array.<HTMLElement>} Список найденных элементов
- * @version 1
+ * @version 2
  */
 var $$ = global["$$"] = function(selector, roots/*, noCache*/, isFirst) {
 	//$$N.test = $$N["test"];//$$N["test"] TODO:: добавить в $$N["test"] проверку на нестандартные селекторы
@@ -2228,16 +2203,6 @@ var $$0 = global["$$0"] = function(selector, root) {
 	return $$(selector, root, true)[0];
 }
 
-/**
- * @deprecated
- * getCurrentStyle - функция возвращяет текущий стиль элемента
- * @param {HTMLElement} obj HTML-Элемент
- * @return {CSSStyleDeclaration} Стиль элемента
- */
-var getCurrentStyle = global.getComputedStyle ?
-	function(obj) {	return global.getComputedStyle(obj, null) } :
-    function(obj) { return obj.currentStyle }
-    
 /**
  * @link https://developer.mozilla.org/en/DOM/window.getComputedStyle
  * getCurrentStyle - функция возвращяет текущий стиль элемента
@@ -2275,10 +2240,8 @@ if(browser.msie && browser.msie < 9) {
 			msie_CreateDocumentFragment.orig.call(this) :
 			(this["__fake__cdf"] = msie_CreateDocumentFragment.orig)();
 		
-		if(__SUPPORT_EXPERIMENTAL__) {
-			if(!df.querySelector)df.querySelector = function(sel){return $$0(sel, this);};//TODO:: tests
-			if(!df.querySelectorAll)df.querySelectorAll = function(sel){return $$(sel, this);};
-		}		
+		if(!df.querySelector)df.querySelector = document.querySelector;
+		if(!df.querySelectorAll)df.querySelectorAll = document.querySelectorAll;
 		
 		return html5_document(df);
 	}
@@ -2554,7 +2517,7 @@ var Site = global["Site"] = {
 	/** Исходный заголовок страницы
 	 * @const 
 	 * @type {string} */
-	"title" : d.title,
+	"title" : document.title,
 	/** @const 
 	 * @type {string} */
 	"path" : location.protocol + "//" + location.host + location.pathname,
@@ -2578,7 +2541,7 @@ var Site = global["Site"] = {
 		if(browser.noDocumentReadyState)document.readyState = "interactive";
 		
 		//Добавим к тегу <HTML> класс с названием браузера/движка
-		d.documentElement.className += (" " + browser.names.join(" "));
+		document.documentElement.className += (" " + browser.names.join(" "));
 		
 		for(var i in Site["inits"])if(Site["inits"].hasOwnProperty(i) && typeof (i = Site["inits"][i]) == "function")i();
 	}
