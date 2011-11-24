@@ -1,6 +1,7 @@
 ﻿<PUBLIC:COMPONENT lightWeight="true">
 <PUBLIC:PROPERTY NAME="classList" GET="getClassList" />
 <PUBLIC:PROPERTY NAME="attributes" GET="getAttributes" />
+<PUBLIC:PROPERTY NAME="children" GET="getChildren" />
 <PUBLIC:PROPERTY NAME="firstElementChild" GET="getFirstElementChild" />
 <PUBLIC:PROPERTY NAME="lastElementChild" GET="getLastElementChild" />
 <PUBLIC:PROPERTY NAME="nextElementSibling" GET="getNextElementSibling" />
@@ -41,6 +42,7 @@ if(!this.querySelector)this.querySelector=window._ielt8_querySelector;
  *  compareDocumentPosition : <Function>
  * }*/
 var Element_proto=window._ielt8_Element_proto,
+	getChildren=Element_proto.getchildren,
 	getClassList=Element_proto.getclassList,
 	getLastElementChild=Element_proto.getlastElementChild,
 	getFirstElementChild=Element_proto.getfirstElementChild,

@@ -1,6 +1,7 @@
 <PUBLIC:COMPONENT lightWeight="true">
 <PUBLIC:PROPERTY NAME="classList" GET="a" />
 <PUBLIC:PROPERTY NAME="attributes" GET="b" />
+<PUBLIC:PROPERTY NAME="children" GET="g" />
 <PUBLIC:PROPERTY NAME="firstElementChild" GET="c" />
 <PUBLIC:PROPERTY NAME="lastElementChild" GET="d" />
 <PUBLIC:PROPERTY NAME="nextElementSibling" GET="f" />
@@ -18,6 +19,7 @@ var b=window._ielt8_getAttributes;
 if(!this.querySelectorAll)this.querySelectorAll=window._ielt8_querySelectorAll;
 if(!this.querySelector)this.querySelector=window._ielt8_querySelector;
 var m=window._ielt8_Element_proto,
+g=m.getchildren,
 a=m.getclassList,
 d=m.getlastElementChild,
 c=m.getfirstElementChild,

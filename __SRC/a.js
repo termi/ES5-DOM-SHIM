@@ -11,7 +11,7 @@
  *  changeLog: 3.2   [24.11.2011 18:00] push it to github 
 			   3.1.7 [23.11.2011 01:20] + Продолжаю переносить из github.com/Raynos/DOM-shim со своими изменениями: compareDocumentPosition (своя), getElementsByClassName, importNode (исправил), new Event(...) (исправил), new CustomEvent(...) (исправил)
 			   --deleted--
- * TODO:: end comments
+ * TODO:: eng comments
  *        delete 'deprecated', Site obj and Log obj, and isNumber
  *        querySelector and querySelectorAll for DocumentFragment
  *        dateTime prop for IE < 8
@@ -969,6 +969,19 @@ if(!("classList" in browser.testElement)) {
 }
 
 
+if(!("children" in browser.testElement) || browser.msie && browser.msie < 9)
+	Object.defineProperty(elementProto, "children", {"get" : function() {
+		var arr = [],
+			child = this.firstChild;
+
+		while(child) {
+			if(child.nodeType == 1)arr.push(child);
+			child = child.nextSibling;
+		}
+
+		return arr;
+	}, "ielt8" : true});
+
 // Traversal for IE < 9 and other
 if(typeof browser.testElement.childElementCount != 'undefined')Object.defineProperties(elementProto, {
 	"firstElementChild" : {
@@ -1008,23 +1021,13 @@ if(typeof browser.testElement.childElementCount != 'undefined')Object.defineProp
 	},
 	"childElementCount" : {
 		"get" : function() {
-    		if(this.children)return this.children.length;
-			
-			// Firefox before version 3.5
-			var child = container.firstChild,
-				childCount = 0;
-				
-			while(child) {
-				if(child.nodeType == 1)childCount++;
-				child = child.nextSibling;
-			}
-			
-			return childCount;
-			
+    		if(this.children)return this.children.length;//requared this.children
 		}, "ielt8" : true
 	}
 }
 )
+
+
 
 if(!("getElementsByClassName" in browser.testElement))elementProto["getElementsByClassName"] = function(clas) {
 	var ar = [];
@@ -2062,6 +2065,14 @@ global["bubbleEventListener"] = function bubbleEventListener(attribute, namedFun
 
 /*  ======================================================================================  */
 /*  ========================================  DOM  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+// IE8 window.addEventListener does not exist
+// From https://github.com/Raynos/DOM-shim/
+if(!global.addEventListener && document.addEventListener) {
+    global.addEventListener = document.addEventListener.bind(document);
+    global.removeEventListener = document.removeEventListener.bind(document);
+    global.dispatchEvent = document.dispatchEvent.bind(document);
+}
 
 /**
  * document.getElementById alias
