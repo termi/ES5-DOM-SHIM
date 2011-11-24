@@ -1,0 +1,10 @@
+ES5 and DOM4 shim for all browsers with IE6 and IE7 support
+
+Adding to html:
+in a HEAD section
+<script src="a.js"></script>
+<!--[if lt IE 8]>
+<script src="a.ielt8.js"></script>
+<![endif]-->
+
+TODO::More readmy

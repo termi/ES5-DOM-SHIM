@@ -1,0 +1,68 @@
+﻿<PUBLIC:COMPONENT lightWeight="true">
+<PUBLIC:PROPERTY NAME="classList" GET="getClassList" />
+<PUBLIC:PROPERTY NAME="attributes" GET="getAttributes" />
+<PUBLIC:PROPERTY NAME="firstElementChild" GET="getFirstElementChild" />
+<PUBLIC:PROPERTY NAME="lastElementChild" GET="getLastElementChild" />
+<PUBLIC:PROPERTY NAME="nextElementSibling" GET="getNextElementSibling" />
+<PUBLIC:PROPERTY NAME="previousElementSibling" GET="getPreviousElementSibling" />
+<PUBLIC:PROPERTY NAME="childElementCount" GET="getChildElementCount" />
+
+<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_DISCONNECTED" GET="getDPD" />
+<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_PRECEDING" GET="getDPP" />
+<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_FOLLOWING" GET="getDPF" />
+<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_CONTAINS" GET="getDPC" />
+<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_CONTAINED_BY" GET="getDPCB" />
+
+<SCRIPT>
+
+if(!this._)this._={};
+
+/*@requared window._ielt8_getAttributes */
+//attributes property start
+//Save original attributes property if we don't do it
+if(!this._.__ielt8_attributes__)this._.__ielt8_attributes__=this.attributes;
+
+var getAttributes = window._ielt8_getAttributes;
+//attributes property end
+
+if(!this.querySelectorAll)this.querySelectorAll=window._ielt8_querySelectorAll;
+if(!this.querySelector)this.querySelector=window._ielt8_querySelector;
+
+/*@requared window._ielt8_Element_proto = {
+ *  getclassList : <Function>,
+ *  getfirstElementChild : <Function>,
+ *  getlastElementChild : <Function>,
+ *  getfirstElementChild : <Function>,
+ *  getnextElementSibling : <Function>,
+ *  getpreviousElementSibling : <Function>,
+ *  getchildElementCount : <Function>,
+ *  insertAfter : <Function>,
+ *  getElementsByClassName : <Function>,
+ *  compareDocumentPosition : <Function>
+ * }*/
+var Element_proto=window._ielt8_Element_proto,
+	getClassList=Element_proto.getclassList,
+	getLastElementChild=Element_proto.getlastElementChild,
+	getFirstElementChild=Element_proto.getfirstElementChild,
+	getNextElementSibling=Element_proto.getnextElementSibling,
+	getPreviousElementSibling=Element_proto.getpreviousElementSibling,
+	getChildElementCount=Element_proto.getchildElementCount;
+
+if(this.cloneNode!==Element_proto.cloneNode)this.cloneNode=Element_proto.cloneNode;
+if(!this.insertAfter)this.insertAfter=Element_proto.insertAfter;
+if(!this.getElementsByClassName)this.getElementsByClassName=Element_proto.getElementsByClassName;
+if(!this.compareDocumentPosition)this.compareDocumentPosition=Element_proto.compareDocumentPosition;
+
+/*@requared: window.addEventListener, window.removeEventListener, window.dispatchEvent */
+if(!this.addEventListener)this.addEventListener=window.addEventListener;
+if(!this.removeEventListener)this.removeEventListener=window.removeEventListener;
+if(!this.dispatchEvent)this.dispatchEvent=window.dispatchEvent;
+
+var getDPD=function(){return 0x01},
+	getDPP=function(){return 0x02},
+	getDPF=function(){return 0x04},
+	getDPC=function(){return 0x08},
+	getDPCB=function(){return 0x10};
+
+</SCRIPT>
+</PUBLIC:COMPONENT>
