@@ -196,21 +196,6 @@ function addScript(link, callback){
 /*if(browser.msie && browser.msie < 8)
 	document.write("<script src='a.ielt8.js'></script>");*/
 
-function _recursivelyWalk(nodes, cb) {
-    for (var i = 0, len = nodes.length; i < len; i++) {
-        var node = nodes[i];
-        var ret = cb(node);
-        if (ret) {
-            return ret;
-        }
-        if (node.childNodes && node.childNodes.length > 0) {
-            var ret = _recursivelyWalk(node.childNodes, cb);
-            if (ret) {
-                return ret;
-            }
-        }
-    }
-};
 
 /*  =======================================================================================  */
 /*  =================================  Utils.Dom  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
@@ -457,61 +442,6 @@ if(!Object.getPrototypeOf)Object.getPrototypeOf = function getPrototypeOf(object
 	);
 };
 
-/*
- * A generic way to define a getter/setter for
- * objects in both the legacy Mozilla way and the new ECMA standard way,
- * which should work in I.E. with DOM Elements, but not js objects.
- *
- * more info on javascript getters and setters:
- * John Resig: http://bit.ly/resig-js-gs-2007
- * Robert Nyman: http://bit.ly/nyman-js-gs-2009
- *
- * @author somethingkindawierd@gmail.com (Jon Beebe)
- * @link http://somethingkindawierd.com/blog/web-development/10/2010/javascript-getters-and-setters/
- * @param {!Object} obj 
- * @param {!string} label The property name to get/set.
- * @param {Function=} getter The get function.
- * @param {Function=} setter The set function.
- *//*
-Object["addProperty"] = function(obj, label, getter, setter) {
-	if(Object.defineProperty)
-		Object.defineProperty(
-			obj,
-			label, {
-				get: getter,
-				set: setter
-			}
-		);
-	else if(obj.__defineGetter__) {
-		if(getter) {
-			obj.__defineGetter__(label, getter);
-		}
-		if(setter) {
-			obj.__defineSetter__(label, setter);
-		}
-	}
-	else {
-		//IE < 8
-		throw new DOMException_("SYNTAX_ERR");
-	}
-};*/
-
-/*
- * A generic way to define a group of getters/setters for objects
- *
- * @author somethingkindawierd@gmail.com (Jon Beebe)
- * @link http://somethingkindawierd.com/blog/web-development/10/2010/javascript-getters-and-setters/
- * @param {!Object} obj 
- * @param {!Object} p Set of properties and their getter/setter methods.
- */
-/*Object["addProperties"] = function(obj, p) {
-  for (var label in p) {
-    if (p.hasOwnProperty(label)) {
-      Object["addProperty"](obj, label, p[label].get, p[label].set);
-    }
-  }
-
-};*/
 /**
  * https://developer.mozilla.org/en/JavaScript/Reference/global_Objects/Object/create
  * JavaScript 1.8.5
@@ -580,7 +510,8 @@ if (Object.defineProperty) {
     var definePropertyWorksOnDom = typeof document == "undefined" ||
         doesDefinePropertyWork(document.createElement("div"));
     if (!definePropertyWorksOnObject || !definePropertyWorksOnDom) {
-        var definePropertyFallback = Object.defineProperty;
+        var definePropertyFallback = Object.defineProperty,
+			definePropertiesFallback = Object.defineProperties;
     }
 }
 
@@ -642,8 +573,10 @@ if (!Object.defineProperty || definePropertyFallback) {
         } else {
             if (!object.__defineGetter__) {
                 if(descriptor["ielt8"]) {
-					object["get" + property] = descriptor["get"];
-					object["set" + property] = descriptor["set"];
+					if(descriptor["get"] !== void 0)
+						object["get" + property] = descriptor["get"];
+					if(descriptor["set"] !== void 0)
+						object["set" + property] = descriptor["set"];
 				}
 				else throw new TypeError(ERR_ACCESSORS_NOT_SUPPORTED);
 			}
@@ -662,8 +595,17 @@ if (!Object.defineProperty || definePropertyFallback) {
 
 // ES5 15.2.3.7
 // http://es5.github.com/#x15.2.3.7
-if (!Object.defineProperties) {
-    Object.defineProperties = function defineProperties(object, properties) {
+if (!Object.defineProperties || definePropertiesFallback) {
+	Object.defineProperties = function defineProperties(object, properties) {
+		// make a valiant attempt to use the real defineProperty
+		// for I8's DOM elements.
+		if (definePropertiesFallback) {
+			try {
+				return definePropertiesFallback.call(Object, object, properties);
+			} catch (exception) {
+				// try the shim if the real one doesn't work
+			}
+		}
         for (var property in properties) {
             if(_hasOwnProperty(properties, property))
                 Object.defineProperty(object, property, properties[property]);
@@ -937,6 +879,19 @@ if(!String.prototype.trim)String.prototype.trim = function() {
 /*  ======================================================================================  */
 /*  ================================  Document  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
+/*
+TODO::
+;(function() {
+var origin = document.createElement;
+document.createElement = function() {
+	var el = origin.apply(document, arguments);
+	
+	//FIX IE lt 8 Element.prototype
+	
+}
+})();
+*/
+
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Document  ==================================  */
 /*  ======================================================================================  */
 
@@ -946,13 +901,13 @@ if(!String.prototype.trim)String.prototype.trim = function() {
 /*  Some of from https://github.com/Raynos/DOM-shim/  */
 
 // IE < 8 support in a.ielt8.js and a.ielt8.htc
-var elementProto = global["HTMLElement"] && global["HTMLElement"].prototype || 
+var nodeProto = global["Node"] && global["Node"].prototype || 
 				   /*ie8*/global["Element"] && global["Element"].prototype || 
 				   /*ielt8*/(global["_ielt8_Element_proto"] = {});
 
 //Add JS 1.8 Element property classList				   
 if(!("classList" in browser.testElement)) {
-	Object.defineProperty(elementProto, "classList", {"get" : function() {
+	Object.defineProperty(nodeProto, "classList", {"get" : function() {
 		var thisObj = this,
 			cont = (browser.msie && browser.msie < 8 && (
 				thisObj._ || (thisObj._ = {}))//Положим _cachedClassList в контейнер "_" для IE < 8
@@ -968,9 +923,9 @@ if(!("classList" in browser.testElement)) {
 	}, "ielt8" : true});
 }
 
-
+// Fix "children" property in IE < 9
 if(!("children" in browser.testElement) || browser.msie && browser.msie < 9)
-	Object.defineProperty(elementProto, "children", {"get" : function() {
+	Object.defineProperty(nodeProto, "children", {"get" : function() {
 		var arr = [],
 			child = this.firstChild;
 
@@ -983,7 +938,7 @@ if(!("children" in browser.testElement) || browser.msie && browser.msie < 9)
 	}, "ielt8" : true});
 
 // Traversal for IE < 9 and other
-if(typeof browser.testElement.childElementCount != 'undefined')Object.defineProperties(elementProto, {
+if(typeof browser.testElement.childElementCount != 'undefined')Object.defineProperties(nodeProto, {
 	"firstElementChild" : {
 		"get" : function() {
 		    var node = this;
@@ -1028,8 +983,23 @@ if(typeof browser.testElement.childElementCount != 'undefined')Object.defineProp
 )
 
 
+function _recursivelyWalk(nodes, cb) {
+    for (var i = 0, len = nodes.length; i < len; i++) {
+        var node = nodes[i];
+        var ret = cb(node);
+        if (ret) {
+            return ret;
+        }
+        if (node.childNodes && node.childNodes.length > 0) {
+            var ret = _recursivelyWalk(node.childNodes, cb);
+            if (ret) {
+                return ret;
+            }
+        }
+    }
+};
 
-if(!("getElementsByClassName" in browser.testElement))elementProto["getElementsByClassName"] = function(clas) {
+if(!("getElementsByClassName" in browser.testElement))nodeProto["getElementsByClassName"] = function(clas) {
 	var ar = [];
 	
 	clas && _recursivelyWalk(this.childNodes, function (el, index) {
@@ -1050,7 +1020,7 @@ if(!("insertAfter" in browser.testElement)) {
 	 * @param {Node} afterElement После чего вставляем
 	 * @return {Node} Переданый elementToInsert
 	 */
-	elementProto["insertAfter"] = function(elementToInsert, afterElement) {
+	nodeProto["insertAfter"] = function(elementToInsert, afterElement) {
 		//function(F,B){D=this;if(D._insertAfter){D._insertAfter(F,B)}else{(D.lastChild==B)?D.appendChild(F):D.insertBefore(F,B.nextSibling)}}
 		return this.insertBefore(elementToInsert, afterElement.nextSibling);
 	};
@@ -1058,8 +1028,7 @@ if(!("insertAfter" in browser.testElement)) {
 
 var _compareDocumentPosition_ = 'compareDocumentPosition';
 if(!(_compareDocumentPosition_ in document)) {
-	var nodeProto = (global["Node"] && global["Node"].prototype || /*ielt8*/elementProto),
-		__name;
+	var __name;
 	document[_compareDocumentPosition_] = nodeProto[_compareDocumentPosition_] = function(b) {
 		var a = this;
 		
@@ -1086,8 +1055,8 @@ if(!(_compareDocumentPosition_ in document)) {
 };
 
 // Emuleted HTMLTimeElement
-if(!(global["HTMLTimeElement"] && global["HTMLTimeElement"].prototype) && (!browser.msie || browser.msie > 7))
-Object.defineProperty((global["HTMLUnknownElement"] || global["HTMLElement"]).prototype, "dateTime", {
+if(!(global["HTMLTimeElement"] && global["HTMLTimeElement"].prototype))
+Object.defineProperty((global["HTMLUnknownElement"] && global["HTMLUnknownElement"].prototype) || nodeProto, "dateTime", {
 	"get" : function() {
 		var thisObj = this,
 			elTag = thisObj.tagName;
@@ -1104,7 +1073,8 @@ Object.defineProperty((global["HTMLUnknownElement"] || global["HTMLElement"]).pr
 		}
 		
 		return null;
-	}
+	},
+	"ielt8" : true
 });
 
 // IE9 thinks the argument is not optional
@@ -1115,9 +1085,9 @@ Object.defineProperty((global["HTMLUnknownElement"] || global["HTMLElement"]).pr
     try {
         document.importNode(e);
     } catch (e) {
-        if (e.number === -2147418113 ||//e.message === "Argument not optional" // IE выводит сообщения на локальном языке, поэтому это не сработает
-            e.result === 2153185281 ||//e.message === "Not enough arguments" // FF
-            e.code === 6//e.message === "WRONG_ARGUMENTS_ERR" // Opera
+        if (e["number"] === -2147418113 ||//e.message === "Argument not optional" // IE выводит сообщения на локальном языке, поэтому это не сработает
+            e["result"] === 2153185281 ||//e.message === "Not enough arguments" // FF
+            e["code"] === 6//e.message === "WRONG_ARGUMENTS_ERR" // Opera
         ) {
             var importNode = document.importNode;
             document.importNode = function (node, bool) {
@@ -1136,25 +1106,21 @@ Object.defineProperty((global["HTMLUnknownElement"] || global["HTMLElement"]).pr
 /*  =======================================================================================  */
 /*  ======================================  Classes  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-Object.append = function(object) {
+/**
+ * Расширяем 'obj' объект свойствами из объекта/объектов в списке аргументов со 2го аргумента
+ * @param {Object} obj Object to extend
+ * @param {...} ravArgs extentions
+ */
+Object.append = function(obj, ravArgs) {
 	for(var i = 1; i < arguments.length; i++) {
 		var extension = arguments[i];
 		for(var key in extension)
-			if(!extension.hasOwnProperty || extension.hasOwnProperty(key))object[key] = extension[key];
+			if(!extension.hasOwnProperty || extension.hasOwnProperty(key))obj[key] = extension[key];
 	}
 	
-	return object;
+	return obj;
 }
 
-/**
- * @deprecated
- * Наследует класс Child от Parent - фактически, только добавляет prototype Parent в цепочку прототипов Child. Не выполняет инициализирующий код содержащийся в конструкторе Parent, поэтому в конструкторе Child нужно дополнительно вызвать Child.superclass.constructor.call(this, ...)
- * @param {Function} Child
- * @param {Function} Parent
- */
-global["extend"] = function(Child, Parent) {
-	(Child.prototype = Object.create(Child.superclass = Parent.prototype)).constructor = Child;
-}
 
 /**
  * Наследует класс Child от Parent - фактически, только добавляет prototype Parent в цепочку прототипов Child. Не выполняет инициализирующий код содержащийся в конструкторе Parent, поэтому в конструкторе Child нужно дополнительно вызвать Child.superclass.constructor.call(this, ...)
@@ -1162,7 +1128,7 @@ global["extend"] = function(Child, Parent) {
  * @param {Function} Parent
  */
 global["inherit"] = function(Child, Parent) {
-	(Child.prototype = Object.create(Child.superclass = Parent.prototype)).constructor = Child;
+	(Child.prototype = Object.create(Child["superclass"] = Parent.prototype)).constructor = Child;
 }
 
 /*
@@ -1175,11 +1141,11 @@ global["inherit"] = function(Child, Parent) {
 		add to f's prototype.
 	TODO:: jsdoc's и описать
 */
-global["append"] = function(f, addMe) {
+/*global["append"] = function(f, addMe) {
 	for (var i in addMe) {
 		f.prototype[i] = addMe[i];
 	}
-}
+}*/
 
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Classes  ======================================  */
@@ -1434,13 +1400,15 @@ function commonHandle(event) {
 if(!document.addEventListener)global.addEventListener = document.addEventListener = function(_type, _handler, useCapture) {
 	if(typeof _handler != "function")return;
 	
+	var thisObj = this;
+	
 	if(_type == "DOMContentLoaded") {
 		//IE
 		document.write("<script id=\"__ie_onload\" defer=\"defer\" src=\"javascript:void(0)\"><\/script>");
 		var a = document.getElementById("__ie_onload");
 		a.onreadystatechange = function(e) {
 			var n = this;
-			if(n.readyState == "complete")commonHandle.call(this, {"type" : _type});
+			if(n.readyState == "complete")commonHandle.call(thisObj, {"type" : _type});
 		}
 	}
 	/* TODO:: DOMAttrModified
@@ -1449,8 +1417,7 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 	}
 	*/
 	
-	var thisObj = this,
-		_ = thisObj._
+	var _ = thisObj._
 	if(!_)_ = thisObj._ = {};
 	
 	// исправляем небольшой глюк IE с передачей объекта window
@@ -1510,14 +1477,26 @@ if(!document.removeEventListener)global.removeEventListener = document.removeEve
 }
 
 if(!document.dispatchEvent)global.dispatchEvent = document.dispatchEvent = function(event) {
+	
+	/**
+	 * @type {Node}
+	 */
+	var thisObj = this;
+	
 	try {
-		this.fireEvent("on" + event.type, event);
+		thisObj.fireEvent("on" + event.type, event);
 	}
 	catch(e) {
 		//custome events
-		if(e.number === -2147024809) {//"Недопустимый аргумент."
-			event._custom_event_ = true;//FOR DEBUG
-			commonHandle.call(this, event);
+		if(e["number"] === -2147024809) {//"Недопустимый аргумент."
+			//event._custom_event_ = true;//FOR DEBUG
+			var node = thisObj;
+			//Всплываем событие
+			while(!event.cancelBubble && node) {//Если мы вызвали stopPropogation() - больше не всплываем событие
+				commonHandle.call(node, event);
+				//Если у события отключено всплытие - не всплываем его
+				node = event.bubbles ? node.parentNode : null;
+			}
 		}
 		else throw e;
 	}
@@ -1536,8 +1515,9 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 		}
 	
 		this.type = _type;
-		this.cancelBubble = //TODO:: <-- testing
-			!(this.bubbles = _bubbles);
+		//this.cancelBubble = //TODO:: <-- testing Глупость ???
+		//	!(this.bubbles = _bubbles);
+		this.bubbles = _bubbles;
 		this.cancelable = _cancelable;//https://developer.mozilla.org/en/DOM/event.cancelable
 		
 		this.isTrusted = false;
@@ -1611,7 +1591,7 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 
 })();
 
-/**
+/*
 	@deprecate Оставлено только для совместимости
 	@namespace Класс для работы с событиями
 	22.11.11    ver.last Объект устарел. Сделал events-shim для IE < 9 вместо этого объекта
@@ -1621,7 +1601,7 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 	30.09.10	ver.2.1.3
 	Event -> Events
 */
-var Events = global["Events"] = (function() {
+/*var Events = global["Events"] = (function() {
 	return {
 		//Объект, в котором хранятся пары "название события"-"пользовательская функция добавления"
 		//"пользовательская функция добавления" должна возвращать guid функции добавленной к событию
@@ -1641,7 +1621,7 @@ var Events = global["Events"] = (function() {
 			elem.addEventListener(type, handler, false);
 		}
 	}
-}())
+}())*/
 
 // new Event(...) and new CustomEvent(...) from github.com/Raynos/DOM-shim/ with my fixing
 
@@ -1658,8 +1638,8 @@ var Events = global["Events"] = (function() {
 		
 		dict = dict || {};
 		dict.bubbles = dict.bubbles || false;
-		dict.catchable = dict.catchable || false;
-		e.initEvent(type, dict.bubbles, dict.catchable);
+		dict.cancelable = dict.cancelable || false;
+		e.initEvent(type, dict.bubbles, dict.cancelable);
 		
 		return e;
 	};
@@ -1695,13 +1675,13 @@ var Events = global["Events"] = (function() {
 		var e = document.createEvent("CustomEvent");
 					
 		dict = dict || {};
-		dict.detail = dict.detail || null;
+		dict.detail = (dict.detail !== void 0) ? dict.detail : null;
 		dict.bubbles = dict.bubbles || false;
-		dict.catchable = dict.catchable || false;
+		dict.cancelable = dict.cancelable || false;
 		if (e.initCustomEvent) {
-			e.initCustomEvent(type, dict.bubbles, dict.catchable, dict.detail);
+			e.initCustomEvent(type, dict.bubbles, dict.cancelable, dict.detail);
 		} else {
-			e.initEvent(type, dict.bubbles, dict.catchable);
+			e.initEvent(type, dict.bubbles, dict.cancelable);
 			e.detail = dict.detail;
 		}
 		
@@ -1736,71 +1716,13 @@ var Events = global["Events"] = (function() {
 
 /*  ======================================================================================  */
 /*  =======================================  Utils  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
-/**
- * Проверяет на наличие CSS-класса value у элемента element
- * @deprecated
- * @version 2.2
- * @param {!HTMLElement|Node} element
- * @param {!string} value
- * @return {boolean}
- */
-var isCssClass = "classList" in browser.testElement ? 
-	function(element, value) {return element["classList"].contains(value);}//HTML5 & JavaScript 1.8	
-	:
-	function(element, value) {
-		if(!element.className)return false;
-		return !!~(" " + element.className + " ").indexOf(" " + value + " ");
-	}
-/**
- * Удаляет CSS-класс value из списка классов элемента element
- * @deprecated
- * @version 2.2
- * @param {!HTMLElement|Node} element
- * @param {!string} value
- * @return {HTMLElement|Node} обработаный элемент element
- */
-var removeCssClass = "classList" in browser.testElement ? 
-	function(element, value) {return element["classList"].remove(value), element;}//HTML5 & JavaScript 1.8	
-	:
-	function(element, value) {
-		var re = new RegExp("(^|\\s)" + value + "(\\s|$)", "g");
-		element.className = element.className.replace(re, "$1").replace(/\s+/g, " ").replace(/(^ | $)/g, "");
-		return element;
-	}
-/**
- * Добавляет к списку классов элемента element CSS-класс value
- * @deprecated
- * @version 2.2
- * @param {!HTMLElement|Node} element
- * @param {!string} value
- * @return {HTMLElement|Node} обработаный элемент element
- */
-var addCssClass = "classList" in browser.testElement ? 
-	function(element, value) {return element["classList"].add(value), element;}//HTML5 & JavaScript 1.8	
-	:
-	function(element, value) {
-		var re = new RegExp("(^|\\s)" + value + "(\\s|$)", "g");
-		if(re.test(element.className))return element;
-		element.className = (element.className + " " + value).replace(/\s+/g, " ").replace(/(^ | $)/g, "");
-		return element;
-	}
-/**
- * Проверка, является ли объект числом
- * EN: Is a given value a number?
- * @param {!Object} obj
- * @return {boolean}
- */
-function isNumber(obj) {
-	//return (obj === +obj) || (toString.call(obj) === '[object Number]');
-	return !isNaN(obj);
-}
 
 /**
  * Проверка, является ли объект объектом типа HTMLElement
  * @param {!Object} obj Проверяемый объект
  * @return {boolean}
  */
-function isHTMLElement(obj) {
+global["isHTMLElement"] = function(obj) {
 	try {
 		if(obj instanceof Element)return true;
 	}
@@ -2036,7 +1958,8 @@ global["bubbleEventListener"] = function bubbleEventListener(attribute, namedFun
 			}*/
 			
 			do {
-				if((elemAttrValue = elem.getAttribute(_attr) || flags & 0x2 && elem[_attr]) == null)continue;
+				elemAttrValue = elem.getAttribute(_attr) || (flags & 0x2 ? elem[_attr] : null);
+				if(elemAttrValue == null)continue;
 				/** @type {Array} */
 				var params = [event, elem, elemAttrValue];//Параметры вызова функции для apply()
 				
@@ -2141,10 +2064,6 @@ function $$N(selector, roots, isFirst) {
 		var /** @type {boolean} */isSpecialMod,
 			/** @type {boolean} */noway = false,
 			/** @type {string} */specialSelector;
-			
-		/* replace not quoted args with quoted one -- Safari doesn't understand either */
-        if(browser.safary)
-			selector = selector.replace(/=([^\]]+)/, '="$1"');
 		
 		if(selector.charAt(0) == ",")selector = selector.substr(1);
 		isSpecialMod = /[>\+\~]/.test(selector.charAt(0));
@@ -2188,8 +2107,15 @@ var $$ = global["$$"] = function(selector, roots/*, noCache*/, isFirst) {
 	//TODO:: вернуть назад поддержку нестандартных псевдо-классов
 	//if(document.querySelector && !($$N.test && $$N.test.test(selector)) {
 	roots = roots || document;
+	/* replace not quoted args with quoted one -- Safari doesn't understand either */
+	if(browser.safary)
+		selector = selector.replace(/=([^\]]+)/, '="$1"');
+	
+	var isSpecialMod = /[>\+\~]/.test(selector.charAt(0)) || 
+					/(\,>)|(\,\+)|(\,\~)/.test(selector);
 	
 	if(document.querySelector) {
+		//if(isSpecialMod) TODO:: special selectors support
 		if(!Array.isArray(roots))return $A(roots.querySelectorAll(selector));
 		
 		var result = [],
@@ -2197,7 +2123,7 @@ var $$ = global["$$"] = function(selector, roots/*, noCache*/, isFirst) {
 			i = -1;
 					
 		while(root = roots[++i] && (!isFirst || !result.length))
-			result.concat($A(root.querySelectorAll(selector)));
+			result.concat($A(root.querySelectorAll(selector)))
 		
 		return result;
 	}
@@ -2233,7 +2159,7 @@ if(!global.getComputedStyle)global.getComputedStyle = function(obj, pseudoElt) {
 function html5_document(doc) { // pass in a document as an argument
 	// create an array of elements IE does not support
 	var html5_elements_array = 'abbr article aside audio canvas command datalist details figure figcaption footer header hgroup keygen mark meter nav output progress section source summary time video'.split(' '),
-	a = -1;
+		a = -1;
 
 	while (++a < html5_elements_array.length) { // loop through array
 		if(doc.createElement)doc.createElement(html5_elements_array[a]); // pass html5 element into createElement method on document
@@ -2277,11 +2203,11 @@ if(browser.msie && browser.msie < 9) {
  * @param {boolean=} include_all [false] Клонировать ли все дочерние элементы? По-умолчанию, false
  * @param {boolean=} delete_id [false] Удалить аттрибут id из нового элемента? По-умолчанию, false
  * @version 3
- *  chacgeLog: 3 [23.11.2011 19:00] Переделал. include_all and delete_id default now false. Передаю в elementProto в качестве cloneNode для IE < 9
+ *  chacgeLog: 3 [23.11.2011 19:00] Переделал. include_all and delete_id default now false. Передаю в nodeProto в качестве cloneNode для IE < 9
  *			   2 [06.07.2011 20:00] Добавил поддержку клонирования td и tr для IE < 9
  *			   1 [--.--.2011 --:--] Initial release
  */
-var _cloneElement = global["cloneElement"] = function(element, include_all, delete_id) {//Экспортируем cloneNode для совместимости и для вызова напрямую	
+var _cloneElement = global["cloneElement"] = function(element, include_all, delete_id) {//Экспортируем cloneElement для совместимости и для вызова напрямую	
 	// Обновляем функции _cloneElement
 	if(document.createDocumentFragment !== _cloneElement.oldCreateDocumentFragment && _cloneElement.safeElement != false)
 		_cloneElement.safeElement = 
@@ -2327,35 +2253,18 @@ var _cloneElement = global["cloneElement"] = function(element, include_all, dele
 }
 
 if(browser.msie && browser.msie < 9) {
-	//elementProto["_cloneNode_"] = browser.testElement.cloneNode;//Original function
-	elementProto["cloneNode"] = function(deep){return _cloneElement(this, deep)};
+	//nodeProto["_cloneNode_"] = browser.testElement.cloneNode;//Original function
+	nodeProto["cloneNode"] = function(deep){return _cloneElement(this, deep)};
 }
 
 //Events
 if(!browser.testElement.addEventListener && (!browser.msie || browser.msie > 7)) {
-	elementProto.addEventListener = global.addEventListener;
-	elementProto.removeEventListener = global.removeEventListener;
-	elementProto.createEvent = global.createEvent;
-	elementProto.dispatchEvent = global.dispatchEvent;
+	nodeProto.addEventListener = global.addEventListener;
+	nodeProto.removeEventListener = global.removeEventListener;
+	nodeProto.createEvent = global.createEvent;
+	nodeProto.dispatchEvent = global.dispatchEvent;
 }
 
-
-/*function getChildCount(container) {
-	if('childElementCount' in container)return container.childElementCount;
-	
-	if(container.children)return container.children.length;
-	
-	// Firefox before version 3.5
-	var child = container.firstChild,
-		childCount = 0;
-		
-	while(child) {
-		if(child.nodeType == 1)childCount++;
-		child = child.nextSibling;
-	}
-	
-	return childCount;
-}*/
 /*  ======================================================================================  */
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  DOM  =======================================  */
 
@@ -2560,7 +2469,7 @@ var Site = global["Site"] = {
 
 /***----------------- СТАРТ ------------------***/
 
-Events.add(global, 'DOMContentLoaded', Site.init);
-Events.add(global, 'load', Site.afterPageLoad);
+global.addEventListener('DOMContentLoaded', Site.init, false);
+global.addEventListener('load', Site.afterPageLoad, false);
 
 })(window);

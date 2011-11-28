@@ -9,9 +9,14 @@ window.browser && window.browser.msie && (ie = window.browser.msie);
 
 if(ie < 8) {
 
+window["__ielt8__wontfix"] = [];//TODO:: use it to extend 'OBJECT' tag with compareDocumentPosition, getElementsByClassName and etc functions
+
 // Node.attributes path for IE < 8
 // No Node.attributes patch for document.head :(
 var __getAtt = window["_ielt8_getAttributes"] = function() {
+	/*
+	[BUG]strange behavior on 'object' element: IE < 8 won't create '_' container
+	*/
 	var tmp = this._ && this._["__ielt8_attributes__"],
 		res = {length : 0},
 		val;
@@ -412,7 +417,7 @@ function queryOneSelector(selector, root) {
  *  		   2.2:(!)Исправлена ошибка в модификаторах '~' и '+'
  *  		   2.1:(!)Исправлена ошибка при которой не находились элементы во втором селекторе, если в первом ничего не найдено ["tag1>.class2, tag2>.class2"]
  */
-function queryManySelector(selector) {
+var queryManySelector = function(selector) {
 	//var rules = selector.replace(/ *([,>+~. ]) */g, "$1").match(/[^,]\w*/g),
 	var root = this;
 	
@@ -483,7 +488,9 @@ if(ie < 7)add+=(" url(\"" + __URL_TO_IE6_ELEMENT_BEHAVIOR__ + "\") ")
 
 add+=" url(\""+__URL_TO_ELEMENT_BEHAVIOR__+"\") ";
 
-document.write("<style id='"+__STYLE_ID+"' data-url='"+add+"'>html,body,div,span,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,abbr,address,cite,code,del,dfn,em,img,ins,kbd,q,samp,small,strong,sub,sup,var,b,i,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td,article,aside,canvas,details,figcaption,figure,footer,header,hgroup,menu,nav,section,summary,time,mark,audio,video,textarea,input,select{behavior: "+add+"}</style>");
-
+document.write("<style id='"+__STYLE_ID+"' data-url='"+add+"'>html,body,div,span,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,abbr,address,cite,code,del,dfn,em,img,ins,kbd,q,samp,small,strong,sub,sup,var,b,i,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td,article,aside,canvas,details,figcaption,figure,footer,header,hgroup,menu,nav,section,summary,time,mark,audio,video,textarea,input,select{behavior: "+add+"}</style>");
+/*
+[BUG]there is no 'object' tag in this style, because IE < 8 won't apply behavior to 'object' element
+*/
 }
 })();

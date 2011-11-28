@@ -7,4 +7,10 @@ in a HEAD section
 <script src="a.ielt8.js"></script>
 <![endif]-->
 
-TODO::More readmy
+Same-domain limitation
+
+IE requires that the .htc behavior file must be in the same domain as the HTML page which uses it. If you try to load the behavior from a different domain, you will get an "Access Denied" error.
+
+Note that the domain must be exactly the same; that means that http://www.foo.com is a different domain than http://foo.com.
+
+http://css3pie.com/documentation/known-issues/#x-domain

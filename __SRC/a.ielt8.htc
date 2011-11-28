@@ -15,19 +15,31 @@
 <PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_CONTAINED_BY" GET="getDPCB" />
 
 <SCRIPT>
+if(!this.compareDocumentPosition)this.compareDocumentPosition=Element_proto.compareDocumentPosition;
+if(!this.compareDocumentPosition)window.__ielt8__wontfix.push(this);//'OBJECT' tag
+if(!this.getElementsByClassName)this.getElementsByClassName=Element_proto.getElementsByClassName;
+if(!this.insertAfter)this.insertAfter=Element_proto.insertAfter;
+/*@requared: window.addEventListener, window.removeEventListener, window.dispatchEvent */
+if(!this.addEventListener)this.addEventListener=window.addEventListener;
+if(!this.removeEventListener)this.removeEventListener=window.removeEventListener;
+if(!this.dispatchEvent)this.dispatchEvent=window.dispatchEvent;
+if(this.cloneNode!==Element_proto.cloneNode)this.cloneNode=Element_proto.cloneNode;
+
+if(!this.querySelectorAll)this.querySelectorAll=window._ielt8_querySelectorAll;
+if(!this.querySelector)this.querySelector=window._ielt8_querySelector;
 
 if(!this._)this._={};
 
-/*@requared window._ielt8_getAttributes */
 //attributes property start
+/*
+	[BUG]strange behavior on 'object' element: IE < 8 won't create '_' container
+	*/
+/*@requared window._ielt8_getAttributes */
 //Save original attributes property if we don't do it
 if(!this._.__ielt8_attributes__)this._.__ielt8_attributes__=this.attributes;
 
 var getAttributes = window._ielt8_getAttributes;
 //attributes property end
-
-if(!this.querySelectorAll)this.querySelectorAll=window._ielt8_querySelectorAll;
-if(!this.querySelector)this.querySelector=window._ielt8_querySelector;
 
 /*@requared window._ielt8_Element_proto = {
  *  getclassList : <Function>,
@@ -48,19 +60,8 @@ var Element_proto=window._ielt8_Element_proto,
 	getFirstElementChild=Element_proto.getfirstElementChild,
 	getNextElementSibling=Element_proto.getnextElementSibling,
 	getPreviousElementSibling=Element_proto.getpreviousElementSibling,
-	getChildElementCount=Element_proto.getchildElementCount;
-
-if(this.cloneNode!==Element_proto.cloneNode)this.cloneNode=Element_proto.cloneNode;
-if(!this.insertAfter)this.insertAfter=Element_proto.insertAfter;
-if(!this.getElementsByClassName)this.getElementsByClassName=Element_proto.getElementsByClassName;
-if(!this.compareDocumentPosition)this.compareDocumentPosition=Element_proto.compareDocumentPosition;
-
-/*@requared: window.addEventListener, window.removeEventListener, window.dispatchEvent */
-if(!this.addEventListener)this.addEventListener=window.addEventListener;
-if(!this.removeEventListener)this.removeEventListener=window.removeEventListener;
-if(!this.dispatchEvent)this.dispatchEvent=window.dispatchEvent;
-
-var getDPD=function(){return 0x01},
+	getChildElementCount=Element_proto.getchildElementCount,
+	getDPD=function(){return 0x01},
 	getDPP=function(){return 0x02},
 	getDPF=function(){return 0x04},
 	getDPC=function(){return 0x08},
