@@ -15,29 +15,30 @@
 <PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_CONTAINED_BY" GET="getDPCB" />
 
 <SCRIPT>
-if(!this.compareDocumentPosition)this.compareDocumentPosition=Element_proto.compareDocumentPosition;
-if(!this.compareDocumentPosition)window.__ielt8__wontfix.push(this);//'OBJECT' tag
-if(!this.getElementsByClassName)this.getElementsByClassName=Element_proto.getElementsByClassName;
-if(!this.insertAfter)this.insertAfter=Element_proto.insertAfter;
-/*@requared: window.addEventListener, window.removeEventListener, window.dispatchEvent */
-if(!this.addEventListener)this.addEventListener=window.addEventListener;
-if(!this.removeEventListener)this.removeEventListener=window.removeEventListener;
-if(!this.dispatchEvent)this.dispatchEvent=window.dispatchEvent;
-if(this.cloneNode!==Element_proto.cloneNode)this.cloneNode=Element_proto.cloneNode;
+if(this != window) {//Strange IE bug where this === window
+	if(!this.compareDocumentPosition)this.compareDocumentPosition=Element_proto.compareDocumentPosition;
+	if(!this.compareDocumentPosition)window.__ielt8__wontfix.push(this);//'OBJECT' tag
+	if(!this.getElementsByClassName)this.getElementsByClassName=Element_proto.getElementsByClassName;
+	if(!this.insertAfter)this.insertAfter=Element_proto.insertAfter;
+	/*@requared: window.addEventListener, window.removeEventListener, window.dispatchEvent */
+	if(!this.addEventListener)this.addEventListener=window.addEventListener;
+	if(!this.removeEventListener)this.removeEventListener=window.removeEventListener;
+	if(!this.dispatchEvent)this.dispatchEvent=window.dispatchEvent;
+	if(this.cloneNode!==Element_proto.cloneNode)this.cloneNode=Element_proto.cloneNode;
 
-if(!this.querySelectorAll)this.querySelectorAll=window._ielt8_querySelectorAll;
-if(!this.querySelector)this.querySelector=window._ielt8_querySelector;
+	if(!this.querySelectorAll)this.querySelectorAll=window._ielt8_querySelectorAll;
+	if(!this.querySelector)this.querySelector=window._ielt8_querySelector;
 
-if(!this._)this._={};
+	if(!this._)this._={};
 
-//attributes property start
-/*
-	[BUG]strange behavior on 'object' element: IE < 8 won't create '_' container
-	*/
-/*@requared window._ielt8_getAttributes */
-//Save original attributes property if we don't do it
-if(!this._.__ielt8_attributes__)this._.__ielt8_attributes__=this.attributes;
-
+	//attributes property start
+	/*
+		[BUG]strange behavior on 'object' element: IE < 8 won't create '_' container
+		*/
+	/*@requared window._ielt8_getAttributes */
+	//Save original attributes property if we don't do it
+	if(!this._.__ielt8_attributes__)this._.__ielt8_attributes__=this.attributes;
+}
 var getAttributes = window._ielt8_getAttributes;
 //attributes property end
 

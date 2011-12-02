@@ -7,7 +7,7 @@
 // ==/ClosureCompiler==
 /**
  * module
- * @version 3.2
+ * @version 3.3
  *  changeLog: 3.2   [24.11.2011 18:00] push it to github 
 			   3.1.7 [23.11.2011 01:20] + Продолжаю переносить из github.com/Raynos/DOM-shim со своими изменениями: compareDocumentPosition (своя), getElementsByClassName, importNode (исправил), new Event(...) (исправил), new CustomEvent(...) (исправил)
 			   --deleted--
@@ -189,7 +189,7 @@ function addScript(link, callback){
 	newScript.onload = function() {
 		!!callback && callback();
 	};
-	(document.body || document.head || document).appendChild(newScript);
+	(document.body || document.head).appendChild(newScript);
 }
 
 
@@ -896,404 +896,53 @@ document.createElement = function() {
 /*  ======================================================================================  */
 
 
-/*  ======================================================================================  */
-/*  ================================  Element.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
-/*  Some of from https://github.com/Raynos/DOM-shim/  */
-
-// IE < 8 support in a.ielt8.js and a.ielt8.htc
-var nodeProto = global["Node"] && global["Node"].prototype || 
-				   /*ie8*/global["Element"] && global["Element"].prototype || 
-				   /*ielt8*/(global["_ielt8_Element_proto"] = {});
-
-//Add JS 1.8 Element property classList				   
-if(!("classList" in browser.testElement)) {
-	Object.defineProperty(nodeProto, "classList", {"get" : function() {
-		var thisObj = this,
-			cont = (browser.msie && browser.msie < 8 && (
-				thisObj._ || (thisObj._ = {}))//Положим _cachedClassList в контейнер "_" для IE < 8
-			) || thisObj,
-			_cachedClassList = "__ccl_00lh__";
-		
-		if(!cont[_cachedClassList])cont[_cachedClassList] = new global["Utils"]["Dom"]["DOMStringCollection"](thisObj.getAttribute("class"), function() {
-			thisObj.setAttribute("class", this.value);//this instanceof Utils.Dom.DOMStringCollection
-			if(thisObj.className != this.value)thisObj.className = this.value;
-		})
-		
-		return cont[_cachedClassList];
-	}, "ielt8" : true});
-}
-
-// Fix "children" property in IE < 9
-if(!("children" in browser.testElement) || browser.msie && browser.msie < 9)
-	Object.defineProperty(nodeProto, "children", {"get" : function() {
-		var arr = [],
-			child = this.firstChild;
-
-		while(child) {
-			if(child.nodeType == 1)arr.push(child);
-			child = child.nextSibling;
-		}
-
-		return arr;
-	}, "ielt8" : true});
-
-// Traversal for IE < 9 and other
-if(typeof browser.testElement.childElementCount != 'undefined')Object.defineProperties(nodeProto, {
-	"firstElementChild" : {
-		"get" : function() {
-		    var node = this;
-		    // для старых браузеров
-		    // находим первый дочерний узел
-		    node = node.firstChild;
-		    // ищем в цикле следующий узел,
-		    // пока не встретим элемент с nodeType == 1
-		    while(node && node.nodeType != 1) node = node.nextSibling;
-		    // возвращаем результат
-		    return node;
-		}, "ielt8" : true
-	},
-	"lastElementChild" : {
-		"get" : function() {
-		    var node = this;
-		    node = node.lastChild;
-		    while(node && node.nodeType != 1) node = node.previousSibling;
-		    return node;
-		}, "ielt8" : true
-	},
-	"nextElementSibling" : {
-		"get" : function() {
-		    var node = this;
-		    while(node = node.nextSibling) if(node.nodeType == 1) break;
-		    return node;
-		}, "ielt8" : true
-	},
-	"previousElementSibling" : {
-		"get" : function() {
-		    var node = this;
-		    while(node = node.previousSibling) if(node.nodeType == 1) break;
-    		return node;
-		}, "ielt8" : true
-	},
-	"childElementCount" : {
-		"get" : function() {
-    		if(this.children)return this.children.length;//requared this.children
-		}, "ielt8" : true
-	}
-}
-)
-
-
-function _recursivelyWalk(nodes, cb) {
-    for (var i = 0, len = nodes.length; i < len; i++) {
-        var node = nodes[i];
-        var ret = cb(node);
-        if (ret) {
-            return ret;
-        }
-        if (node.childNodes && node.childNodes.length > 0) {
-            var ret = _recursivelyWalk(node.childNodes, cb);
-            if (ret) {
-                return ret;
-            }
-        }
-    }
-};
-
-if(!("getElementsByClassName" in browser.testElement))nodeProto["getElementsByClassName"] = function(clas) {
-	var ar = [];
-	
-	clas && _recursivelyWalk(this.childNodes, function (el, index) {
-		if (el.nodeType == 1 && el.classList.contains(clas)) {
-			ar.push(el);
-		}
-	});
-	
-	return ar;
-};
-
-if(!("insertAfter" in browser.testElement)) {
-	/**
-	 * NON STANDART METHOD
-	 * Вставляет DOM-элемент вслед за определённым DOM-элементом
-	 * @this {Node} Куда вставляем
-	 * @param {Node} elementToInsert Что вставляем
-	 * @param {Node} afterElement После чего вставляем
-	 * @return {Node} Переданый elementToInsert
-	 */
-	nodeProto["insertAfter"] = function(elementToInsert, afterElement) {
-		//function(F,B){D=this;if(D._insertAfter){D._insertAfter(F,B)}else{(D.lastChild==B)?D.appendChild(F):D.insertBefore(F,B.nextSibling)}}
-		return this.insertBefore(elementToInsert, afterElement.nextSibling);
-	};
-};
-
-var _compareDocumentPosition_ = 'compareDocumentPosition';
-if(!(_compareDocumentPosition_ in document)) {
-	var __name;
-	document[_compareDocumentPosition_] = nodeProto[_compareDocumentPosition_] = function(b) {
-		var a = this;
-		
-		//compareDocumentPosition from http://ejohn.org/blog/comparing-document-position/
-		return a.contains ?
-				(a != b && a.contains(b) && 16) +
-				(a != b && b.contains(a) && 8) +
-				(a.sourceIndex >= 0 && b.sourceIndex >= 0 ?
-					(a.sourceIndex < b.sourceIndex && 4) +
-					(a.sourceIndex > b.sourceIndex && 2) :
-				1) +
-			0 : 0;
-	};
-	__name = 'DOCUMENT_POSITION_DISCONNECTED';
-	document[__name] = nodeProto[__name] = 0x01;
-	__name = 'DOCUMENT_POSITION_PRECEDING';
-	document[__name] = nodeProto[__name] = 0x02;
-	__name = 'DOCUMENT_POSITION_FOLLOWING';
-	document[__name] = nodeProto[__name] = 0x04;
-	__name = 'DOCUMENT_POSITION_CONTAINS';
-	document[__name] = nodeProto[__name] = 0x08;
-	__name = 'DOCUMENT_POSITION_CONTAINED_BY';
-	document[__name] = nodeProto[__name] = 0x10;
-};
-
-// Emuleted HTMLTimeElement
-if(!(global["HTMLTimeElement"] && global["HTMLTimeElement"].prototype))
-Object.defineProperty((global["HTMLUnknownElement"] && global["HTMLUnknownElement"].prototype) || nodeProto, "dateTime", {
-	"get" : function() {
-		var thisObj = this,
-			elTag = thisObj.tagName;
-		
-		return thisObj.tagName.toUpperCase() == "TIME" ? (thisObj.getAttribute("datetime") || "") : void 0;
-	},
-	"set" : function(val) {
-		var thisObj = this,
-			elTag = thisObj.tagName;
-		
-		if(thisObj.tagName.toUpperCase() == "TIME") {
-			thisObj.setAttribute("datetime", val);
-			return val;
-		}
-		
-		return null;
-	},
-	"ielt8" : true
-});
-
-// IE9 thinks the argument is not optional
-// FF thinks the argument is not optional
-// Opera agress that its not optional
-;(function () {
-    var e = document.createElement("div");
-    try {
-        document.importNode(e);
-    } catch (e) {
-        if (e["number"] === -2147418113 ||//e.message === "Argument not optional" // IE выводит сообщения на локальном языке, поэтому это не сработает
-            e["result"] === 2153185281 ||//e.message === "Not enough arguments" // FF
-            e["code"] === 6//e.message === "WRONG_ARGUMENTS_ERR" // Opera
-        ) {
-            var importNode = document.importNode;
-            document.importNode = function (node, bool) {
-                if (bool === void 0) {
-                    bool = true;
-                }
-                return importNode.call(this, node, bool);
-            }
-        }
-    }
-})();
-
-/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Element.prototype  ==================================  */
-/*  ======================================================================================  */
-
-/*  =======================================================================================  */
-/*  ======================================  Classes  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
-
-/**
- * Расширяем 'obj' объект свойствами из объекта/объектов в списке аргументов со 2го аргумента
- * @param {Object} obj Object to extend
- * @param {...} ravArgs extentions
- */
-Object.append = function(obj, ravArgs) {
-	for(var i = 1; i < arguments.length; i++) {
-		var extension = arguments[i];
-		for(var key in extension)
-			if(!extension.hasOwnProperty || extension.hasOwnProperty(key))obj[key] = extension[key];
-	}
-	
-	return obj;
-}
-
-
-/**
- * Наследует класс Child от Parent - фактически, только добавляет prototype Parent в цепочку прототипов Child. Не выполняет инициализирующий код содержащийся в конструкторе Parent, поэтому в конструкторе Child нужно дополнительно вызвать Child.superclass.constructor.call(this, ...)
- * @param {Function} Child
- * @param {Function} Parent
- */
-global["inherit"] = function(Child, Parent) {
-	(Child.prototype = Object.create(Child["superclass"] = Parent.prototype)).constructor = Child;
-}
-
-/*
-	Quick way to define prototypes; much less verbose than standard 
-	foobar.prototype.someFunc = function() lists. See ApplicationCache
-	defined below for example use.
-
-	@param f Function object/constructor to add to.
-	@param addMe Object literal that contains the properties/methods to
-		add to f's prototype.
-	TODO:: jsdoc's и описать
-*/
-/*global["append"] = function(f, addMe) {
-	for (var i in addMe) {
-		f.prototype[i] = addMe[i];
-	}
-}*/
-
-
-/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Classes  ======================================  */
-/*  =======================================================================================  */
-
-
-/*  =======================================================================================  */
-/*  ======================================  Network  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
-
-/*
- * Получение XHR
- * @return {XMLHttpRequest}
- 
-var getXmlHttp = XMLHttpRequest ? function(){ return new XMLHttpRequest() } : 
-function() {
-  var xmlhttp;
-  try {
-    xmlhttp = new ActiveXObject("Msxml2.XMLHTTP");
-  } catch (e) {
-    try {
-      xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
-    } catch (E) {
-      xmlhttp = null;
-    }
-  }
-  return xmlhttp;
-}*/
-if(!global.XMLHttpRequest)global.XMLHttpRequest = ActiveXObject.bind(global, "Microsoft.XMLHTTP");
-
-/**
- * Функция посылки запроса к файлу на сервере
- * TODO:: Переделать на объект-замыкание AJAX и не использовать global для хранения флагов/настроек
- * @param {!string} path путь к файлу
- * @param {string} args аргументы вида a=1&b=2&c=3... или пустая строка ""
- * @param {function(XMLHttpRequest)=} onDone
- * @param {function(XMLHttpRequest)=} onError — функции-обработчик ответа от сервера, если в функцию передаётся null - значит она была прервана по timeout
- * @param {({post:boolean, temporary:boolean, timeOut:number, onProccess:Function}|
-			   {post:boolean, temporary:boolean, timeOut:number}|
-			   {post:boolean, temporary:boolean}|
-			   {post:boolean}|
-			   {temporary:boolean, post:boolean, onProccess:Function}|
-			   {temporary:boolean, onProccess:Function}|
-			   {temporary:boolean, timeOut:number}|
-			   {temporary:boolean}|
-			   {timeOut:number, temporary:boolean, post:boolean}|
-			   {timeOut:number, onProccess:Function}|
-			   {timeOut:number, post:boolean}|
-			   {timeOut:number}|
-			   {onProccess:Function, post:boolean, timeOut:number}|
-			   {onProccess:Function, post:boolean}|
-			   {onProccess:Function})=} options Дополнительные опции: post - любое true значение означает, что нужно применить POST метод; temporary - любое значение означает, что нужно создать новый XHR объект и удалить его после выполнения запроса; timeOut - время в мс, по истечении которого, выполнения запроса прирывается и вызывается функция onError; onProccess - функция вызываемая во время выполнения запроса
- * @version 2.3
- *  versionLog: 2.3 [23.06.2011 15:10] options.temporary включается, если глобальный XHR занят
- *				2.2 [22.06.2011 13:00] [bug*]Не задавался options по-умолчанию
- *				2.1 [25.05.2011 14:51] Внедрил getXmlHttp внутрь функции
- *				2   [23.05.2011 13:46] Рефакторинг кода: Убрал пораметры method, onProccess и temp в новый параметр options. 
-Короткая версия:
-function xhr(m,u,c,x) {
-	with(new(global.XMLHttpRequest||ActiveXObject)("Microsoft.XMLHTTP"))
-		onreadystatechange = function(x){
-			readyState ^ 4 || c(x)
-		},
-		open(m, u),
-		send(c)
-}
-  TODO:: Посмотреть реализацию тут http://code.google.com/p/microajax/
-         и тут https://github.com/ded/Reqwest
- */
-var SendRequest = global["SendRequest"] = function(path, args, onDone, onError, options) {
-	options = options || {};//Default value
-	
-	//TODO:: Прерывать соединение по timeOut, и вызывать funcError и определённым кодом ошибки
-	// Получаем объект XMLHTTPRequest
-    if(!SendRequest.XHR || SendRequest.outOfDate){
-    	SendRequest.XHR = null;//Удалим старый XHR//Avoid memory leak
-		SendRequest.outOfDate = false;
-		SendRequest.XHR = new global.XMLHttpRequest();
-        global.working = false;
-    }
-    if(!SendRequest.XHRs)w.XHRs = [];
-	//Каждые 5 минут поднимаем флаг, что XHR устарел
-	setTimeout(function() {SendRequest.outOfDate = true}, 3e5);
-	
-	var method = options.post ? "POST" : "GET",
-		//Создаём отдельный XHR в случае, если глобальный XHR занят или, если в опциях указан temporary
-		temp = options.temporary || global.working;
-	
-	// Запрос
-    if ((!global.working && SendRequest.XHR) || temp) {
-    	var http1 = temp ? SendRequest.XHRs[SendRequest.guid] = new global.XMLHttpRequest() : SendRequest.XHR,
-    		tmpXHRguid = temp ? SendRequest.guid++ : null;
-    	
-    	//Проверяем, если требуется сделать GET-запрос
-		if(!options.post && args.length > 0)
-			path += "?" + args;//добавляем закодированный текст в URL запроса
-
-        //Инициализируем соединение
-		http1.open(method, path, true);
-
-        //прикрепляем к запросу функцию-обработчик событий
-        http1.onreadystatechange = function() {// 4 - данные готовы для обработки
-        	if (http1.readyState == 4) {
-            	if(http1.status == 200) {// если статус 200 (ОК) - выдать ответ пользователю
-            		if(onDone)onDone(http1);
-            	}
-            	else if(onError)onError(http1);
-            	
-                if(!temp)global.working = false;
-                else delete SendRequest.XHRs[tmpXHRguid];//Удалим временный объект XHR
-            }
-            else{ // данные в процессе получения, можно повеселить пользователя сообщениями ЖДИТЕ ОТВЕТА
-            	if(options.onProccess)options.onProccess();
-            }
-        }
-        if(!temp)global.working = true;
-        
-        try {
-			if (options.post) {//Если это POST-запрос
-				//Устанавливаем заголовок
-				http1.setRequestHeader("Content-Type","application/x-www-form-urlencoded; charset=utf-8");
-				//Посылаем запрос
-				http1.send(args);
-			}
-			else {//Если это GET-запрос
-				//Посылаем нуль-запрос
-				http1.send(null);
-			}
-		}
-		catch(e) {
-		
-		}
-    }
-	if(!SendRequest.XHR) {
-		if(DEBUG)Log.err("Ошибка при создании XMLHTTP объекта!");
-		return false;//alert('Ошибка при создании XMLHTTP объекта!')
-	}
-}
-SendRequest.guid = 0;
-
-
-/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Network  ======================================  */
-/*  =======================================================================================  */
-
 
 /*  ======================================================================================  */
 /*  ======================================  Events  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-;(function() {
+if(document.addEventListener) {//fix [add|remove]EventListener for all browsers that support it
+	(function () {
+		// FF fails when you "forgot" the optional parameter for addEventListener and removeEventListener
+		// Opera didn't do anything without optional parameter
+		var _done = false,
+			dummy = function () {
+				_done = true
+			};
+		var el_proto = global["Element"].prototype
+		function fixEventListener(elementToFix) {
+			var old_addEventListener = elementToFix.addEventListener,
+				old_removeEventListener = elementToFix.removeEventListener;
+			elementToFix.addEventListener = function (type, listener, optional) {
+				optional = optional || false;
+				return old_addEventListener.call(this, type, listener, optional);
+			}
+			elementToFix.removeEventListener = function (type, listener, optional) {
+				optional = optional || false;
+				return old_removeEventListener.call(this, type, listener, optional);
+			}
+		}
+		function fixEventListenerAll() {
+			fixEventListener(document)
+			fixEventListener(window)
+			fixEventListener(el_proto)
+		}
+		try {
+			browser.testElement.addEventListener("click", dummy);
+			if(browser.testElement.click)
+				browser.testElement.click();//testing
+			else //If !browser.testElement.click -> modern browsers
+				_done = true;
+		} catch (e) {
+			fixEventListenerAll()
+			_done = true;
+		} finally {
+			document.removeEventListener("click", dummy);
+		}
+		if(!_done)fixEventListenerAll()
+	})();
+}
+else {//fix [add|remove]EventListener & dispatchEvent for IE < 9
+(function() {
 //	TODO:: использовать наработки https://github.com/arexkun/Vine
 //		   использовать наработки https://github.com/kbjr/Events.js
 /*
@@ -1363,7 +1012,7 @@ function commonHandle(event) {
 		errors = [],//Инициализуется массив errors для исключений
 		errorsMessages = [];
 	
-	if(!_)return;
+	if(!_ || !_[eventsUUID])return;
 	
 	var handlers = _[eventsUUID][event.type];
 	
@@ -1495,7 +1144,7 @@ if(!document.dispatchEvent)global.dispatchEvent = document.dispatchEvent = funct
 			while(!event.cancelBubble && node) {//Если мы вызвали stopPropogation() - больше не всплываем событие
 				commonHandle.call(node, event);
 				//Если у события отключено всплытие - не всплываем его
-				node = event.bubbles ? node.parentNode : null;
+				node = event.bubbles ? (node === document ? window : node.parentNode) : null;
 			}
 		}
 		else throw e;
@@ -1513,15 +1162,16 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 			//WRONG_ARGUMENTS_ERR
 			throw new Error('WRONG_ARGUMENTS_ERR');
 		}
+		var thisObj = this;
 	
-		this.type = _type;
+		thisObj.type = _type;
 		//this.cancelBubble = //TODO:: <-- testing Глупость ???
 		//	!(this.bubbles = _bubbles);
-		this.bubbles = _bubbles;
-		this.cancelable = _cancelable;//https://developer.mozilla.org/en/DOM/event.cancelable
+		thisObj.bubbles = _bubbles;
+		thisObj.cancelable = _cancelable;//https://developer.mozilla.org/en/DOM/event.cancelable
 		
-		this.isTrusted = false;
-		this.target = null;		
+		thisObj.isTrusted = false;
+		thisObj.target = null;		
 	}
 	function _initCustomEvent(_type, _bubbles, _cancelable, _detail) {
 		//https://developer.mozilla.org/en/DOM/CustomEvent
@@ -1539,33 +1189,35 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
                      _detail, _screenX, _screenY, _clientX, _clientY, 
                      _ctrlKey, _altKey, _shiftKey, _metaKey, 
                      _button, _relatedTarget) {
+		var thisObj = this;
 		//https://developer.mozilla.org/en/DOM/event.initMouseEvent
-		_initUIEvent.call(this, _type, _bubbles, _view, _cancelable);
+		_initUIEvent.call(thisObj, _type, _bubbles, _view, _cancelable);
 		
-		this.screenX = _screenX;
-		this.screenY = _screenY;
-		this.clientX = _clientX;
-		this.clientY = _clientY;
-        this.ctrlKey = _ctrlKey;
-		this.altKey = _altKey;
-		this.shiftKey = _shiftKey;
-		this.metaKey = _metaKey;
-		this.button = _button;
-		this.relatedTarget = _relatedTarget;
+		thisObj.screenX = _screenX;
+		thisObj.screenY = _screenY;
+		thisObj.clientX = _clientX;
+		thisObj.clientY = _clientY;
+        thisObj.ctrlKey = _ctrlKey;
+		thisObj.altKey = _altKey;
+		thisObj.shiftKey = _shiftKey;
+		thisObj.metaKey = _metaKey;
+		thisObj.button = _button;
+		thisObj.relatedTarget = _relatedTarget;
 	}
 	/*
 	_type in [DOMAttrModified, DOMCharacterDataModified, DOMNodeInserted, DOMNodeInsertedIntoDocument, DOMNodeRemoved, DOMNodeRemovedFromDocument, DOMSubtreeModified]
 	_attrChange in [MutationEvent.MODIFICATION, MutationEvent.ADDITION, MutationEvent.REMOVA]
 	*/
 	function _initMutationEvent(_type, _bubbles, _cancelable, _relatedNode, _prevValue, _newValue, _attrName, _attrChange) {
+		var thisObj = this;
 		//http://help.dottoro.com/ljifcdwx.php
-		_initEvent.call(this, _type, _bubbles, _cancelable);
+		_initEvent.call(thisObj, _type, _bubbles, _cancelable);
 		
-		this.relatedNode = _relatedNode;
-		this.prevValue = _prevValue;
-		this.newValue = _newValue;
-		this.attrName = _attrName;
-        this.attrChange = _attrChange;
+		thisObj.relatedNode = _relatedNode;
+		thisObj.prevValue = _prevValue;
+		thisObj.newValue = _newValue;
+		thisObj.attrName = _attrName;
+        thisObj.attrChange = _attrChange;
 	}
 	//No "MutationNameEvent": eventObject.initMutationNameEvent and "TextEvent"/"TextEvents": eventObject.initTextEvent, "KeyboardEvent":eventObject.initKeyEvent implimentation because of lack major browsers support
 
@@ -1590,6 +1242,7 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 }
 
 })();
+}
 
 /*
 	@deprecate Оставлено только для совместимости
@@ -1637,9 +1290,7 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 		var e = document.createEvent("Events");
 		
 		dict = dict || {};
-		dict.bubbles = dict.bubbles || false;
-		dict.cancelable = dict.cancelable || false;
-		e.initEvent(type, dict.bubbles, dict.cancelable);
+		e.initEvent(type, dict.bubbles || false, dict.cancelable || false);
 		
 		return e;
 	};
@@ -1672,18 +1323,18 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 ;(function () {
 	// CustomEvent constructor
 	var _CustomEvent = function (type, dict) {
-		var e = document.createEvent("CustomEvent");
+		var e;
+		try {
+			e = document.createEvent("CustomEvent");
+		}
+		catch(err) {//FF 3.6 cant create "CustomEvent"
+			e = document.createEvent("Event");
+		}
 					
 		dict = dict || {};
 		dict.detail = (dict.detail !== void 0) ? dict.detail : null;
-		dict.bubbles = dict.bubbles || false;
-		dict.cancelable = dict.cancelable || false;
-		if (e.initCustomEvent) {
-			e.initCustomEvent(type, dict.bubbles, dict.cancelable, dict.detail);
-		} else {
-			e.initEvent(type, dict.bubbles, dict.cancelable);
-			e.detail = dict.detail;
-		}
+		(e.initCustomEvent || (e.detail = dict.detail, e.initEvent)).call
+			(e, type, dict.bubbles || false, dict.cancelable || false, dict.detail);
 		
 		return e;
 	};
@@ -1713,6 +1364,399 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 /*  ======================================================================================  */
 
 
+/*  ======================================================================================  */
+/*  ================================  Element.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+/*  Some of from https://github.com/Raynos/DOM-shim/  */
+
+// IE < 8 support in a.ielt8.js and a.ielt8.htc
+var nodeProto = global["Node"] && global["Node"].prototype || 
+				   /*ie8*/global["Element"] && global["Element"].prototype || 
+				   /*ielt8*/(global["_ielt8_Element_proto"] = {});
+
+//Add JS 1.8 Element property classList				   
+if(!("classList" in browser.testElement)) {
+	Object.defineProperty(nodeProto, "classList", {"get" : function() {
+		var thisObj = this,
+			cont = (browser.msie && browser.msie < 8 && (
+				thisObj._ || (thisObj._ = {}))//Положим _cachedClassList в контейнер "_" для IE < 8
+			) || thisObj,
+			_cachedClassList = "__ccl_00lh__";
+		
+		if(!cont[_cachedClassList])cont[_cachedClassList] = new global["Utils"]["Dom"]["DOMStringCollection"](thisObj.getAttribute("class"), function() {
+			thisObj.setAttribute("class", this.value);//this instanceof Utils.Dom.DOMStringCollection
+			if(thisObj.className != this.value)thisObj.className = this.value;
+		})
+		
+		return cont[_cachedClassList];
+	}, "ielt8" : true});
+}
+
+// Fix "children" property in IE < 9
+if(!("children" in browser.testElement) || browser.msie && browser.msie < 9)
+	Object.defineProperty(nodeProto, "children", {"get" : function() {
+		var arr = [],
+			child = this.firstChild;
+
+		while(child) {
+			if(child.nodeType == 1)arr.push(child);
+			child = child.nextSibling;
+		}
+
+		return arr;
+	}, "ielt8" : true});
+
+// Traversal for IE < 9 and other
+if(typeof browser.testElement.childElementCount != 'undefined')Object.defineProperties(nodeProto, {
+	"firstElementChild" : {
+		"get" : function() {
+		    var node = this;
+		    // для старых браузеров
+		    // находим первый дочерний узел
+		    node = node.firstChild;
+		    // ищем в цикле следующий узел,
+		    // пока не встретим элемент с nodeType == 1
+		    while(node && node.nodeType != 1) node = node.nextSibling;
+		    // возвращаем результат
+		    return node;
+		}, "ielt8" : true
+	},
+	"lastElementChild" : {
+		"get" : function() {
+		    var node = this;
+		    node = node.lastChild;
+		    while(node && node.nodeType != 1) node = node.previousSibling;
+		    return node;
+		}, "ielt8" : true
+	},
+	"nextElementSibling" : {
+		"get" : function() {
+		    var node = this;
+		    while(node = node.nextSibling) if(node.nodeType == 1) break;
+		    return node;
+		}, "ielt8" : true
+	},
+	"previousElementSibling" : {
+		"get" : function() {
+		    var node = this;
+		    while(node = node.previousSibling) if(node.nodeType == 1) break;
+    		return node;
+		}, "ielt8" : true
+	},
+	"childElementCount" : {
+		"get" : function() {
+    		if(this.children)return this.children.length;//requared this.children
+		}, "ielt8" : true
+	}
+}
+)
+
+
+function _recursivelyWalk(nodes, cb) {
+    for (var i = 0, len = nodes.length; i < len; i++) {
+        var node = nodes[i];
+        var ret = cb(node);
+        if (ret) {
+            return ret;
+        }
+        if (node.childNodes && node.childNodes.length > 0) {
+            var ret = _recursivelyWalk(node.childNodes, cb);
+            if (ret) {
+                return ret;
+            }
+        }
+    }
+};
+
+var attr = "getElementsByClassName";
+if(!(attr in browser.testElement))document[attr] = nodeProto[attr] = function(clas) {
+	var ar = [];
+	
+	clas && _recursivelyWalk(this.childNodes, function (el, index) {
+		if (el.nodeType == 1 && el.classList.contains(clas)) {
+			ar.push(el);
+		}
+	});
+	
+	return ar;
+};
+
+if(!("insertAfter" in browser.testElement)) {
+	/**
+	 * NON STANDART METHOD
+	 * Вставляет DOM-элемент вслед за определённым DOM-элементом
+	 * @this {Node} Куда вставляем
+	 * @param {Node} elementToInsert Что вставляем
+	 * @param {Node} afterElement После чего вставляем
+	 * @return {Node} Переданый elementToInsert
+	 */
+	nodeProto["insertAfter"] = function(elementToInsert, afterElement) {
+		//function(F,B){D=this;if(D._insertAfter){D._insertAfter(F,B)}else{(D.lastChild==B)?D.appendChild(F):D.insertBefore(F,B.nextSibling)}}
+		return this.insertBefore(elementToInsert, afterElement.nextSibling);
+	};
+};
+
+var _compareDocumentPosition_ = 'compareDocumentPosition';
+if(!(_compareDocumentPosition_ in document)) {
+	var __name;
+	document[_compareDocumentPosition_] = nodeProto[_compareDocumentPosition_] = function(b) {
+		var a = this;
+		
+		//compareDocumentPosition from http://ejohn.org/blog/comparing-document-position/
+		return a.contains ?
+				(a != b && a.contains(b) && 16) +
+				(a != b && b.contains(a) && 8) +
+				(a.sourceIndex >= 0 && b.sourceIndex >= 0 ?
+					(a.sourceIndex < b.sourceIndex && 4) +
+					(a.sourceIndex > b.sourceIndex && 2) :
+				1) +
+			0 : 0;
+	};
+	__name = 'DOCUMENT_POSITION_DISCONNECTED';
+	document[__name] = nodeProto[__name] = 0x01;
+	__name = 'DOCUMENT_POSITION_PRECEDING';
+	document[__name] = nodeProto[__name] = 0x02;
+	__name = 'DOCUMENT_POSITION_FOLLOWING';
+	document[__name] = nodeProto[__name] = 0x04;
+	__name = 'DOCUMENT_POSITION_CONTAINS';
+	document[__name] = nodeProto[__name] = 0x08;
+	__name = 'DOCUMENT_POSITION_CONTAINED_BY';
+	document[__name] = nodeProto[__name] = 0x10;
+};
+
+// Emuleted HTMLTimeElement
+if(!(global["HTMLTimeElement"] && global["HTMLTimeElement"].prototype))
+Object.defineProperty((global["HTMLUnknownElement"] && global["HTMLUnknownElement"].prototype) || nodeProto, "dateTime", {
+	"get" : function() {
+		var thisObj = this,
+			elTag = thisObj.tagName;
+		
+		return thisObj.tagName.toUpperCase() == "TIME" ? (thisObj.getAttribute("datetime") || "") : void 0;
+	},
+	"set" : function(val) {
+		var thisObj = this,
+			elTag = thisObj.tagName;
+		
+		if(thisObj.tagName.toUpperCase() == "TIME") {
+			thisObj.setAttribute("datetime", val);
+			return val;
+		}
+		
+		return null;
+	},
+	"ielt8" : true
+});
+
+// IE9 thinks the argument is not optional
+// FF thinks the argument is not optional
+// Opera agress that its not optional
+try {
+	document.importNode(browser.testElement);
+} catch (e) {
+	if (e["number"] === -2147418113 ||//e.message === "Argument not optional" // IE выводит сообщения на локальном языке, поэтому это не сработает
+		e["result"] === 2153185281 ||//e.message === "Not enough arguments" // FF
+		e["code"] === 6//e.message === "WRONG_ARGUMENTS_ERR" // Opera
+	) {
+		var importNode = document.importNode;
+		document.importNode = function (node, bool) {
+			if (bool === void 0) {
+				bool = true;
+			}
+			return importNode.call(this, node, bool);
+		}
+	}
+}
+
+
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Element.prototype  ==================================  */
+/*  ======================================================================================  */
+
+/*  =======================================================================================  */
+/*  ======================================  Classes  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+/**
+ * Расширяем 'obj' объект свойствами из объекта/объектов в списке аргументов со 2го аргумента
+ * @param {Object} obj Object to extend
+ * @param {...} ravArgs extentions
+ */
+Object.append = function(obj, ravArgs) {
+	for(var i = 1; i < arguments.length; i++) {
+		var extension = arguments[i];
+		for(var key in extension)
+			if(!extension.hasOwnProperty || extension.hasOwnProperty(key))obj[key] = extension[key];
+	}
+	
+	return obj;
+}
+
+
+/**
+ * Наследует класс Child от Parent - фактически, только добавляет prototype Parent в цепочку прототипов Child. Не выполняет инициализирующий код содержащийся в конструкторе Parent, поэтому в конструкторе Child нужно дополнительно вызвать Child.superclass.constructor.call(this, ...)
+ * @param {Function} Child
+ * @param {Function} Parent
+ */
+global["inherit"] = function(Child, Parent) {
+	(Child.prototype = Object.create(Child["superclass"] = Parent.prototype)).constructor = Child;
+}
+
+/*
+	Quick way to define prototypes; much less verbose than standard 
+	foobar.prototype.someFunc = function() lists. See ApplicationCache
+	defined below for example use.
+
+	@param f Function object/constructor to add to.
+	@param addMe Object literal that contains the properties/methods to
+		add to f's prototype.
+	TODO:: jsdoc's и описать
+*/
+/*global["append"] = function(f, addMe) {
+	for (var i in addMe) {
+		f.prototype[i] = addMe[i];
+	}
+}*/
+
+
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Classes  ======================================  */
+/*  =======================================================================================  */
+
+
+/*  =======================================================================================  */
+/*  ======================================  Network  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+/*
+ * Получение XHR
+ * @return {XMLHttpRequest}
+ 
+var getXmlHttp = XMLHttpRequest ? function(){ return new XMLHttpRequest() } : 
+function() {
+  var xmlhttp;
+  try {
+    xmlhttp = new ActiveXObject("Msxml2.XMLHTTP");
+  } catch (e) {
+    try {
+      xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+    } catch (E) {
+      xmlhttp = null;
+    }
+  }
+  return xmlhttp;
+}*/
+if(!global.XMLHttpRequest)global.XMLHttpRequest = ActiveXObject.bind(global, "Microsoft.XMLHTTP");
+
+/**
+ * Функция посылки запроса к файлу на сервере
+ * TODO:: Переделать на объект-замыкание AJAX и не использовать global для хранения флагов/настроек
+ * @param {!string} path путь к файлу
+ * @param {string} args аргументы вида a=1&b=2&c=3... или пустая строка ""
+ * @param {function(XMLHttpRequest)=} onDone
+ * @param {function(XMLHttpRequest)=} onError — функции-обработчик ответа от сервера, если в функцию передаётся null - значит она была прервана по timeout
+ * @param {({post:boolean, temporary:boolean, timeOut:number, onProccess:Function}|
+			   {post:boolean, temporary:boolean, timeOut:number}|
+			   {post:boolean, temporary:boolean}|
+			   {post:boolean}|
+			   {temporary:boolean, post:boolean, onProccess:Function}|
+			   {temporary:boolean, onProccess:Function}|
+			   {temporary:boolean, timeOut:number}|
+			   {temporary:boolean}|
+			   {timeOut:number, temporary:boolean, post:boolean}|
+			   {timeOut:number, onProccess:Function}|
+			   {timeOut:number, post:boolean}|
+			   {timeOut:number}|
+			   {onProccess:Function, post:boolean, timeOut:number}|
+			   {onProccess:Function, post:boolean}|
+			   {onProccess:Function})=} options Дополнительные опции: post - любое true значение означает, что нужно применить POST метод; temporary - любое значение означает, что нужно создать новый XHR объект и удалить его после выполнения запроса; timeOut - время в мс, по истечении которого, выполнения запроса прирывается и вызывается функция onError; onProccess - функция вызываемая во время выполнения запроса
+ * @version 2.3
+ *  versionLog: 2.3 [23.06.2011 15:10] options.temporary включается, если глобальный XHR занят
+ *				2.2 [22.06.2011 13:00] [bug*]Не задавался options по-умолчанию
+ *				2.1 [25.05.2011 14:51] Внедрил getXmlHttp внутрь функции
+ *				2   [23.05.2011 13:46] Рефакторинг кода: Убрал пораметры method, onProccess и temp в новый параметр options. 
+Короткая версия:
+function xhr(m,u,c,x) {
+	with(new(global.XMLHttpRequest||ActiveXObject)("Microsoft.XMLHTTP"))
+		onreadystatechange = function(x){
+			readyState ^ 4 || c(x)
+		},
+		open(m, u),
+		send(c)
+}
+  TODO:: Посмотреть реализацию тут http://code.google.com/p/microajax/
+         и тут https://github.com/ded/Reqwest
+ */
+var SendRequest = global["SendRequest"] = function(path, args, onDone, onError, options) {
+	options = options || {};//Default value
+	
+	//TODO:: Прерывать соединение по timeOut, и вызывать funcError и определённым кодом ошибки
+	// Получаем объект XMLHTTPRequest
+    if(!SendRequest.XHR || SendRequest.outOfDate){
+    	SendRequest.XHR = null;//Удалим старый XHR//Avoid memory leak
+		SendRequest.outOfDate = false;
+		SendRequest.XHR = new global.XMLHttpRequest();
+        global.working = false;
+    }
+    if(!SendRequest.XHRs)SendRequest.XHRs = [];
+	//Каждые 5 минут поднимаем флаг, что XHR устарел
+	setTimeout(function() {SendRequest.outOfDate = true}, 3e5);
+	
+	var method = options["post"] ? "POST" : "GET",
+		//Создаём отдельный XHR в случае, если глобальный XHR занят или, если в опциях указан temporary
+		temp = options["temporary"] || global.working;
+	
+	// Запрос
+    if ((!global.working && SendRequest.XHR) || temp) {
+    	var http1 = temp ? SendRequest.XHRs[SendRequest.guid] = new global.XMLHttpRequest() : SendRequest.XHR,
+    		tmpXHRguid = temp ? SendRequest.guid++ : null;
+    	
+    	//Проверяем, если требуется сделать GET-запрос
+		if(!options["post"] && args.length > 0)
+			path += "?" + args;//добавляем закодированный текст в URL запроса
+
+        //Инициализируем соединение
+		http1.open(method, path, true);
+
+        //прикрепляем к запросу функцию-обработчик событий
+        http1.onreadystatechange = function() {// 4 - данные готовы для обработки
+        	if (http1.readyState == 4) {
+            	if(http1.status == 200) {// если статус 200 (ОК) - выдать ответ пользователю
+            		if(onDone)onDone(http1);
+            	}
+            	else if(onError)onError(http1);
+            	
+                if(!temp)global.working = false;
+                else delete SendRequest.XHRs[tmpXHRguid];//Удалим временный объект XHR
+            }
+            else{ // данные в процессе получения, можно повеселить пользователя сообщениями ЖДИТЕ ОТВЕТА
+            	if(options["onProccess"])options["onProccess"]();
+            }
+        }
+        if(!temp)global.working = true;
+        
+        try {
+			if (options["post"]) {//Если это POST-запрос
+				//Отсылаем специальный заголовок, чтобы сервер знал, что это AJAX
+				http1.setRequestHeader("X-Requested-With", "HTTPRequest");
+				//Устанавливаем заголовок
+				http1.setRequestHeader("Content-Type","application/x-www-form-urlencoded; charset=utf-8");
+				//Посылаем запрос
+				http1.send(args);
+			}
+			else {//Если это GET-запрос
+				//Посылаем нуль-запрос
+				http1.send(null);
+			}
+		}
+		catch(e) {
+		
+		}
+    }
+	if(!SendRequest.XHR) {
+		if(DEBUG)Log.err("Ошибка при создании XMLHTTP объекта!");
+		return false;//alert('Ошибка при создании XMLHTTP объекта!')
+	}
+}
+SendRequest.guid = 0;
+
+
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Network  ======================================  */
+/*  =======================================================================================  */
 
 /*  ======================================================================================  */
 /*  =======================================  Utils  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
@@ -1991,11 +2035,11 @@ global["bubbleEventListener"] = function bubbleEventListener(attribute, namedFun
 
 // IE8 window.addEventListener does not exist
 // From https://github.com/Raynos/DOM-shim/
-if(!global.addEventListener && document.addEventListener) {
+/*if(!global.addEventListener && document.addEventListener) {
     global.addEventListener = document.addEventListener.bind(document);
     global.removeEventListener = document.removeEventListener.bind(document);
     global.dispatchEvent = document.dispatchEvent.bind(document);
-}
+}*/
 
 /**
  * document.getElementById alias
@@ -2140,6 +2184,7 @@ var $$0 = global["$$0"] = function(selector, root) {
 	return $$(selector, root, true)[0];
 }
 
+;(function () {
 /**
  * @link https://developer.mozilla.org/en/DOM/window.getComputedStyle
  * getCurrentStyle - функция возвращяет текущий стиль элемента
@@ -2151,6 +2196,19 @@ var $$0 = global["$$0"] = function(selector, root) {
 if(!global.getComputedStyle)global.getComputedStyle = function(obj, pseudoElt) {
 	return obj.currentStyle;
 }
+else {
+	//FF say that pseudoElt param is required
+	try {
+		global.getComputedStyle(browser.testElement)
+	}
+	catch(e) {
+		var old = global.getComputedStyle;
+		global.getComputedStyle = function(obj, pseudoElt) {
+			return old(obj, pseudoElt || null)
+		}
+	}
+}
+})();
 
 /** Example of making a document HTML5 element safe
  * Функция "включает" в IE < 9 HTML5 элементы

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+
+<style>
+.null {
+	background: black !important;
+	color: red
+}
+</style>
+<script>document.createElement("j")</script>
+<script src="../../__SRC/a.js"></script>
+
+</head>
+<body>
+
+<j id=test1 style="display:block;background:green;height:40px" class="test test2" color1=gray color2=red color3=yellow>
+test
+</j>
+
+<div id=test2>
+test2
+</div>
+
+<script>
+function main() {
+
+	var j = document.getElementsByClassName("test")[0];
+
+	window.addEventListener("someEvent", function doSomething(event) {
+		var i;
+		
+		if(event.detail) {
+			!isNaN(event.detail) && 
+				(i = "color" + event.detail), 
+					j.attributes[i] &&
+						(j.style.backgroundColor = j.attributes[i].value);
+		}
+		else {
+			!~(j.classList+"").indexOf("null") ? 
+				j.classList.add(null) :
+				j.classList.remove(null)
+		}
+	})
+	
+	document.addEventListener("someEvent", function() {
+		console.log("document someEvent")
+	});
+	window.addEventListener("someEvent", function() {
+		console.log("window someEvent")
+	});
+	
+
+	var att = 0;
+
+	setInterval(function() {
+		++att > 3 ? att = 0 : 0;
+		
+		var ev = new CustomEvent("someEvent", {bubbles : true, detail : att});
+		
+		j.dispatchEvent(ev);
+	}, 1000)
+}
+
+window.addEventListener('DOMContentLoaded', main);
+</script>
