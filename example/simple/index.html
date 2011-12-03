@@ -8,28 +8,79 @@
 	background: black !important;
 	color: red
 }
+ * {
+     -moz-binding:url(ff3.xml#link);
+ }
+
+.cotainer, .header, .footer {
+	display: block;
+}
+
 </style>
-<script>document.createElement("j")</script>
+<script>
+document.createElement("j");
+document.createElement("c");
+document.createElement("h");
+document.createElement("f");
+</script>
 <script src="../../__SRC/a.js"></script>
 
 </head>
 <body>
 
-<j id=test1 style="display:block;background:green;height:40px" class="test test2" color1=gray color2=red color3=yellow>
+<j id=test1 style="display:block;background:green;height:40px" class=test color1=gray color2=red color3=yellow>
 test
 </j>
 
-<div id=test2>
+<div id=test2 class="test2 linked_data">
 test2
 </div>
 
+<c class="container" id=testContainer>
+	<h class="header">
+		<h4>Container header</h4>
+	</h>
+	
+	<data class="data">
+		<c class="container">
+			<h class="header">
+				<h5>List</h5>
+			</h>
+			
+			<ul class="data">
+				<li>asdf</li>
+				<li>asdf</li>
+				<li>asdf</li>
+				<li>asdf</li>
+			</ul>
+			
+			<f class="footer">
+				<p>List up here</p>
+			</f>
+		</c>
+		<c class="container">
+			<h class="header">
+				<h5>Img</h5>
+			</h>
+			
+			<img class="data" src="https://a248.e.akamai.net/assets.github.com/images/modules/header/logov6-hover.svg?1315858593" />
+				
+			<f class="footer">
+				<p>Image up here</p>
+			</f>
+		</c>
+	</data>
+	
+	<f class="footer">
+		<p>Container footer</p>
+	</f>
+</c>
+
 <script>
 function main() {
-
-	var j = document.getElementsByClassName("test")[0];
-
 	window.addEventListener("someEvent", function doSomething(event) {
-		var i;
+		var i,
+			j = event.target;
 		
 		if(event.detail) {
 			!isNaN(event.detail) && 
@@ -44,23 +95,30 @@ function main() {
 		}
 	})
 	
-	document.addEventListener("someEvent", function() {
-		console.log("document someEvent")
+	var dosome1;
+	document.addEventListener("someEvent", dosome1 = function(event) {
+		console.log((this === document ? "document" : "window") + " someEvent " + (event.eventPhase === Event.BUBBLING_PHASE ? "bubble" : "capture"))
 	});
-	window.addEventListener("someEvent", function() {
-		console.log("window someEvent")
-	});
+	document.addEventListener("someEvent", dosome1, true);
+	window.addEventListener("someEvent", dosome1, false);
+	document.addEventListener("someEvent", dosome1, false);
 	
-
+	var j = document.getElementsByClassName("test")[0];
+	j.addEventListener("someEvent", console.log.bind(null, "j someEvent bubble"), false);
+	j.addEventListener("someEvent", console.log.bind(null, "j someEvent capture"), true);
+	
+	$("test2").addEventListener("someEvent", console.log.bind(null, "test2 someEvent capture"), true);
+	
 	var att = 0;
-
-	setInterval(function() {
-		++att > 3 ? att = 0 : 0;
-		
-		var ev = new CustomEvent("someEvent", {bubbles : true, detail : att});
-		
-		j.dispatchEvent(ev);
+	
+	var testInterval = setInterval(function() {
+		j.dispatchEvent(new CustomEvent("someEvent", {bubbles : true, detail : ++att > 3 ? att = 0 : att}));
 	}, 1000)
+	
+	
+	window.stopIt = function() {
+		clearInterval(testInterval);
+	}
 }
 
 window.addEventListener('DOMContentLoaded', main);
