@@ -621,6 +621,25 @@ if (!Object.defineProperties || definePropertiesFallback) {
 /*  ==================================  Array.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
 /**
+ * Non-standart method
+ * Create a new Array with the all unique items
+ * @return {Array}
+ */
+if(!Array.prototype["unique"])Array.prototype["unique"] = function() {
+    var hash = {},
+		result = [],
+		array = this;
+	
+    for(var i = 0, l = array.length; i < l; ++i) {
+        if(!hash.hasOwnProperty(array[i])) { //it works with objects! in FF, at least
+            hash[array[i]] = true;
+            result.push(array[i]);
+        }
+    }
+    return result;
+}
+
+/**
  * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/Reduce
  * 
  * Apply a function against an accumulator and each value of the array (from left-to-right) as to reduce it to a single value.
@@ -903,42 +922,56 @@ document.createElement = function() {
 if(document.addEventListener) {//fix [add|remove]EventListener for all browsers that support it
 	(function () {
 		// FF fails when you "forgot" the optional parameter for addEventListener and removeEventListener
+		// Agr!!! FF 3.6 Unable to override addEventListener https://bugzilla.mozilla.org/show_bug.cgi?id=428229
 		// Opera didn't do anything without optional parameter
-		var _done = false,
+		var _rightBehavior = false,
 			dummy = function () {
-				_done = true
+				_rightBehavior = true
 			};
-		var el_proto = global["Element"].prototype
+		var el_proto = global["Node"] && global["Node"].prototype || global["Element"].prototype
 		function fixEventListener(elementToFix) {
 			var old_addEventListener = elementToFix.addEventListener,
 				old_removeEventListener = elementToFix.removeEventListener;
+				
+			/*Object.defineProperty(elementToFix, "addEventListener", {value : function (type, listener, optional) {
+				optional = optional || false;
+				return old_addEventListener.call(this, type, listener, optional);
+			}})
+			Object.defineProperty(elementToFix, "removeEventListener", {value : function (type, listener, optional) {
+				optional = optional || false;
+				return old_removeEventListener.call(this, type, listener, optional);
+			}})*/
+			
 			elementToFix.addEventListener = function (type, listener, optional) {
 				optional = optional || false;
 				return old_addEventListener.call(this, type, listener, optional);
 			}
+			//elementToFix.addEventListener.shim = true;
 			elementToFix.removeEventListener = function (type, listener, optional) {
 				optional = optional || false;
 				return old_removeEventListener.call(this, type, listener, optional);
 			}
+			//elementToFix.removeEventListener.shim = true;
 		}
 		function fixEventListenerAll() {
-			fixEventListener(document)
-			fixEventListener(window)
-			fixEventListener(el_proto)
+			fixEventListener(document);
+			fixEventListener(window);
+			fixEventListener(el_proto);
+			//if(!browser.testElement.addEventListener.shim)
+				//console.error("shim dosn't work")
 		}
 		try {
 			browser.testElement.addEventListener("click", dummy);
 			if(browser.testElement.click)
 				browser.testElement.click();//testing
 			else //If !browser.testElement.click -> modern browsers
-				_done = true;
+				_rightBehavior = true;
 		} catch (e) {
-			fixEventListenerAll()
-			_done = true;
+		
 		} finally {
+			if(!_rightBehavior)fixEventListenerAll()
 			document.removeEventListener("click", dummy);
 		}
-		if(!_done)fixEventListenerAll()
 	})();
 }
 else {//fix [add|remove]EventListener & dispatchEvent for IE < 9
@@ -1043,7 +1076,7 @@ function commonHandle(event) {
 		var e = new Error("Multiple errors thrown : " + event.type + " : " + " : " + errorsMessages.join("|"));
 		e.errors = errors;
 		throw e;
-	}  
+	}
 }
 
 if(!document.addEventListener)global.addEventListener = document.addEventListener = function(_type, _handler, useCapture) {
@@ -1065,6 +1098,13 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 	
 	}
 	*/
+	
+	/*
+	TODO::
+	Reference: http://www.w3.org/TR/DOM-Level-2-Events/events.html#Events-EventTarget
+	If multiple identical EventListeners are registered on the same EventTarget with the same parameters the duplicate instances are discarded. They do not cause the EventListener to be called twice and since they are discarded they do not need to be removed with the removeEventListener method.
+	*/
+	
 	
 	var _ = thisObj._
 	if(!_)_ = thisObj._ = {};
@@ -2074,6 +2114,7 @@ var $ = global["$"] = function(id) {
  *
  * @param {!string} selector CSS3-селектор
  * @param {Document|HTMLElement|Node|Array.<HTMLElement>=} roots Список элементов в которых мы будем искать
+ * @param {Array=} prefetchResult ссылка на массив уже сформированных результатов, к которым будет добавлен текущий результат
  * @param {boolean=} isFirst ищем только первый
  * @return {Array.<HTMLElement>}
  * @version 2
@@ -2092,11 +2133,11 @@ var $ = global["$"] = function(id) {
  *             1.2   [23.02.2011 20:50] Изменён алгоритм вызова querySelector если первый символ в selector = [>|+|~]
  *  TODO:: Изучить код https://github.com/ded/qwery - может быть будет что-нибуть полезное
  */
-function $$N(selector, roots, isFirst) {
+function $$N(selector, roots, prefetchResult, isFirst) {
 	//TODO:: Не засовывать в result те элементы, которые уже были туда засованы
 	roots = !roots ? [d] : (Array.isArray(roots) ? roots : [roots]);
 	
-	var /** @type {Array.<HTMLElement>} */result = [],
+	var /** @type {Array.<HTMLElement>} */result = prefetchResult || [],
 		/** @type {Node|Window|HTMLElement} */rt,
 		/** @type {HTMLElement} */child,
 		/** @type {number} */ir = -1,
@@ -2156,15 +2197,25 @@ var $$ = global["$$"] = function(selector, roots/*, noCache*/, isFirst) {
 		selector = selector.replace(/=([^\]]+)/, '="$1"');
 	
 	var isSpecialMod = /[>\+\~]/.test(selector.charAt(0)) || 
-					/(\,>)|(\,\+)|(\,\~)/.test(selector);
+					/(\,>)|(\,\+)|(\,\~)/.test(selector),
+		i = -1,
+		root;
 	
 	if(document.querySelector) {
-		//if(isSpecialMod) TODO:: special selectors support
-		if(!Array.isArray(roots))return $A(roots.querySelectorAll(selector));
+		var result = [];
 		
-		var result = [],
-			root,
-			i = -1;
+		if(isSpecialMod) {//spetial selectors like ">*", "~div", "+a"
+			//Мы надеемся :(, что в селекторе не бедет [attrName=","]
+			//TODO:: переделать сплитер, чтобы он правильно работал даже для [attrName=","]
+			selector = selector.split(",")["unique"]();
+			
+			while(root = selector[++i])
+				result = $$N(root, roots, result);
+				
+			return result;
+		}
+		
+		if(!Array.isArray(roots))return $A(roots.querySelectorAll(selector));
 					
 		while(root = roots[++i] && (!isFirst || !result.length))
 			result.concat($A(root.querySelectorAll(selector)))
@@ -2350,7 +2401,7 @@ var i,
 
 for (i = methods.length; i--;) empty[methods[i]] = emptyFn;
 
-if (console) {
+if (console && !DEBUG) {
 
 	if (!console.time) {
 		console.timeCounters = timeCounters = {};
@@ -2393,87 +2444,6 @@ if (console) {
 
 })( typeof console === 'undefined' ? null : console );
 
-/**
- * @namespace Логирование
- */
-var Log = global["Log"] = DEBUG ? (function() {
-/* PRIVATE */
-	var thisObj = {},
-		_c = console,
-		_countContainer = {},
-		_groups = [];
-
-/* PUBLICK */
-	thisObj.start = function() {
-		var name = arguments[0] || randomString(6);
-		_c.time(name);
-		thisObj.group(name + " START ");
-		_groups.push(name);
-		thisObj.log.apply(thisObj, $A(arguments, 1));
-	}
-	thisObj.end = function() {
-		thisObj.log.apply(thisObj, $A(arguments));
-		var name = _groups.pop();
-		_c.timeEnd(name);
-		thisObj.log(name + " END " + repeatString("-", _groups.length + 1));
-		thisObj.groupEnd();
-	}
-	thisObj.log = function(var_args) {
-		_c.log.apply(_c, arguments);
-	}
-	thisObj.logsFirst = function(count, uniqueName) {
-		if(_countContainer[uniqueName] === void 0)_countContainer[uniqueName] = count;
-		else _countContainer[uniqueName]--;
-		if(_countContainer[uniqueName])thisObj.log.apply(thisObj, $A(arguments, 2));
-	}
-	thisObj.err = function() {
-		_c.error.apply(_c, arguments);
-	}
-	thisObj.errsFirst = function(count, uniqueName) {
-		if(!_countContainer[uniqueName])_countContainer[uniqueName] = count;
-		else _countContainer[uniqueName]--;
-		if(_countContainer[uniqueName])thisObj.err.apply(thisObj, $A(arguments, 2));
-	}
-	
-	thisObj.group = _c.group ? _c.group.bind(_c) : thisObj.log;//For IE
-	thisObj.groupEnd = _c.groupEnd ? _c.groupEnd.bind(_c) : function(){};//For IE
-	
-	thisObj.assert = _c.assert ? _c.assert.bind(_c) : function(expression, falseMessage) {
-		var isTrue;
-		if(typeof expression == "function")isTrue = expression();
-		else isTrue = !!expression;
-		
-		if(!isTrue)thisObj.error(falseMessage);
-	}
-   	
-	/**
-	 * @param {HTMLElement|Node} el
-	 * @param {boolean=} addParentName Добавлять родительское имя?
-	 */
-	thisObj.name = function(el, addParentName) {
-		return  el ? ((addParentName && el.parentNode && (thisObj.name(el.parentNode) + "->") || "") + 
-			el.tagName + (el.id ? "#" + el.id : "") + (el.className ? "." + el.className.replace(/ /g, ".") : ""))
-				  : "";
-	}
-	
-	thisObj.dump = function(obje, obj_name, prefix, postfix/*, maxLvl*/) {
-		if(prefix === void 0)prefix = "";
-		if(postfix === void 0)postfix = "";
-		
-		//if(maxLvl > 9)maxLvl = 9;
-		
-		var result = (obj_name || "") + ":";
-		var hop = Object.prototype.hasOwnProperty;
-	
-		for(var i in obje) if(hop.call(obj, i)) {
-			/*if(typeof obje[i] == "object" && maxLvl)result += prefix + dump(obje[i], i, prefix, postfix, --maxLvl) + postfix
-			else */result += prefix + i + "=" + obje[i] + postfix;
-		}
-		return result;
-	} 
-	
-	return thisObj;
-})() : null;
 
 /*  ======================================================================================  */
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  DEBUG  =====================================  */
