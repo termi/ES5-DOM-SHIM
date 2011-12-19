@@ -277,7 +277,7 @@ var methods = {
 			delete thisObj._container[i];//[BUG*fix]prevente strange bug in FireFox 8 then after thisObj._splice(i, 1) this.length == 0 but this[0] return value O_0//DOTO:: проверить
 			thisObj._container.splice(i, 1);
 		}
-		for(var i = 0, l = thisObj._container.length ; i < l ; ++i) {
+		for(i = 0, l = thisObj._container.length ; i < l ; ++i) {
 			thisObj[i] = thisObj._container[i];
 		}
 		for( ; i < thisObj.length ; ++i) {
@@ -956,6 +956,8 @@ if(document.addEventListener) {//fix [add|remove]EventListener for all browsers 
 		function fixEventListenerAll() {
 			fixEventListener(document);
 			fixEventListener(window);
+			fixEventListener(HTMLDocument.prototype);
+			fixEventListener(Window.prototype);
 			fixEventListener(el_proto);
 			//if(!browser.testElement.addEventListener.shim)
 				//console.error("shim dosn't work")
@@ -1165,6 +1167,11 @@ if(!document.removeEventListener)global.removeEventListener = document.removeEve
 	delete _[eventsUUID];
 }
 
+/**
+ * @param {string} event is an event object to be dispatched.
+ * @this element is the target of the event.
+ * @return {boolean} The return value is false if at least one of the event handlers which handled this event called preventDefault. Otherwise it returns true.
+ */
 if(!document.dispatchEvent)global.dispatchEvent = document.dispatchEvent = function(event) {
 	
 	/**
@@ -1173,7 +1180,7 @@ if(!document.dispatchEvent)global.dispatchEvent = document.dispatchEvent = funct
 	var thisObj = this;
 	
 	try {
-		thisObj.fireEvent("on" + event.type, event);
+		return thisObj.fireEvent("on" + event.type, event);
 	}
 	catch(e) {
 		//custome events
@@ -1186,6 +1193,8 @@ if(!document.dispatchEvent)global.dispatchEvent = document.dispatchEvent = funct
 				//Если у события отключено всплытие - не всплываем его
 				node = event.bubbles ? (node === document ? window : node.parentNode) : null;
 			}
+			
+			return !event.cancelBubble;
 		}
 		else throw e;
 	}
@@ -1231,7 +1240,7 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
                      _button, _relatedTarget) {
 		var thisObj = this;
 		//https://developer.mozilla.org/en/DOM/event.initMouseEvent
-		_initUIEvent.call(thisObj, _type, _bubbles, _view, _cancelable);
+		_initUIEvent.call(thisObj, _type, _bubbles, _cancelable, _view, _detail);
 		
 		thisObj.screenX = _screenX;
 		thisObj.screenY = _screenY;
@@ -1398,6 +1407,56 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
     }
 })();
 
+// Fix Chrome problem with DOMAttrModified event | http://blog.silkapp.com/2009/10/mutation-events-what-happen/
+;(function () {
+	function isDOMAttrModifiedSupported() {
+		var flag = false; 
+		
+		function callback() {
+			flag = true;
+		}
+		
+		try {
+			browser.testElement.addEventListener('DOMAttrModified', callback, false);
+			p.setAttribute('id', 'target');
+		}
+		catch(e) {
+			
+		}
+		finally {
+			if(browser.testElement.removeEventListener)
+				browser.testElement.removeEventListener('DOMAttrModified', callback, false);
+		}
+		
+		return flag;
+	}
+	
+	if(DEBUG)console.log("DOMAttrModified not supported")
+	
+	if(!isDOMAttrModifiedSupported()) {
+		/**
+		 * @param {Function} oldHandle
+		 * @param {number=} attrChange
+		 */
+		var new_set_remove_Attribute = function(oldHandle, attrChange) {
+			return function(name, val) {
+				var e = document.createEvent("MutationEvents"); 
+				var prev = this.getAttribute(name);
+				oldHandle.apply(this, arguments);
+				e.initMutationEvent("DOMAttrModified", true, true, null, prev, 
+					((attrChange || val === null) ? "" : val),
+					name,
+					attrChange || ((prev == null) ? evt.ADDITION : evt.MODIFICATION)
+				);
+				this.dispatchEvent(e);
+			}
+		}
+	
+		var _Element_prototype = Element.prototype;
+		_Element_prototype.setAttribute = new_set_remove_Attribute(_Element_prototype.setAttribute)
+		_Element_prototype.removeAttribute = new_set_remove_Attribute(_Element_prototype.removeAttribute, 3)//3 === REMOVAL
+	}
+})();
 
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Events  ======================================  */
@@ -1493,13 +1552,13 @@ if(typeof browser.testElement.childElementCount != 'undefined')Object.defineProp
 
 function _recursivelyWalk(nodes, cb) {
     for (var i = 0, len = nodes.length; i < len; i++) {
-        var node = nodes[i];
-        var ret = cb(node);
+        var node = nodes[i],
+			ret = cb(node);
         if (ret) {
             return ret;
         }
         if (node.childNodes && node.childNodes.length > 0) {
-            var ret = _recursivelyWalk(node.childNodes, cb);
+            ret = _recursivelyWalk(node.childNodes, cb);
             if (ret) {
                 return ret;
             }
@@ -1788,7 +1847,7 @@ var SendRequest = global["SendRequest"] = function(path, args, onDone, onError, 
 		}
     }
 	if(!SendRequest.XHR) {
-		if(DEBUG)Log.err("Ошибка при создании XMLHTTP объекта!");
+		if(DEBUG)console.error("Ошибка при создании XMLHTTP объекта!");
 		return false;//alert('Ошибка при создании XMLHTTP объекта!')
 	}
 }
@@ -1905,10 +1964,13 @@ var $A = global["$A"] = function(iterable, start, end, forse) {
 		args = [start];
 	if(end)args.push(end);
 	
-	if(type == "number")iterable += "";
+	if(type == "number") {
+		iterable += "";
+		type = "string";
+	}
 	
 	//IE не умеет выполнять Array.prototype.slice для "string" и "number"
-	if(browser.msie < 9 && (type == "number" || type == "string"))trySlice = false;
+	if(browser.msie < 9 && type == "string")trySlice = false;
 	
 	if(typeof iterable.length == "number") {
 		
@@ -2011,18 +2073,18 @@ global["bubbleEventListener"] = function bubbleEventListener(attribute, namedFun
 	if(DEBUG) {
 		if(!namedFunctions || 
 		   (typeof namedFunctions != "object" && typeof namedFunctions != funcType))	
-				Log.err("bubbleEventListener::namedFunctions must be an Object or Function")
+				console.error("bubbleEventListener::namedFunctions must be an Object or Function")
 		else if(typeof namedFunctions == "object") {
-			if(!$A(namedFunctions).length)Log.err("bubbleEventListener::no functions are sets")
+			if(!$A(namedFunctions).length)console.error("bubbleEventListener::no functions are sets")
 			else {
 				var s = true;
 				$K(namedFunctions).forEach(function(key){
 					if(typeof namedFunctions[key] != funcType)s = false;
 				})
-				if(!s)Log.err("bubbleEventListener::all values in namedFunctions MUST be a Functions")
+				if(!s)console.error("bubbleEventListener::all values in namedFunctions MUST be a Functions")
 			}
 		}
-		if(Array.isArray(attribute) && !attribute.length)Log.err("bubbleEventListener::в массиве attribute должен быть хотябы один элемент")
+		if(Array.isArray(attribute) && !attribute.length)console.error("bubbleEventListener::в массиве attribute должен быть хотябы один элемент")
 	}
 
 	var _attr = (Array.isArray(attribute) ? attribute[0] : attribute);//TODO:: Выяснить зачем я делал это -> .toLowerCase(); С propName это не работает
@@ -2235,17 +2297,20 @@ var $$0 = global["$$0"] = function(selector, root) {
 	return $$(selector, root, true)[0];
 }
 
+// window.getComputedStyle fix
 ;(function () {
-/**
- * @link https://developer.mozilla.org/en/DOM/window.getComputedStyle
- * getCurrentStyle - функция возвращяет текущий стиль элемента
- * @param {?Element} obj HTML-Элемент
- * @param {?string} pseudoElt A string specifying the pseudo-element to match. Must be null (or not specified) for regular elements.
- * @this {Window}
- * @return {CSSStyleDeclaration} Стиль элемента
- */
-if(!global.getComputedStyle)global.getComputedStyle = function(obj, pseudoElt) {
-	return obj.currentStyle;
+if(!global.getComputedStyle) {//IE < 9
+	/**
+	 * @link https://developer.mozilla.org/en/DOM/window.getComputedStyle
+	 * getCurrentStyle - функция возвращяет текущий стиль элемента
+	 * @param {?Node} obj HTML-Элемент
+	 * @param {?string} pseudoElt A string specifying the pseudo-element to match. Must be null (or not specified) for regular elements.
+	 * @this {Window}
+	 * @return {CSSStyleDeclaration} Стиль элемента
+	 */
+	global.getComputedStyle = function(obj, pseudoElt) {
+		return obj.currentStyle;
+	}
 }
 else {
 	//FF say that pseudoElt param is required
@@ -2255,7 +2320,7 @@ else {
 	catch(e) {
 		var old = global.getComputedStyle;
 		global.getComputedStyle = function(obj, pseudoElt) {
-			return old(obj, pseudoElt || null)
+			return old.call(global, obj, pseudoElt || null)
 		}
 	}
 }
@@ -2317,10 +2382,12 @@ if(browser.msie && browser.msie < 9) {
  *			   1 [--.--.2011 --:--] Initial release
  */
 var _cloneElement = global["cloneElement"] = function(element, include_all, delete_id) {//Экспортируем cloneElement для совместимости и для вызова напрямую	
-	// Обновляем функции _cloneElement
+	// Обновляем функцию _cloneElement
 	if(document.createDocumentFragment !== _cloneElement.oldCreateDocumentFragment && _cloneElement.safeElement != false)
 		_cloneElement.safeElement = 
-			(!!browser.msie && browser.msie < 9) ? (_cloneElement.oldCreateDocumentFragment = document.createDocumentFragment)().appendChild(document.createElement("div"))
+			(!!browser.msie && browser.msie < 9)
+			?
+			(_cloneElement.oldCreateDocumentFragment = document.createDocumentFragment).call(document).appendChild(document.createElement("div"))
 			:
 			false;
 	

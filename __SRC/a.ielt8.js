@@ -474,8 +474,8 @@ if(!document.querySelector)document.querySelector = window["_ielt8_querySelector
 
 
 
-var __URL_TO_ELEMENT_BEHAVIOR__='a.ielt8.htc',
-	__URL_TO_IE6_ELEMENT_BEHAVIOR__='a.ie6.htc',
+var __URL_TO_ELEMENT_BEHAVIOR__='/a.ielt8.htc',
+	__URL_TO_IE6_ELEMENT_BEHAVIOR__='/a.ie6.ielt8.htc',
 	__STYLE_ID="ielt8_style_prev_for_behaviour";
 
 var prevStyle=document.getElementById(__STYLE_ID),add="";
