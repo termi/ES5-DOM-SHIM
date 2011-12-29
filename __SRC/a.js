@@ -1514,7 +1514,7 @@ if(!("children" in browser.testElement) || browser.msie && browser.msie < 9)
 	}, "ielt8" : true});
 
 // Traversal for IE < 9 and other
-if(typeof browser.testElement.childElementCount != 'undefined')Object.defineProperties(nodeProto, {
+if(typeof browser.testElement.childElementCount == 'undefined')Object.defineProperties(nodeProto, {
 	"firstElementChild" : {
 		"get" : function() {
 		    var node = this;
