@@ -954,10 +954,10 @@ if(document.addEventListener) {//fix [add|remove]EventListener for all browsers 
 			//elementToFix.removeEventListener.shim = true;
 		}
 		function fixEventListenerAll() {
-			fixEventListener(document);
-			fixEventListener(window);
-			fixEventListener(HTMLDocument.prototype);
-			fixEventListener(Window.prototype);
+			global["document"] && fixEventListener(global["document"]);
+			fixEventListener(global);
+			global["HTMLDocument"] && fixEventListener(global["HTMLDocument"].prototype);
+			global["Window"] && fixEventListener(global["Window"].prototype);
 			fixEventListener(el_proto);
 			//if(!browser.testElement.addEventListener.shim)
 				//console.error("shim dosn't work")
@@ -1320,7 +1320,7 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 
 		// удалить обработчик события
 		remove: function(elem, type, handler) {
-			elem.addEventListener(type, handler, false);
+			elem.removeEventListener(type, handler, false);
 		}
 	}
 }())*/
@@ -1440,13 +1440,22 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 		 */
 		var new_set_remove_Attribute = function(oldHandle, attrChange) {
 			return function(name, val) {
+				/**
+				 * @type {MutationEvents}
+				 */
 				var e = document.createEvent("MutationEvents"); 
+				/**
+				 * @type {String}
+				 */
 				var prev = this.getAttribute(name);
 				oldHandle.apply(this, arguments);
 				e.initMutationEvent("DOMAttrModified", true, true, null, prev, 
 					((attrChange || val === null) ? "" : val),
 					name,
-					attrChange || ((prev == null) ? evt.ADDITION : evt.MODIFICATION)
+					attrChange || ((prev == null) ? 
+						2://e.ADDITION :
+						1//e.MODIFICATION
+								  )
 				);
 				this.dispatchEvent(e);
 			}
@@ -2095,7 +2104,7 @@ global["bubbleEventListener"] = function bubbleEventListener(attribute, namedFun
 				stopElement = this,//Контекст this у функции !!!ДОЛЖЕН!!! указываеть на элемент, на который эту функцию повесили в качестве обработчика
 				/** @type {string} Значение атрибута - имя функции */
 				elemAttrValue,
-				/** @type {(Object|null)} */
+				/** @type {(Object|null|function)} */
 				f,//Функция для вызова
 				result;
 			
@@ -2266,21 +2275,24 @@ var $$ = global["$$"] = function(selector, roots/*, noCache*/, isFirst) {
 	if(document.querySelector) {
 		var result = [];
 		
-		if(isSpecialMod) {//spetial selectors like ">*", "~div", "+a"
-			//Мы надеемся :(, что в селекторе не бедет [attrName=","]
-			//TODO:: переделать сплитер, чтобы он правильно работал даже для [attrName=","]
-			selector = selector.split(",")["unique"]();
-			
-			while(root = selector[++i])
-				result = $$N(root, roots, result);
+		if(selector) {
+			if(isSpecialMod) {//spetial selectors like ">*", "~div", "+a"
+				//Мы надеемся :(, что в селекторе не бедет [attrName=","]
+				//TODO:: переделать сплитер, чтобы он правильно работал даже для [attrName=","]
+				selector = selector.split(",")["unique"]();
 				
-			return result;
-		}
-		
-		if(!Array.isArray(roots))return $A(roots.querySelectorAll(selector));
+				while(root = selector[++i])
+					result = $$N(root, roots, result);
 					
-		while(root = roots[++i] && (!isFirst || !result.length))
-			result.concat($A(root.querySelectorAll(selector)))
+				return result;
+			}
+			
+			if(!Array.isArray(roots))return $A(roots.querySelectorAll(selector));
+						
+			while(root = roots[++i] && (!isFirst || !result.length))
+				result.concat($A(root.querySelectorAll(selector)))
+			
+		}
 		
 		return result;
 	}

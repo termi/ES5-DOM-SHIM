@@ -1,5 +1,7 @@
 ﻿// This file MUST be in <head> section of document
 
+// TODO:: see http://pkario.blogspot.com/2010/09/javascript-event-handling-all-browsers.html
+
 ;(function() {
 
 var ie = 99;
