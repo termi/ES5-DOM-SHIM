@@ -13,18 +13,6 @@
 <PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_CONTAINS" GET="r" />
 <PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_CONTAINED_BY" GET="t" />
 <SCRIPT>
-if(!this.compareDocumentPosition)this.compareDocumentPosition=m.compareDocumentPosition;
-if(!this.getElementsByClassName)this.getElementsByClassName=m.getElementsByClassName;
-if(!this.insertAfter)this.insertAfter=m.insertAfter;
-if(!this.addEventListener)this.addEventListener=window.addEventListener;
-if(!this.removeEventListener)this.removeEventListener=window.removeEventListener;
-if(!this.dispatchEvent)this.dispatchEvent=window.dispatchEvent;
-if(this.cloneNode!==m.cloneNode)this.cloneNode=m.cloneNode;
-if(!this._)this._={};
-if(!this._.__ielt8_attributes__)this._.__ielt8_attributes__=this.attributes;
-var b=window._ielt8_getAttributes;
-if(!this.querySelectorAll)this.querySelectorAll=window._ielt8_querySelectorAll;
-if(!this.querySelector)this.querySelector=window._ielt8_querySelector;
 var m=window._ielt8_Element_proto,
 g=m.getchildren,
 a=m.getclassList,
@@ -37,6 +25,18 @@ var q=function(){return 1},
 w=function(){return 2},
 e=function(){return 4},
 r=function(){return 8},
-t=function(){return 16}
+t=function(){return 16};
+if(!this.compareDocumentPosition)this.compareDocumentPosition=m.compareDocumentPosition;
+if(!this.getElementsByClassName)this.getElementsByClassName=m.getElementsByClassName;
+if(!this.insertAfter)this.insertAfter=m.insertAfter;
+if(!this.addEventListener)this.addEventListener=window.addEventListener;
+if(!this.removeEventListener)this.removeEventListener=window.removeEventListener;
+if(!this.dispatchEvent)this.dispatchEvent=window.dispatchEvent;
+if(this.cloneNode!==m.cloneNode)this.cloneNode=m.cloneNode;
+if(!this._)this._={};
+if(!this._.__ielt8_attributes__)this._.__ielt8_attributes__=this.attributes;
+var b=window._ielt8_getAttributes;
+if(!this.querySelectorAll)this.querySelectorAll=window._ielt8_querySelectorAll;
+if(!this.querySelector)this.querySelector=window._ielt8_querySelector;
 </SCRIPT>
 </PUBLIC:COMPONENT>

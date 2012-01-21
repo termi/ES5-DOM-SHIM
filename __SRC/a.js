@@ -911,6 +911,10 @@ document.createElement = function() {
 })();
 */
 
+if(!global["HTMLDocument"])global["HTMLDocument"] = global["Document"];//For IE9
+if(!global["Document"])global["Document"] = global["HTMLDocument"];//For IE8
+//TODO:: for IE < 8 :: if(!global["Document"] && !global["HTMLDocument"])global["Document"] = global["HTMLDocument"] = ??;//for IE < 8
+
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Document  ==================================  */
 /*  ======================================================================================  */
 
@@ -1043,7 +1047,7 @@ function fixEvent(event){
 // вспомогательный универсальный обработчик. Вызывается в контексте элемента всегда this = element
 function commonHandle(event) {
 	var thisObj = this,
-		_ = thisObj._,
+		_ = thisObj["_"],
 		errors = [],//Инициализуется массив errors для исключений
 		errorsMessages = [];
 	
@@ -1108,8 +1112,8 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 	*/
 	
 	
-	var _ = thisObj._
-	if(!_)_ = thisObj._ = {};
+	var _ = thisObj["_"];
+	if(!_)_ = thisObj["_"] = {};
 	
 	// исправляем небольшой глюк IE с передачей объекта window
 	if(thisObj.setInterval && (thisObj != global && !thisObj.frameElement))thisObj = global;
@@ -1148,7 +1152,7 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 
 if(!document.removeEventListener)global.removeEventListener = document.removeEventListener = function(_type, _handler) {
 	var thisObj = this,
-		_ = thisObj._;		
+		_ = thisObj["_"];		
 	if(typeof _handler != "function" || !_handler.guid || !_)return;
 	var handlers = _[eventsUUID] && _[eventsUUID][_type];//Получить список обработчиков
 	
@@ -1407,67 +1411,6 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
     }
 })();
 
-// Fix Chrome problem with DOMAttrModified event | http://blog.silkapp.com/2009/10/mutation-events-what-happen/
-;(function () {
-	function isDOMAttrModifiedSupported() {
-		var flag = false; 
-		
-		function callback() {
-			flag = true;
-		}
-		
-		try {
-			browser.testElement.addEventListener('DOMAttrModified', callback, false);
-			p.setAttribute('id', 'target');
-		}
-		catch(e) {
-			
-		}
-		finally {
-			if(browser.testElement.removeEventListener)
-				browser.testElement.removeEventListener('DOMAttrModified', callback, false);
-		}
-		
-		return flag;
-	}
-	
-	if(DEBUG)console.log("DOMAttrModified not supported")
-	
-	if(!isDOMAttrModifiedSupported()) {
-		/**
-		 * @param {Function} oldHandle
-		 * @param {number=} attrChange
-		 */
-		var new_set_remove_Attribute = function(oldHandle, attrChange) {
-			return function(name, val) {
-				/**
-				 * @type {MutationEvents}
-				 */
-				var e = document.createEvent("MutationEvents"); 
-				/**
-				 * @type {String}
-				 */
-				var prev = this.getAttribute(name);
-				oldHandle.apply(this, arguments);
-				e.initMutationEvent("DOMAttrModified", true, true, null, prev, 
-					((attrChange || val === null) ? "" : val),
-					name,
-					attrChange || ((prev == null) ? 
-						2://e.ADDITION :
-						1//e.MODIFICATION
-								  )
-				);
-				this.dispatchEvent(e);
-			}
-		}
-	
-		var _Element_prototype = Element.prototype;
-		_Element_prototype.setAttribute = new_set_remove_Attribute(_Element_prototype.setAttribute)
-		_Element_prototype.removeAttribute = new_set_remove_Attribute(_Element_prototype.removeAttribute, 3)//3 === REMOVAL
-	}
-})();
-
-
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Events  ======================================  */
 /*  ======================================================================================  */
 
@@ -1633,7 +1576,8 @@ if(!(_compareDocumentPosition_ in document)) {
 
 // Emuleted HTMLTimeElement
 if(!(global["HTMLTimeElement"] && global["HTMLTimeElement"].prototype))
-Object.defineProperty((global["HTMLUnknownElement"] && global["HTMLUnknownElement"].prototype) || nodeProto, "dateTime", {
+Object.defineProperty((global["HTMLUnknownElement"] && global["HTMLUnknownElement"].prototype) || nodeProto/*TODO::or not using "Node" -> using "Element"*/, 
+	"dateTime", {
 	"get" : function() {
 		var thisObj = this,
 			elTag = thisObj.tagName;
@@ -1673,6 +1617,69 @@ try {
 		}
 	}
 }
+
+
+// Fix Chrome problem with DOMAttrModified event | http://blog.silkapp.com/2009/10/mutation-events-what-happen/
+;(function () {
+	function isDOMAttrModifiedSupported() {
+		var flag = false; 
+		
+		function callback() {
+			flag = true;
+		}
+		
+		try {
+			browser.testElement.addEventListener('DOMAttrModified', callback, false);
+			p.setAttribute('id', 'target');
+		}
+		catch(e) {
+			
+		}
+		finally {
+			if(browser.testElement.removeEventListener)
+				browser.testElement.removeEventListener('DOMAttrModified', callback, false);
+		}
+		
+		return flag;
+	}
+	
+	if(DEBUG)console.log("DOMAttrModified not supported")
+	
+	if(!isDOMAttrModifiedSupported()) {
+		/**
+		 * @param {Function} oldHandle
+		 * @param {number=} attrChange
+		 */
+		var new_set_remove_Attribute = function(oldHandle, attrChange) {
+			return function(name, val) {
+				/**
+				 * @type {MutationEvents}
+				 */
+				var e = document.createEvent("MutationEvents"); 
+				/**
+				 * @type {String}
+				 */
+				var prev = this.getAttribute(name);
+				oldHandle.apply(this, arguments);
+				e.initMutationEvent("DOMAttrModified", true, true, null, prev, 
+					((attrChange || val === null) ? "" : val),
+					name,
+					attrChange || ((prev == null) ? 
+						2://e.ADDITION :
+						1//e.MODIFICATION
+								  )
+				);
+				this.dispatchEvent(e);
+			}
+		}
+	
+		nodeProto.setAttribute = new_set_remove_Attribute(nodeProto.setAttribute || browser.testElement.setAttribute/*IE < 8*/)
+		nodeProto.removeAttribute = new_set_remove_Attribute(nodeProto.removeAttribute || browser.testElement.removeAttribute/*IE < 8*/, 3)//3 === REMOVAL
+	}
+})();
+
+//TODO:: https://developer.mozilla.org/en/DOM/HTMLLabelElement (property "control")
+//TODO:: https://developer.mozilla.org/en/DOM/HTMLInputElement (properties "labels")
 
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Element.prototype  ==================================  */
