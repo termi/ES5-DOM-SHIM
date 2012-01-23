@@ -14,8 +14,7 @@ Note that the domain must be exactly the same; that means that http://www.foo.co
 http://css3pie.com/documentation/known-issues/#x-domain
 
 Solve Same-domain limitation
-1. put *ielt8.htc files on you static server
-2. Use nginx or apache .conf file from extra/htc_server_config dir
+Russian instruction in extra/SameDomainLimitation.SOLVE_RUS.odt
 
 
 Temporary testing
