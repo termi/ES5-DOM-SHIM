@@ -1,4 +1,7 @@
 ES5 and DOM4 shim for all browsers with IE6 and IE7 support
+based on 
+https://github.com/kriskowal/es5-shim
+https://github.com/Raynos/DOM-shim
 
 Adding to html:
 in a HEAD section
@@ -19,3 +22,7 @@ Russian instruction in extra/SameDomainLimitation.SOLVE_RUS.odt
 
 Temporary testing
 http://jsperf.com/es5-dom-shim-test
+
+Goal
+Main lib (a.js): 7.8 Kib of total minified and gzipped size
+IE < 8 support: 2 Kib (a.ielt8.js) + 600 b (a.ielt8.htc) + 150 b (a.ie6.ielt8) of total minified and gzipped size
