@@ -1,15 +1,40 @@
 <html>
 
-<label id=lalel1>
-    <label>
-        <input id=input1 />
-        <label id=label2>
-            <input id=input2 />
-        </label>
-     </label>
+<label>
+	<form>
+		<label>
+			<input id=input1 />
+			<label>
+				<input id=input2 />
+			</label>
+		</label>
+	</form>
 </label>
 
+<div>
+	<form>
+		<label for=test1></label>
+		<label>
+			<input id=test1 />
+			
+			<label for=test2></label>
+			<label>
+				<input id=test2 />
+			</label>
+		</label>
+	</form>
+</div>
+
 <script>
+var input1 = document.getElementById('input1'),	
+	input2 = document.getElementById('input2'),
+	
+	test1 = document.getElementById('test1'),
+	test2 = document.getElementById('test2');
+	
 alert(input1.labels.length)
 alert(input2.labels.length)
+
+alert(test1.labels.length)
+alert(test2.labels.length)
 </script>
