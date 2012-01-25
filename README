@@ -19,10 +19,22 @@ http://css3pie.com/documentation/known-issues/#x-domain
 Solve Same-domain limitation
 Russian instruction in extra/SameDomainLimitation.SOLVE_RUS.odt
 
-
 Temporary testing
 http://jsperf.com/es5-dom-shim-test
 
 Goal
 Main lib (a.js): 7.8 Kib of total minified and gzipped size
 IE < 8 support: 2 Kib (a.ielt8.js) + 600 b (a.ielt8.htc) + 150 b (a.ie6.ielt8) of total minified and gzipped size
+
+Known issues:
+1. Same-domain limitation (can be solve only on server)
+2. Incompatibility with http://code.google.com/p/ie7-js/ [working on it]
+
+TODO
+0. fix getAttribute/setAttribute for IE6,7 (it should differentiate attributes and properties with same names)
+1. hasAttribute
+2. input.labels
+3. label.control
+4. element.dataset
+**
+9. http://dvcs.w3.org/hg/url/raw-file/tip/Overview.html
