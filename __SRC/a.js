@@ -1753,9 +1753,9 @@ try {
 /*  ================================  HTMLTextAreaElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 /*  ================================  HTMLSelectElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-//TODO:: https://developer.mozilla.org/en/DOM/HTMLLabelElement (property "control")
-
+var labelableElements = ["INPUT", "BUTTON", "KEYGEN", "METER", "OUTPUT", "PROGRESS", "TEXTAREA", "SELECT"];
 /*
+Implement HTML*Element.labels
 https://developer.mozilla.org/en/DOM/HTMLInputElement
 http://www.w3.org/TR/html5/forms.html#dom-lfe-labels
 */
@@ -1767,7 +1767,7 @@ if(!("labels" in document.createElement("input"))) (function() {
 	Object.defineProperty(nodeProto, "labels", {
 		enumerable: true,
 		"get" : function() {
-			if(!~["INPUT", "BUTTON", "KEYGEN", "METER", "OUTPUT", "PROGRESS", "TEXTAREA", "SELECT"].indexOf(this.nodeName))
+			if(!~labelableElements.indexOf(this.nodeName))
 				return void 0;
 			
 			var node = this,
@@ -1795,6 +1795,44 @@ if(!("labels" in document.createElement("input"))) (function() {
 	});
 })();
 
+/*  ======================================================================================  */
+
+/*  ======================================================================================  */
+/*  ================================  HTMLLabelElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+/*
+Implement HTMLLabelElement.control
+https://developer.mozilla.org/en/DOM/HTMLLabelElement
+http://www.w3.org/TR/html5/forms.html#dom-label-control
+*/
+if(!("constor" in document.createElement("label"))) (function() {
+	Object.defineProperty(global["HTMLLabelElement"] && global["HTMLLabelElement"].prototype || nodeProto, "labels", {
+		enumerable: true,
+		"get" : function() {
+			if(this.nodeName !== "LABEL")
+				return void 0;
+			
+			if(thisObj.getAttribute("for") !== null)//hasAttribute
+				return document.getElementById(thisObj.htmlFor);
+			
+			var /**
+				 * @type {HTMLInputElement|NULL} result
+				 */
+				result = _recursivelyWalk(this.childNodes,
+					function(el) {
+						if(~labelableElements.indexOf(el.nodeName))
+							return el
+					}
+				) || null;
+				
+			return result;
+		},
+		"ielt8" : true
+	});
+
+});
+
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  HTMLLabelElement.prototype  ==================================  */
 /*  ======================================================================================  */
 
 /*  =======================================================================================  */

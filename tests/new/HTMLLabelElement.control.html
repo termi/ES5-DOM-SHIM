@@ -1,0 +1,41 @@
+<html>
+
+<script src="https://raw.github.com/termi1uc1/ES5-DOM-SHIM/master/__SRC/a.js"></script>
+
+<label id=label1 for=no_such_id1>
+	<form id=form1>
+		<label id=label2>
+			<input id=input1 />
+			<label id=label3>
+				<input id=input2 />
+			</label>
+		</label>
+	</form>
+</label>
+
+<div>
+	<form id=form2>
+		<label id=label4 for=test1></label>
+		<label id=label5>
+			<input id=test1 />
+			
+			<label id=label6 for=test2></label>
+			<label id=label8 for=test2></label>
+			<label id=label9 for=test1></label>
+			<label id=label7>
+				<input id=test2 />
+			</label>
+		</label>
+	</form>
+</div>
+
+<script>
+
+
+var input1 = document.getElementById('input1'),	
+	input2 = document.getElementById('input2'),
+	
+	test1 = document.getElementById('test1'),
+	test2 = document.getElementById('test2');
+	
+</script>
