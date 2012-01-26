@@ -1,15 +1,11 @@
 ﻿// This file MUST be in <head> section of document
 
 // TODO:: see http://pkario.blogspot.com/2010/09/javascript-event-handling-all-browsers.html
+// requared window.browser.msie
 
 ;(function() {
 
-var ie = 99;
-/*@cc_on ie = @_jscript_version @*/
-
-window.browser && window.browser.msie && (ie = window.browser.msie);
-
-if(ie < 8) {
+if(window._ielt8_Element_proto) {//IE < 8 polifill
 
 window["__ielt8__wontfix"] = [];//TODO:: use it to extend 'OBJECT' tag with compareDocumentPosition, getElementsByClassName and etc functions
 
@@ -486,7 +482,7 @@ add=prevStyle.getAttribute("data-url")||"";
 prevStyle.id="";
 }
 
-if(ie < 7)add+=(" url(\"" + __URL_TO_IE6_ELEMENT_BEHAVIOR__ + "\") ")
+if(window.browser.msie < 7)add+=(" url(\"" + __URL_TO_IE6_ELEMENT_BEHAVIOR__ + "\") ")
 
 add+=" url(\""+__URL_TO_ELEMENT_BEHAVIOR__+"\") ";
 
