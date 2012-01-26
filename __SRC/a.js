@@ -98,30 +98,31 @@ var browser = global["browser"] = {
 	agent : navigator.userAgent.toLowerCase()
 };
 
-//Тут не хватает chrome
-//TODO:: Chrome определяется как Safari
 /** @type {Array}
  * @const */
-browser.names = browser.agent.match(/(mozilla|compatible|webkit|safari|opera|msie|iphone|ipod|ipad)/gi);
+browser.names = browser.agent.match(/(mozilla|compatible|chrome|webkit|safari|opera|msie|iphone|ipod|ipad)/gi);
 /** @type {number} */
 var len = browser.names.length;
 while(len-- > 0)browser[browser.names[len]] = true;
 //Alians'es
 /** @type {boolean}
  * @const */
-browser.mozilla = browser["mozilla"];
-/** @type {boolean}
- * @const */
 browser.webkit = browser["webkit"];
 /** @type {boolean}
  * @const */
-browser.safari = browser["safari"];
+browser.mozilla = browser["mozilla"] = browser["mozilla"] && !browser["compatible"] && !browser.webkit;
 /** @type {boolean}
  * @const */
-browser.opera = browser["opera"];
+browser.chrome = browser["chrome"];
 /** @type {boolean}
  * @const */
-browser.msie = browser["msie"];
+browser.safari = browser["safari"] = browser["safari"] && !browser.chrome;
+/* @type {boolean}
+ * @const */
+//browser.opera = browser["opera"];//No need in this version of GCC
+/** @type {boolean}
+ * @const */
+browser.msie = browser["msie"] = browser["msie"] && !browser.opera;
 /** @type {boolean}
  * @const */
 browser.iphone = browser["iphone"];
@@ -135,14 +136,6 @@ browser.ipad = browser["ipad"];
 /** @deprecated Теперь версию IE записываю непосредственно в browser.msie */
 browser.msieV = void 0;
 
-if(browser["compatible"] || browser.webkit) {
-	browser.mozilla = false;
-	delete browser["mozilla"];
-}
-else if(browser.opera) {
-	browser.msie = false;
-	delete browser["msie"];
-}
 if(browser.msie)for(var i = 6 ; i < 11 ; i++)//IE from 6 to 10
 	if(new RegExp('msie ' + i).test(browser.agent)) {
 		browser.msie = i;
@@ -158,7 +151,7 @@ browser["msie"] = browser.msie;
 browser.testElement = document.createElement('div');
 /** @type {boolean}
  * @const */
-browser.isPlaceholder = typeof document.createElement("INPUT").placeholder != "undefined";
+browser.isPlaceholder = document.createElement("INPUT").placeholder != undefined;
 /** @type {string}
  * @const */
 browser["cssPrefix"] = 
@@ -173,6 +166,12 @@ if(!document.readyState)browser.noDocumentReadyState = true;
 if(browser.noDocumentReadyState)document.readyState = "uninitialized";
 //Emulating HEAD for ie < 9
 document.head || (document.head = document.getElementsByTagName('head')[0]);
+
+if(!global["HTMLElement"])global["HTMLElement"] = global["Element"];//IE8
+if(!global["Node"])global["Node"] = global["Element"];//IE8
+if(!global["HTMLDocument"])global["HTMLDocument"] = global["Document"];//For IE9
+if(!global["Document"])global["Document"] = global["HTMLDocument"];//For IE8
+//TODO:: for IE < 8 :: if(!global["Document"] && !global["HTMLDocument"])global["Document"] = global["HTMLDocument"] = ??;//for IE < 8
 
 
 /**
@@ -208,6 +207,7 @@ if(!global["Utils"]["Dom"])global["Utils"]["Dom"] = {};
  * DOMException like error
  * @constructor
  * @param {string} errStr Error string code
+ 
  */
 var DOMException_ = global["Utils"]["Dom"]["DOMException"] = function(errStr) {
 	this.code = this[errStr];
@@ -235,6 +235,7 @@ p.TYPE_MISMATCH_ERR = 17;
 /**
  * Utils.Dom.DOMStringCollection
  * DOMSettableTokenList like object
+ * http://www.w3.org/TR/html5/common-dom-interfaces.html#domsettabletokenlist-0
  * @param {string} string initial string
  * @param {Function} onchange callback for onchange event
  */
@@ -336,6 +337,14 @@ DOMStringCollection.prototype.toString=function(){return this.value||""}
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Utils.Dom  ==================================  */
 /*  =======================================================================================  */
 
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Exception  ==================================  */
+/*  =======================================================================================  */
+
+if(!global["DOMException"])global["DOMException"] = DOMException_;
+
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Exception  ==================================  */
+/*  =======================================================================================  */
+
 // --------------- ================ es5 shim ================ ---------------
 // Source https://github.com/kriskowal/es5-shim/blob/master/es5-shim.js
 
@@ -345,7 +354,7 @@ DOMStringCollection.prototype.toString=function(){return this.value||""}
 /*
 TODO:
 1. jsdoc
-2. Проверить, а нету ли такогоже бага, как у Object.keys описанном тут https://developer.mozilla.org/en/JavaScript/Reference/global_Objects/Object/keys и не нежно ли как в текущей версии Object.keys сделать проверку на hasDontEnumBug?
+2. Проверить, а нету ли такогоже бага, как у Object.keys описанном тут https://developer.mozilla.org/en/JavaScript/Reference/global_Objects/Object/keys и можно ли как в текущей версии Object.keys сделать проверку на hasDontEnumBug?
 */
 if(!Object.getOwnPropertyNames)Object.getOwnPropertyNames = function(obj) {
  	var ret = [], p;
@@ -649,6 +658,7 @@ if(!Array.prototype["unique"])Array.prototype["unique"] = function() {
  *	index The index of the current element being processed in the array.
  *	array The array reduce was called upon.
  * @param {*} initialValue Object to use as the first argument to the first call of the callback.
+ * @return {*} single value
  */
 if(!Array.prototype.reduce)Array.prototype.reduce = function(accumulator, initialValue) {
 	if(typeof accumulator !== funcType) // ES5 : "If IsCallable(callbackfn) is false, throw a TypeError exception."
@@ -854,9 +864,56 @@ if (!Array.prototype.map)Array.prototype.map = function(callback, thisArg) {
  * @param {*} Проверяемый объект 
  * @return {boolean}
  */
-Array.isArray = Array['isArray'] || function(obj) {
+Array['isArray'] = Array['isArray'] || function(obj) {
 	return !!(obj && obj.concat && obj.unshift && !obj.callee);
 };
+
+/*  ================================ ES6 ==================================  */
+// Based on https://github.com/paulmillr/es6-shim/
+
+/**
+ * Преведение к массиву
+ * EN: toArray function
+ * Original Array.from (from https://github.com/paulmillr/es6-shim/) have lack of IE7 support with string (Array.from("somestring") -> [])
+ * 
+ * @param {*} iterable object
+ * @return {Array}
+ */
+Array['from'] = Array['from'] || function(iterable) {
+	var result;
+
+	var _length = iterable.length,
+		_i = 0;
+						
+	try {//Попробуем применить Array.prototype.slice на наш объект
+		results = Array.prototype.slice.apply(iterable);//An idea from https://github.com/Quby/Fn.js/blob/master/fn.js::_.toArray
+		//Match result length of elements with initial length of elements
+		if(results.length === _length)return results;//Проверка !!!
+	}
+	catch(e) {//IE throw error with iterable == "[object NodeList]"
+		//не получилось! -> выполняем обычную переборку
+	}
+	
+	results = [];
+	for( ; _i < _length ; ++_i)results.push(
+		iterable.charAt ? iterable.charAt(_i) : //typeof iterable == "string". [IElt8] IE < 8 support
+			iterable[_i] //typeof iterable == "object" with 'length' prop
+	);
+	
+	return results;
+};
+
+/**
+ * Преведение к массиву состоящему из аргументов функции
+ * EN: return array of arguments of this function
+ * 
+ * @param {...} args
+ * @return {Array}
+ */
+Array['of'] = Array['of'] || function(args) {
+	return Array.prototype.slice.call(arguments);
+}
+
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Array.prototype  ==================================  */
 /*  ======================================================================================  */
@@ -911,9 +968,6 @@ document.createElement = function() {
 })();
 */
 
-if(!global["HTMLDocument"])global["HTMLDocument"] = global["Document"];//For IE9
-if(!global["Document"])global["Document"] = global["HTMLDocument"];//For IE8
-//TODO:: for IE < 8 :: if(!global["Document"] && !global["HTMLDocument"])global["Document"] = global["HTMLDocument"] = ??;//for IE < 8
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Document  ==================================  */
 /*  ======================================================================================  */
@@ -932,7 +986,7 @@ if(document.addEventListener) {//fix [add|remove]EventListener for all browsers 
 			dummy = function () {
 				_rightBehavior = true
 			};
-		var el_proto = global["Node"] && global["Node"].prototype || global["Element"].prototype
+		var el_proto = global["Node"].prototype
 		function fixEventListener(elementToFix) {
 			var old_addEventListener = elementToFix.addEventListener,
 				old_removeEventListener = elementToFix.removeEventListener;
@@ -1013,6 +1067,9 @@ function fixEvent(event){
 	// Снизу, в функции commonHandle,, мы должны проверять на !event.isFixed
 	event.isFixed = true;// пометить событие как обработанное
 
+	//http://javascript.gakaa.com/event-detail.aspx
+	if(event.type === "click" && !event.detail)event.detail = 1;
+	
 	// добавить preventDefault/stopPropagation для IE
 	event.preventDefault || (event.preventDefault = preventDefault_);
 	event.stopPropagation || (event.stopPropagation = stopPropagation_);
@@ -1085,6 +1142,7 @@ function commonHandle(event) {
 	}
 }
 
+/* TODO:: Code for IE8 in a.ie8.js file*/
 if(!document.addEventListener)global.addEventListener = document.addEventListener = function(_type, _handler, useCapture) {
 	if(typeof _handler != "function")return;
 	
@@ -1421,7 +1479,6 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 
 // IE < 8 support in a.ielt8.js and a.ielt8.htc
 var nodeProto = global["Node"] && global["Node"].prototype || 
-				   /*ie8*/global["Element"] && global["Element"].prototype || 
 				   /*ielt8*/(global["_ielt8_Element_proto"] = {});
 
 //Add JS 1.8 Element property classList				   
@@ -1457,7 +1514,7 @@ if(!("children" in browser.testElement) || browser.msie && browser.msie < 9)
 	}, "ielt8" : true});
 
 // Traversal for IE < 9 and other
-if(typeof browser.testElement.childElementCount == 'undefined')Object.defineProperties(nodeProto, {
+if(browser.testElement.childElementCount == undefined)Object.defineProperties(nodeProto, {
 	"firstElementChild" : {
 		"get" : function() {
 		    var node = this;
@@ -1548,7 +1605,8 @@ if(!("insertAfter" in browser.testElement)) {
 
 var _compareDocumentPosition_ = 'compareDocumentPosition';
 if(!(_compareDocumentPosition_ in document)) {
-	var __name;
+	var __name,
+		__n1 = __name || 'DOCUMENT_POSITION_';//Use '__name || ' only for GCC not to inline __n1 param. In this case __name MUST be undefined
 	document[_compareDocumentPosition_] = nodeProto[_compareDocumentPosition_] = function(b) {
 		var a = this;
 		
@@ -1562,16 +1620,16 @@ if(!(_compareDocumentPosition_ in document)) {
 				1) +
 			0 : 0;
 	};
-	__name = 'DOCUMENT_POSITION_DISCONNECTED';
-	document[__name] = nodeProto[__name] = 0x01;
-	__name = 'DOCUMENT_POSITION_PRECEDING';
-	document[__name] = nodeProto[__name] = 0x02;
-	__name = 'DOCUMENT_POSITION_FOLLOWING';
-	document[__name] = nodeProto[__name] = 0x04;
-	__name = 'DOCUMENT_POSITION_CONTAINS';
-	document[__name] = nodeProto[__name] = 0x08;
-	__name = 'DOCUMENT_POSITION_CONTAINED_BY';
-	document[__name] = nodeProto[__name] = 0x10;
+	__name = 'DISCONNECTED';
+	document[__n1 + __name] = nodeProto[__n1 + __name] = 0x01;
+	__name = 'PRECEDING';
+	document[__n1 + __name] = nodeProto[__n1 + __name] = 0x02;
+	__name = 'FOLLOWING';
+	document[__n1 + __name] = nodeProto[__n1 + __name] = 0x04;
+	__name = 'CONTAINS';
+	document[__n1 + __name] = nodeProto[__n1 + __name] = 0x08;
+	__name = 'CONTAINED_BY';
+	document[__n1 + __name] = nodeProto[__n1 + __name] = 0x10;
 };
 
 // Emuleted HTMLTimeElement
@@ -1645,7 +1703,9 @@ try {
 	
 	if(DEBUG)console.log("DOMAttrModified not supported")
 	
-	if(!isDOMAttrModifiedSupported()) {
+	if(!isDOMAttrModifiedSupported()
+	   && browser.testElement.dispatchEvent //[temporary]TODO:: remove this when "DOMAttrModified" event whould be imulated in IE < 9
+	   ) {
 		/**
 		 * @param {Function} oldHandle
 		 * @param {number=} attrChange
@@ -1678,11 +1738,63 @@ try {
 	}
 })();
 
-//TODO:: https://developer.mozilla.org/en/DOM/HTMLLabelElement (property "control")
-//TODO:: https://developer.mozilla.org/en/DOM/HTMLInputElement (properties "labels")
 
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Element.prototype  ==================================  */
+/*  ======================================================================================  */
+
+/*  ======================================================================================  */
+/*  ================================  HTMLInputElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+/*  ================================  HTMLButtonElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+/*  ================================  HTMLKeygenElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+/*  ================================  HTMLMeterElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+/*  ================================  HTMLOutputElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+/*  ================================  HTMLProgressElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+/*  ================================  HTMLTextAreaElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+/*  ================================  HTMLSelectElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+//TODO:: https://developer.mozilla.org/en/DOM/HTMLLabelElement (property "control")
+
+/*
+https://developer.mozilla.org/en/DOM/HTMLInputElement
+http://www.w3.org/TR/html5/forms.html#dom-lfe-labels
+*/
+if(!("labels" in document.createElement("input"))) (function() {
+	/*var HTMLInputElement_prototype = 
+		global["HTMLInputElement"] && global["HTMLInputElement"].prototype ||
+		nodeProto;*/
+		
+	Object.defineProperty(nodeProto, "labels", {
+		enumerable: true,
+		"get" : function() {
+			if(!~["INPUT", "BUTTON", "KEYGEN", "METER", "OUTPUT", "PROGRESS", "TEXTAREA", "SELECT"].indexOf(this.nodeName))
+				return void 0;
+			
+			var node = this,
+				/**
+				 * represents the list of label elements, in [!]tree order[!]
+				 * @type {Array}
+				 */
+				result = this.id ?
+					Array.from(document.querySelectorAll("label[for='" + this.id + "']")) :	
+					[],
+				_lastInTreeOrder_index = result.length - 1;
+
+			while((node = node.parentNode) && (!node.control || node.control === this))
+				if(node.nodeName === "LABEL") {
+					
+					while(result[_lastInTreeOrder_index] && 
+						result[_lastInTreeOrder_index].compareDocumentPosition(node) & 2)//DOCUMENT_POSITION_PRECEDING
+						_lastInTreeOrder_index--;
+					result.splice(_lastInTreeOrder_index + 1, 0, node)
+				}
+				
+			return result;
+		},
+		"ielt8" : true
+	});
+})();
+
 /*  ======================================================================================  */
 
 /*  =======================================================================================  */
@@ -1876,12 +1988,13 @@ SendRequest.guid = 0;
 /*  ======================================================================================  */
 /*  =======================================  Utils  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-/**
+/*
+ * TODO:: In external file
  * Проверка, является ли объект объектом типа HTMLElement
  * @param {!Object} obj Проверяемый объект
  * @return {boolean}
  */
-global["isHTMLElement"] = function(obj) {
+/*global["isHTMLElement"] = function(obj) {
 	try {
 		if(obj instanceof Element)return true;
 	}
@@ -1893,6 +2006,7 @@ global["isHTMLElement"] = function(obj) {
 	}
 	return false;
 }
+*/
 
 /**
  * Внешняя forEach для массивов и объектов
@@ -1954,15 +2068,8 @@ function randomString(length) {
  *  Если start отрицателен, то он будет трактоваться как arrayObj.length+start (т.е. start'ый элемент с конца массива). 
  *  Если end отрицателен, то он будет трактоваться как arrayObj.length+end (т.е. end'ый элемент с конца массива).
  *  Если второй параметр не указан, то экстракция продолжится до конца массива. Если end < start, то будет создан пустой массив.
- * @version 2.3.3
- *  changeLog: 2.3.3[13.11.2011] [bug fix]
-			   2.3.2[15.09.2011] Добавил проверку на кол-во результирующих элементов в результате выполнения Array.prototype.slice
-			   2.3.1[19.05.2011] В секцию if(type == "object") { for(i in iterable)... Добавил проверку на наличие hasOwnProperty, а то в IE, у некоторых объектов этой функции нету
- *			   2.3  [14.04.2011] Переписал логику start и end
- *			   2.2  [13.04.2011] +@param forse для typeof iterable == "object"
- *			   2.1  [11.04.2011] Сделал несколько исключений для IE < 9
- *			   2    [09.04.2011] Переписал логику работы. Теперь принимает больше типов данных
- *			   1    [--.--.2010] First version from prototypejs (prototypejs.org) with no iterable.toArray section
+ * @version 2.4
+ *  changeLog: 2.4 using Array.from
  * @param {Object|Array|number|string|NodeList} iterable Любой Array-like объект, любой объект, число или строка
  * @param {number=} start Индекс элемента в массиве, с которого будет начинаться новый массив.
  * @param {number=} end Индекс элемента в массиве, на котором новый массив завершится.
@@ -1972,7 +2079,10 @@ function randomString(length) {
  */
 var $A = global["$A"] = function(iterable, start, end, forse) {
 	if(!iterable || start + end === 0)return [];
-	if(start == end == void 0 && Array.isArray(iterable))return iterable;
+	if(start == end == void 0) {
+		if(Array.isArray(iterable))return iterable;
+		return Array.from(iterable);
+	}
 	start = start || 0;//Default value
 	
 	var type = typeof iterable, results, trySlice = true,
@@ -2042,7 +2152,7 @@ var $K = global["$K"] = function(iterable, forse) {
 		results;
 		
 	if(type == "object") {
-		if(browser.msie && iterable.length && !(iterable instanceof Array))iterable = $A(iterable);//Если Arguments
+		if(browser.msie && iterable.length && !(iterable instanceof Array))iterable = Array.from(iterable);//Если Arguments
 		if(forse) {
 			results = [];
 			for(var i in iterable)results.push(i);
@@ -2062,12 +2172,14 @@ var $K = global["$K"] = function(iterable, forse) {
 
 /* Minimum JSON JavaScript implementation */
 /* Реализуем минимальную функциональность JSON */
+/*
+Bad practice, because other libs can't detect lack of JSON support
 if(!global.JSON)global.JSON = {
 	parse : function(text) {
 		return text && !(/[^,:{}\[\]0-9.\-+Eaeflnr-u \n\r\t]/.test(text.replace(/"(\\.|[^"\\])*"/g, ''))) &&
 			eval('(' + text + ')') || null;
 	}
-}
+}*/
 
 /**
  * Создаёт универсальный обработчик для всех или нескольких вложенных элементов
@@ -2091,7 +2203,7 @@ global["bubbleEventListener"] = function bubbleEventListener(attribute, namedFun
 		   (typeof namedFunctions != "object" && typeof namedFunctions != funcType))	
 				console.error("bubbleEventListener::namedFunctions must be an Object or Function")
 		else if(typeof namedFunctions == "object") {
-			if(!$A(namedFunctions).length)console.error("bubbleEventListener::no functions are sets")
+			if(!Array.from(namedFunctions).length)console.error("bubbleEventListener::no functions are sets")
 			else {
 				var s = true;
 				$K(namedFunctions).forEach(function(key){
@@ -2244,7 +2356,7 @@ function $$N(selector, roots, prefetchResult, isFirst) {
 			else specialSelector = selector;
 			if(noway){}
 			else if(isFirst)result.push(rt.querySelector(specialSelector));
-			else result = result.concat($A(rt.querySelectorAll(specialSelector)));
+			else result = result.concat(Array.from(rt.querySelectorAll(specialSelector)));
 		}
 		
 		return result;
@@ -2294,10 +2406,10 @@ var $$ = global["$$"] = function(selector, roots/*, noCache*/, isFirst) {
 				return result;
 			}
 			
-			if(!Array.isArray(roots))return $A(roots.querySelectorAll(selector));
+			if(!Array.isArray(roots))return Array.from(roots.querySelectorAll(selector));
 						
 			while(root = roots[++i] && (!isFirst || !result.length))
-				result.concat($A(root.querySelectorAll(selector)))
+				result.concat(Array.from(root.querySelectorAll(selector)))
 			
 		}
 		

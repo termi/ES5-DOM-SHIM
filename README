@@ -1,6 +1,7 @@
 ES5 and DOM4 shim for all browsers with IE6 and IE7 support
 based on 
 https://github.com/kriskowal/es5-shim
+https://github.com/paulmillr/es6-shim
 https://github.com/Raynos/DOM-shim
 
 Adding to html:
