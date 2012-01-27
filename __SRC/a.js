@@ -1231,7 +1231,7 @@ if(!document.removeEventListener)global.removeEventListener = document.removeEve
 
 /**
  * @param {string} event is an event object to be dispatched.
- * @this element is the target of the event.
+ * @this {Element} is the target of the event.
  * @return {boolean} The return value is false if at least one of the event handlers which handled this event called preventDefault. Otherwise it returns true.
  */
 if(!document.dispatchEvent)global.dispatchEvent = document.dispatchEvent = function(event) {
@@ -1805,32 +1805,27 @@ Implement HTMLLabelElement.control
 https://developer.mozilla.org/en/DOM/HTMLLabelElement
 http://www.w3.org/TR/html5/forms.html#dom-label-control
 */
-if(!("constor" in document.createElement("label"))) (function() {
-	Object.defineProperty(global["HTMLLabelElement"] && global["HTMLLabelElement"].prototype || nodeProto, "labels", {
+if(!("control" in document.createElement("label"))) (function() {
+	Object.defineProperty(global["HTMLLabelElement"] && global["HTMLLabelElement"].prototype || nodeProto, "control", {
 		enumerable: true,
 		"get" : function() {
 			if(this.nodeName !== "LABEL")
 				return void 0;
 			
-			if(thisObj.getAttribute("for") !== null)//hasAttribute
-				return document.getElementById(thisObj.htmlFor);
+			if(this.getAttribute("for") !== null)//hasAttribute
+				return document.getElementById(this.htmlFor);
 			
-			var /**
-				 * @type {HTMLInputElement|NULL} result
-				 */
-				result = _recursivelyWalk(this.childNodes,
+			return _recursivelyWalk(this.childNodes,
 					function(el) {
 						if(~labelableElements.indexOf(el.nodeName))
 							return el
 					}
 				) || null;
-				
-			return result;
 		},
 		"ielt8" : true
 	});
 
-});
+})();
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  HTMLLabelElement.prototype  ==================================  */
 /*  ======================================================================================  */

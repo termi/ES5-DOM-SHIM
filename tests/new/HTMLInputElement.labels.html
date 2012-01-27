@@ -42,10 +42,10 @@ var input1 = document.getElementById('input1'),
 		return value + "" + label.id
 	},
 	
-	trueResult1 = Array.from(input1.labels).reduce(fn, ""),
-	trueResult2 = Array.from(input2.labels).reduce(fn, ""),
-	trueResult3 = Array.from(test1.labels).reduce(fn, ""),
-	trueResult4 = Array.from(test2.labels).reduce(fn, "");
+	chrome_Result1 = Array.from(input1.labels).reduce(fn, ""),
+	chrome_Result2 = Array.from(input2.labels).reduce(fn, ""),
+	chrome_Result3 = Array.from(test1.labels).reduce(fn, ""),
+	chrome_Result4 = Array.from(test2.labels).reduce(fn, "");
 	
 var fakeLabels = {
 	enumerable: true,
@@ -83,16 +83,16 @@ Object.defineProperty(input2, "labels", fakeLabels);
 Object.defineProperty(test1, "labels", fakeLabels);
 Object.defineProperty(test2, "labels", fakeLabels);
 
-//if(trueResult1 != input1.labels.reduce(fn, ""))
-	alert("input1:\noriginal: " + trueResult1 + "\nfake: " + input1.labels.reduce(fn, ""))
+//if(chrome_Result1 != input1.labels.reduce(fn, ""))
+	alert("input1:\noriginal: " + chrome_Result1 + "\nfake: " + input1.labels.reduce(fn, ""))
 
-//if(trueResult2 != input2.labels.reduce(fn, ""))
-	alert("input2:\noriginal: " + trueResult2 + "\nfake: " + input2.labels.reduce(fn, ""))
+//if(chrome_Result2 != input2.labels.reduce(fn, ""))
+	alert("input2:\noriginal: " + chrome_Result2 + "\nfake: " + input2.labels.reduce(fn, ""))
 
-//if(trueResult3 != test1.labels.reduce(fn, ""))
-	alert("test1:\noriginal: " + trueResult3 + "\nfake: " + test1.labels.reduce(fn, ""))
+//if(chrome_Result3 != test1.labels.reduce(fn, ""))
+	alert("test1:\noriginal: " + chrome_Result3 + "\nfake: " + test1.labels.reduce(fn, ""))
 
-//if(trueResult4 != test2.labels.reduce(fn, ""))
-	alert("test2:\noriginal: " + trueResult4 + "\nfake: " + test2.labels.reduce(fn, ""))
+//if(chrome_Result4 != test2.labels.reduce(fn, ""))
+	alert("test2:\noriginal: " + chrome_Result4 + "\nfake: " + test2.labels.reduce(fn, ""))
 
 </script>
