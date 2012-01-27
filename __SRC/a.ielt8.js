@@ -1,7 +1,7 @@
 ﻿// This file MUST be in <head> section of document
 
 // TODO:: see http://pkario.blogspot.com/2010/09/javascript-event-handling-all-browsers.html
-// requared window.browser.msie
+// required window.browser.msie
 
 ;(function() {
 
@@ -19,7 +19,7 @@ var __getAtt = window["_ielt8_getAttributes"] = function() {
 		res = {length : 0},
 		val;
 	
-	if(!tmp)throw Error("__ielt8_attributes__ is requared")
+	if(!tmp)throw Error("__ielt8_attributes__ is required")
 	
 	for(var i = 0, l = tmp.length, k = 0 ; i < l ; i++)if((val = tmp[i]).specified && !(val.name in __getAtt.notAnAttribute)){
 		res[k++] = val;
