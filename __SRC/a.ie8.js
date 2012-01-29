@@ -20,6 +20,30 @@ var /** @const */funcType = "function";
 
 ;(function(global) {
 
+
+/*  ======================================================================================  */
+/*  ==================================  Function prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+/**
+ * From prototypejs (prototypejs.org)
+ * Wraps the function in another, locking its execution scope to an object specified by thisObj.
+ * @param {Object} object
+ * @param {...} var_args
+ * @return {Function}
+ * @version 2
+ */
+if(!Function.prototype.bind)Function.prototype.bind = function(object, var_args) {
+	var __method = this, args = Array.prototype.slice.call(arguments, 1);
+	return function() {
+		return __method.apply(object, args.concat(Array.prototype.slice.call(arguments, 0)));
+	}
+}
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Function prototype  ==================================  */
+/*  =======================================================================================  */
+
+
+
+
 /** @type {Object}
  * @const */
 var browser = global["browser"] = {
@@ -41,6 +65,18 @@ if(browser.msie)for(var i = 6 ; i < 11 ; i++)//IE from 6 to 10
 	
 	
 
+//Emulating HEAD for ie < 9
+document.head || (document.head = document.getElementsByTagName('head')[0]);
+
+if(!global["Element"])(global["Element"] = {}).prototype = {};//IE < 8
+if(!global["HTMLElement"])global["HTMLElement"] = global["Element"];//IE8
+if(!global["Node"])global["Node"] = global["Element"];//IE8
+
+//Not sure if it wrong. TODO:: tests for this
+if(!global["DocumentFragment"])global["DocumentFragment"] = global["Document"];//For IE8
+
+
+
 var _hasOwnProperty = Function.prototype.call.bind(Object.prototype.hasOwnProperty),
 	_call = function(_function) {
 		// If no callback function or if callback is not a callable function
@@ -49,17 +85,10 @@ var _hasOwnProperty = Function.prototype.call.bind(Object.prototype.hasOwnProper
 	},
 	/** @type {Node}
 	 * @const */
-	_testElement = document.createElement('div');
-
-//Emulating HEAD for ie < 9
-document.head || (document.head = document.getElementsByTagName('head')[0]);
+	_testElement = document.createElement('div'),
+	nodeProto = global["Node"].prototype;
 
 
-if(!global["HTMLElement"])global["HTMLElement"] = global["Element"];//IE8
-if(!global["Node"])global["Node"] = global["Element"];//IE8
-
-//Not sure if it wrong. TODO:: tests for this
-if(!global["DocumentFragment"])global["DocumentFragment"] = global["Document"];//For IE8
 
 //[BUGFIX] IE < 9 substr() with negative value not working in IE
 if("ab".substr(-1) !== "b") {
@@ -427,6 +456,67 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 
 })();
 
+
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Events  ======================================  */
+/*  ======================================================================================  */
+
+
+/*  =======================================================================================  */
+/*  ======================================  Network  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+if(!global.XMLHttpRequest)global.XMLHttpRequest = ActiveXObject.bind(global, "Microsoft.XMLHTTP");
+
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Network  ======================================  */
+/*  =======================================================================================  */
+
+/*  ======================================================================================  */
+/*  ========================================  DOM  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+/* is this stuff defined? */
+if(!document.ELEMENT_NODE) {
+	document.ELEMENT_NODE = 1;
+	document.ATTRIBUTE_NODE = 2;
+	document.TEXT_NODE = 3;
+	document.CDATA_SECTION_NODE = 4;
+	document.ENTITY_REFERENCE_NODE = 5;
+	document.ENTITY_NODE = 6;
+	document.PROCESSING_INSTRUCTION_NODE = 7;
+	document.COMMENT_NODE = 8;
+	document.DOCUMENT_NODE = 9;
+	document.DOCUMENT_TYPE_NODE = 10;
+	document.DOCUMENT_FRAGMENT_NODE = 11;
+	document.NOTATION_NODE = 12;
+}
+
+/*
+http://www.alistapart.com/articles/crossbrowserscripting
+*/
+if(!document.importNode)document.importNode = function(node, allChildren) {
+	/* find the node type to import */
+	switch (node.nodeType) {
+		case document.ELEMENT_NODE:
+			/* create a new element */
+			var newNode = document.createElement(node.nodeName);
+			/* does the node have any attributes to add? */
+			if (node.attributes && node.attributes.length > 0)
+				/* add all of the attributes */
+				for (var i = 0, il = node.attributes.length; i < il;)
+					newNode.setAttribute(node.attributes[i].nodeName, node.getAttribute(node.attributes[i++].nodeName));
+			/* are we going after children too, and does the node have any? */
+			if (allChildren && node.childNodes && node.childNodes.length > 0)
+				/* recursively get all of the child nodes */
+				for (var i = 0, il = node.childNodes.length; i < il;)
+					newNode.appendChild(document._importNode(node.childNodes[i++], allChildren));
+			return newNode;
+			break;
+		case document.TEXT_NODE:
+		case document.CDATA_SECTION_NODE:
+		case document.COMMENT_NODE:
+			return document.createTextNode(node.nodeValue);
+			break;
+	}
+};
+
 function _recursivelyWalk(nodes, cb) {
     for (var i = 0, len = nodes.length; i < len; i++) {
         var node = nodes[i],
@@ -444,7 +534,7 @@ function _recursivelyWalk(nodes, cb) {
 };
 
 var attr = "getElementsByClassName";
-if(!(attr in browser.testElement))document[attr] = nodeProto[attr] = function(clas) {
+if(!(attr in _testElement))document[attr] = nodeProto[attr] = function(clas) {
 	var ar = [];
 	
 	clas && _recursivelyWalk(this.childNodes, function (el, index) {
@@ -486,20 +576,6 @@ if(!(_compareDocumentPosition_ in document)) {
 	document[__n1 + __name] = nodeProto[__n1 + __name] = 0x10;
 };
 
-/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Events  ======================================  */
-/*  ======================================================================================  */
-
-
-/*  =======================================================================================  */
-/*  ======================================  Network  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
-
-if(!global.XMLHttpRequest)global.XMLHttpRequest = ActiveXObject.bind(global, "Microsoft.XMLHTTP");
-
-/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Network  ======================================  */
-/*  =======================================================================================  */
-
-/*  ======================================================================================  */
-/*  ========================================  DOM  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 if(!global.getComputedStyle) {//IE < 9
 	/**
 	 * @link https://developer.mozilla.org/en/DOM/window.getComputedStyle
@@ -618,7 +694,7 @@ var _cloneElement = global["cloneElement"] = function(element, include_all, dele
 }
 
 if(browser.msie && browser.msie < 9) {
-	//nodeProto["_cloneNode_"] = browser.testElement.cloneNode;//Original function
+	//nodeProto["_cloneNode_"] = _testElement.cloneNode;//Original function
 	nodeProto["cloneNode"] = function(deep){return _cloneElement(this, deep)};
 }
 

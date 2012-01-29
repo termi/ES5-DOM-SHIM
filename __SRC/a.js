@@ -33,13 +33,21 @@ function(global) {
 /*  ==================================  Function prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
 //Fix Function.prototype.apply to work with generic array-like object instead of an array
+// test: function test(a,b){console.log(a,b)};test.apply(null, {0:1,1:2,length:2})
+var trueApply = false;
 try {
-	isNaN.apply(null, {})
+	trueApply = isNaN.apply(null, {})
 }
-catch(e) {
+catch(e) { }
+if(!trueApply) {
 	var ofa = Function.prototype.apply
 	Function.prototype.apply = function(t, args) {
-		ofa(t, Array.from(args));
+		if(!(args instanceof Object) && args.length == void 0)
+			throw TypeError("Function.prototype.apply: Arguments list has wrong type");
+			
+		args = Array["from"](args);
+		
+		return ofa.call(this, t, args);
 	}
 }
 
@@ -1268,7 +1276,7 @@ if(!("labels" in document.createElement("input"))) (function() {
 				 * @type {Array}
 				 */
 				result = this.id ?
-					Array.from(document.querySelectorAll("label[for='" + this.id + "']")) :	
+					Array["from"](document.querySelectorAll("label[for='" + this.id + "']")) :	
 					[],
 				_lastInTreeOrder_index = result.length - 1;
 
@@ -1566,7 +1574,7 @@ var $A = global["$A"] = function(iterable, start, end, forse) {
 	if(!iterable || start + end === 0)return [];
 	if(start == end == void 0) {
 		if(Array.isArray(iterable))return iterable;
-		return Array.from(iterable);
+		return Array["from"](iterable);
 	}
 	start = start || 0;//Default value
 	
@@ -1627,7 +1635,7 @@ var $K = global["$K"] = function(iterable, forse) {
 		results;
 		
 	if(type == "object") {
-		if(browser.msie && iterable.length && !(iterable instanceof Array))iterable = Array.from(iterable);//Если Arguments
+		if(browser.msie && iterable.length && !(iterable instanceof Array))iterable = Array["from"](iterable);//Если Arguments
 		if(forse) {
 			results = [];
 			for(var i in iterable)results.push(i);
@@ -1668,7 +1676,7 @@ global["bubbleEventListener"] = function bubbleEventListener(attribute, namedFun
 		   (typeof namedFunctions != "object" && typeof namedFunctions != funcType))	
 				console.error("bubbleEventListener::namedFunctions must be an Object or Function")
 		else if(typeof namedFunctions == "object") {
-			if(!Array.from(namedFunctions).length)console.error("bubbleEventListener::no functions are sets")
+			if(!Array["from"](namedFunctions).length)console.error("bubbleEventListener::no functions are sets")
 			else {
 				var s = true;
 				$K(namedFunctions).forEach(function(key){
@@ -1814,7 +1822,7 @@ function $$N(selector, roots, prefetchResult, isFirst) {
 			else specialSelector = selector;
 			if(noway){}
 			else if(isFirst)result.push(rt.querySelector(specialSelector));
-			else result = result.concat(Array.from(rt.querySelectorAll(specialSelector)));
+			else result = result.concat(Array["from"](rt.querySelectorAll(specialSelector)));
 		}
 		
 		return result;
@@ -1864,10 +1872,10 @@ var $$ = global["$$"] = function(selector, roots/*, noCache*/, isFirst) {
 				return result;
 			}
 			
-			if(!Array.isArray(roots))return Array.from(roots.querySelectorAll(selector));
+			if(!Array.isArray(roots))return Array["from"](roots.querySelectorAll(selector));
 						
 			while(root = roots[++i] && (!isFirst || !result.length))
-				result.concat(Array.from(root.querySelectorAll(selector)))
+				result.concat(Array["from"](root.querySelectorAll(selector)))
 			
 		}
 		
