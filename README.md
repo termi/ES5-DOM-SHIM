@@ -5,6 +5,8 @@ based on:
 - https://github.com/paulmillr/es6-shim
 - https://github.com/Raynos/DOM-shim
 
+__Status__: Stable, but need carefully use in IE < 9
+
 ## Adding to html:
 `in a HEAD section`
     

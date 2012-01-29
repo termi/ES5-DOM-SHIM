@@ -31,27 +31,6 @@ var __getAtt = window["_ielt8_getAttributes"] = function() {
 __getAtt.notAnAttribute = {"insertAfter" : 1, "getElementsByClassName" : 1, "compareDocumentPosition" : 1, "_" : 1, "getAttribute" : 1, "setAttribute" : 1, "addEventListener" : 1, "removeEventListener" : 1, "dispatchEvent" : 1, "cloneNode" : 1, "quersySelectorAll" : 1, "quersySelector" : 1}
 //
 
-/*var $$N = window["$$N"];
-if($$N) {
-	$$N["q0"] = queryOneSelector;
-	$$N["test"] = {//nonStandartPseudoClasses
-		//Found elements what HAS a child 
-		"parent" : function(child) {
-			return !!child.firstChild;
-		},
-		"text-only" : function(child) {
-			var result = true, node, i = -1;
-			while(node = child.childNodes[++i] && result)result = node.nodeType == 3;
-			return result;
-		},
-		//:(parent|<adding here all new>)
-		regExp : /:(parent|text-only)$/
-		//regExp = /:(parent|text-only)(?:([ >~+])|$)/;//Конец регулярного выражения "(?:([ >~+])|$)/;" - должен оставатся неизменным
-			
-	}
-}*/
-
-
 /**
  * Функция возвращяет массив элементов выбранных по CSS3-велектору. 
  * Также добавляет во все наёденные элементы объекты-контейнеры '_'. '_' можно использовать для хранения переменных,

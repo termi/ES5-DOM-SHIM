@@ -2,18 +2,13 @@
 // @compilation_level ADVANCED_OPTIMIZATIONS
 // @warning_level VERBOSE
 // @jscomp_warning missingProperties
-// @output_file_name default.js
+// @output_file_name a.js
 // @check_types
 // ==/ClosureCompiler==
 /**
  * module
- * @version 3.3
- *  changeLog: 3.2   [24.11.2011 18:00] push it to github 
-			   3.1.7 [23.11.2011 01:20] + Продолжаю переносить из github.com/Raynos/DOM-shim со своими изменениями: compareDocumentPosition (своя), getElementsByClassName, importNode (исправил), new Event(...) (исправил), new CustomEvent(...) (исправил)
-			   --deleted--
+ * @version 4
  * TODO:: eng comments
- *        delete 'deprecated', Site obj and Log obj, and isNumber
- *        querySelector and querySelectorAll for DocumentFragment
  *        dateTime prop for IE < 8
  *        export isHTMLElement ?
  */
@@ -25,9 +20,6 @@ var IS_DEBUG = false;
 var DEBUG = IS_DEBUG && !!(window && window.console);
 
 var /** @const */funcType = "function";
-var /** @const @deprecated */undefType = "undefined";
-
-"use strict";
 
 ;(
 /** Переопределяем глобальную переменную для модулей
@@ -35,15 +27,24 @@ var /** @const @deprecated */undefType = "undefined";
  * @const */
 function(global) {
 
-//Создадим алиасы глобальных переменных global и document для уменьшения размера кода
-// При этом не стоит забывать, что на некоторых JS-движках (особенно V8) такой код:
-// d.<prop> весто document.<prop> будет выполнятся на ~10% медленнее
-// пруф: http://habrahabr.ru/blogs/javascript/100828/#comment_3186840
-var /** @const @deprecated */w = global;
-var /** @const @deprecated */d = document;
+"use strict";
 
 /*  ======================================================================================  */
 /*  ==================================  Function prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+/*
+ * Fix Function.prototype.apply to work with generic array-like object instead of an array
+ * test: (function(a,b,c){console.log(a.id+"|"+b.id+"|"+c.id)}).apply(null, {0:{id:0},1:{id:1},2:{id:2},length:3})
+ */
+try {
+	isNaN.apply(null, {})
+}
+catch(e) {
+	var ofa = Function.prototype.apply
+	Function.prototype.apply = function(t, args) {
+		ofa(t, Array.from(args));
+	}
+}
 
 /**
  * From prototypejs (prototypejs.org)
@@ -61,13 +62,6 @@ if(!Function.prototype.bind)Function.prototype.bind = function(object, var_args)
 }
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Function prototype  ==================================  */
 /*  =======================================================================================  */
-
-var _hasOwnProperty = Function.prototype.call.bind(Object.prototype.hasOwnProperty);
-
-
-//d.head = d["head"];//Для Closure Compiller'а
-
-
 
 // --------------- ================ Browser detection ================ ---------------
 //Определение браузера.
@@ -133,14 +127,9 @@ browser.ipod = browser["ipod"];
  * @const */
 browser.ipad = browser["ipad"];
 
-/** @deprecated Теперь версию IE записываю непосредственно в browser.msie */
-browser.msieV = void 0;
-
 if(browser.msie)for(var i = 6 ; i < 11 ; i++)//IE from 6 to 10
 	if(new RegExp('msie ' + i).test(browser.agent)) {
 		browser.msie = i;
-		
-		browser.msieV = browser.msie;//Оставляю пока для совместимости
 		
 		break;
 	}
@@ -161,39 +150,49 @@ browser["cssPrefix"] =
 	browser.msie ? "ms" : 
 	"";
 	
+	
+	
+	
 
+var _hasOwnProperty = Function.prototype.call.bind(Object.prototype.hasOwnProperty),
+	_call = function(_function) {
+		// If no callback function or if callback is not a callable function
+		// it will throw TypeError
+        Function.prototype.call.apply(_function, arguments)
+	},
+	
+	//Fixed `toObject` to work for strings in IE8 and Rhino. Added test spec for `forEach`.
+	//https://github.com/kriskowal/es5-shim/pull/94
+	need_prepareString = (function(strObj) {
+		// Check failure of by-index access of string characters (IE < 9)
+		// and failure of `0 in strObj` (Rhino)
+		return strObj[0] != "a" || !(0 in strObj);
+	})(Object("a")),
+	_toObject = function(obj) {
+		if (obj == null) { // this matches both null and undefined
+			throw new TypeError(); // TODO message
+		}
+		// If the implementation doesn't support by-index access of
+		// string characters (ex. IE < 9), split the string
+		if (need_prepareString && typeof obj == "string" && obj) {
+			return obj.split("");
+		}
+		return Object(obj);
+	},
+	_throwDOMException = function(errStr) {
+		var ex = Object.create(DOMException.prototype);
+		ex.code = ex[errStr];
+		ex.message = errStr +': DOM Exception ' + this.code;
+		throw ex;
+	}
+	
+	
 if(!document.readyState)browser.noDocumentReadyState = true;
 if(browser.noDocumentReadyState)document.readyState = "uninitialized";
-//Emulating HEAD for ie < 9
-document.head || (document.head = document.getElementsByTagName('head')[0]);
 
-if(!global["HTMLElement"])global["HTMLElement"] = global["Element"];//IE8
-if(!global["Node"])global["Node"] = global["Element"];//IE8
 if(!global["HTMLDocument"])global["HTMLDocument"] = global["Document"];//For IE9
 if(!global["Document"])global["Document"] = global["HTMLDocument"];//For IE8
 //TODO:: for IE < 8 :: if(!global["Document"] && !global["HTMLDocument"])global["Document"] = global["HTMLDocument"] = ??;//for IE < 8
-
-
-/**
- * @param {string} link Path to the script
- * @param {Function=} callback Optional callback executed onload
- * TODO:: Заменить на https://github.com/CapMousse/include.js ???
- *		  или заменить на функцию js из http://headjs.com/ ???
- * 		  или на CommonJS like аналог https://github.com/jiem/my-common [предпочтительнее, только нужно переписать некоторые тупые моменты]
- *		  или на http://requirejs.org/ ??? Бля ну и выбор !!!
- */
-function addScript(link, callback){
-	var newScript = document.createElement('script');
-	newScript.src = link;
-	newScript.onload = function() {
-		!!callback && callback();
-	};
-	(document.body || document.head).appendChild(newScript);
-}
-
-
-/*if(browser.msie && browser.msie < 8)
-	document.write("<script src='a.ielt8.js'></script>");*/
 
 
 /*  =======================================================================================  */
@@ -201,36 +200,6 @@ function addScript(link, callback){
 
 if(!global["Utils"])global["Utils"] = {};
 if(!global["Utils"]["Dom"])global["Utils"]["Dom"] = {};
-
-/**
- * Utils.Dom.DOMException
- * DOMException like error
- * @constructor
- * @param {string} errStr Error string code
- 
- */
-var DOMException_ = global["Utils"]["Dom"]["DOMException"] = function(errStr) {
-	this.code = this[errStr];
-	this.message = errStr +': DOM Exception ' + this.code;
-}
-var p = DOMException_.prototype = new Error;
-p.INDEX_SIZE_ERR = 1;
-p.DOMSTRING_SIZE_ERR = 2; // historical
-p.HIERARCHY_REQUEST_ERR = 3;
-p.WRONG_DOCUMENT_ERR = 4;
-p.INVALID_CHARACTER_ERR = 5;
-p.NO_DATA_ALLOWED_ERR = 6; // historical
-p.NO_MODIFICATION_ALLOWED_ERR = 7;
-p.NOT_FOUND_ERR = 8;
-p.NOT_SUPPORTED_ERR = 9;
-p.INUSE_ATTRIBUTE_ERR = 10; // historical
-p.INVALID_STATE_ERR = 11;
-p.SYNTAX_ERR = 12;
-p.INVALID_MODIFICATION_ERR = 13;
-p.NAMESPACE_ERR = 14;
-p.INVALID_ACCESS_ERR = 15;
-p.VALIDATION_ERR = 16; // historical
-p.TYPE_MISMATCH_ERR = 17;
 
 /**
  * Utils.Dom.DOMStringCollection
@@ -253,8 +222,8 @@ var DOMStringCollection = global["Utils"]["Dom"]["DOMStringCollection"] = functi
 
 var methods = {
 	checkToken: function(token) {
-		if(token === "")throw new DOMException_("SYNTAX_ERR");
-		if((token + "").indexOf(" ") > -1)throw new DOMException_("INVALID_CHARACTER_ERR");
+		if(token === "")_throwDOMException("SYNTAX_ERR");
+		if((token + "").indexOf(" ") > -1)_throwDOMException("INVALID_CHARACTER_ERR");
 	},
 	add: function(token) {
 		this.checkToken(token);
@@ -330,19 +299,11 @@ var methods = {
 }
 for(var key in methods)DOMStringCollection.prototype[key] = methods[key];
 //[ie8 BUG]Метод toString не показывается в цикле for
-DOMStringCollection.prototype.toString=function(){return this.value||""}
+DOMStringCollection.prototype.toString = function(){return this.value||""}
 
 
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Utils.Dom  ==================================  */
-/*  =======================================================================================  */
-
-/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Exception  ==================================  */
-/*  =======================================================================================  */
-
-if(!global["DOMException"])global["DOMException"] = DOMException_;
-
-/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Exception  ==================================  */
 /*  =======================================================================================  */
 
 // --------------- ================ es5 shim ================ ---------------
@@ -640,7 +601,7 @@ if(!Array.prototype["unique"])Array.prototype["unique"] = function() {
 		array = this;
 	
     for(var i = 0, l = array.length; i < l; ++i) {
-        if(!hash.hasOwnProperty(array[i])) { //it works with objects! in FF, at least
+        if(!_hasOwnProperty(hash, array[i])) { //it works with objects! in FF, at least
             hash[array[i]] = true;
             result.push(array[i]);
         }
@@ -648,6 +609,13 @@ if(!Array.prototype["unique"])Array.prototype["unique"] = function() {
     return result;
 }
 
+/*
+for Array.prototype.reduce and Array.prototype.reduceRight
+*/
+function _testLength(l) {
+	if((l === 0 || l === null) && (arguments.length <= 1))// == on purpose to test 0 and false.// no value to return if no initial value, empty array
+		throw new TypeError("Array length is 0 and no second argument");
+}
 /**
  * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/Reduce
  * 
@@ -661,19 +629,17 @@ if(!Array.prototype["unique"])Array.prototype["unique"] = function() {
  * @return {*} single value
  */
 if(!Array.prototype.reduce)Array.prototype.reduce = function(accumulator, initialValue) {
-	if(typeof accumulator !== funcType) // ES5 : "If IsCallable(callbackfn) is false, throw a TypeError exception."
-		throw new TypeError("First argument is not callable");
+	// ES5 : "If IsCallable(callbackfn) is false, throw a TypeError exception." in "_call" function
 	  
 	var l = this.length, i = 0;
 	
-	if((l === 0 || l === null) && (arguments.length <= 1))// == on purpose to test 0 and false.
-		throw new TypeError("Array length is 0 and no second argument");
+	_testLength(l);
 	  
 	initialValue || (initialValue = (i++, this[0]));
 	
 	for( ; i < l ; ++i) {
 	  if(i in this)
-	    initialValue = accumulator.call(undefined, initialValue, this[i], i, this);
+	    initialValue = _call(accumulator, undefined, initialValue, this[i], i, this);
 	}
 
 	return initialValue;
@@ -699,13 +665,11 @@ initialValue
 Object to use as the first argument to the first call of the callback.
 */
 if(!Array.prototype.reduceRight)Array.prototype.reduceRight = function(accumulator, initialValue)  {
-	if(typeof accumulator !== funcType) // ES5 : "If IsCallable(callbackfn) is false, throw a TypeError exception."
-		throw new TypeError("First argument is not callable");
+	// ES5 : "If IsCallable(callbackfn) is false, throw a TypeError exception." in "_call" function
 	  
     var l = this.length >>> 0, k = l - 1;
 	
-	if((l === 0 || l === null) && (arguments.length <= 1))// no value to return if no initial value, empty array
-		throw new TypeError("Array length is 0 and no second argument");
+	_testLength(l);
 	
 	if(!initialValue)do {
 		if(k in this) {
@@ -720,7 +684,7 @@ if(!Array.prototype.reduceRight)Array.prototype.reduceRight = function(accumulat
 	while(true);
 
 	for( ; k >= 0 ; --k)if(k in this)
-		initialValue = accumulator.call(undefined, initialValue, this[k], k, t);
+		initialValue = _call(accumulator, undefined, initialValue, this[k], k, t);
 
     return initialValue;
 };
@@ -731,44 +695,54 @@ if(!Array.prototype.reduceRight)Array.prototype.reduceRight = function(accumulat
 From https://developer.mozilla.org/en/JavaScript/Reference/global_Objects/Array/filter
 */
 if(!Array.prototype.filter)Array.prototype.filter = function(fun, thisp) {  
-	var len = this.length >>> 0;
+	var thisArray = _toObject(this),
+		len = this.length >>> 0;
 	if (typeof fun != funcType)throw new TypeError();  
 
 	var res = [];
 	for (var i = 0; i < len; i++)
-		if (i in this) {  
-			var val = this[i];// in case fun mutates this  
-			if(fun.call(thisp, val, i, this))res.push(val);
+		if (i in thisArray) {  
+			var val = thisArray[i];// in case fun mutates this  
+			if(fun.call(thisp, val, i, thisArray))res.push(val);
 		}
 
 	return res;
 }
 
-//----- Добавляем в массив функциональность выполнения функции для всех элементов массива
-/*[*]*/
-//Убрал: 1.прерывание выполнения если iterator.call возв. false, т.к. это не соотв. стандартному поведению
-//		 2.return this, т.к. это не соотв. стандартному поведению
+/* ES5 15.4.4.18
+ * http://es5.github.com/#x15.4.4.18
+ * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/array/forEach
+ */
 if(!Array.prototype.forEach)Array.prototype.forEach = function(iterator, context) {
-	for(var i in this)if(this.hasOwnProperty(i))iterator.call(context, this[i], parseInt(i, 10), this);
-	//Варианты:
-	//	var v, i = -1;while(v = this[++i])iterator.call(context, v, i, this);
-	// не подходит, т.к. не обрабатывают массив типа t = []; t[0]="0"; t[2]="2"; <- т.к. элемента
-	//  с индексом 1 нету, на индексе 0 первый алгоритм остановится, а второй обработает t[1]
-	//	for(var i = 0, l = this.length ; i < l; i++)iterator.call(context, this[i], i, this);
-	// не подходит, т.к. будет вызван для undefine элементов, в этом случае t = []; t[0]="0"; t[2]="2"; <- элемента 1 == undefine
+	var thisArray = _toObject(this);
+	for(var i in thisArray)
+		if(_hasOwnProperty(thisArray, i))
+			_call(iterator, context, thisArray[i], parseInt(i, 10), thisArray);
 }
 
+/* ES5 15.4.4.14
+ * http://es5.github.com/#x15.4.4.14
+ * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/indexOf
+ */
 if(!Array.prototype.indexOf)Array.prototype.indexOf = function(obj, n) {
-	for(var i = n || 0, l = this.length ; i < l ; i++)
-		if(this[i] === obj)return i;
+	var thisArray = _toObject(this);
+	for(var i = n || 0, l = thisArray.length ; i < l ; i++)
+		if(thisArray[i] === obj)return i;
 	return -1;
 }
+/* ES5 15.4.4.15
+ * http://es5.github.com/#x15.4.4.15
+ * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/lastIndexOf
+ */
 if(!Array.prototype.lastIndexOf)Array.prototype.lastIndexOf = function(obj, i) {
-	return this.slice(0).reverse().indexOf(obj, i)
+	return _toObject(this).slice(0).reverse().indexOf(obj, i)
 }
 
 /**
- * Проверяет, чтобы каждый элемент массива соответствовал некоторому критерию [JavaScript 1.6]
+ * RUS: Проверяет, чтобы каждый элемент массива соответствовал некоторому критерию [JavaScript 1.6]
+ * ES5 15.4.4.16
+ * http://es5.github.com/#x15.4.4.16
+ * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/every
  * @this {Object}
  * @param {Function} callback критерий соответствия. По-умочанию - что элемент существует
  * @param {Object=} opt_thisobj Контент в рамках которого мы будем вызывать функцию
@@ -777,21 +751,24 @@ if(!Array.prototype.lastIndexOf)Array.prototype.lastIndexOf = function(obj, i) {
 if(!Array.prototype.every)Array.prototype.every = function(callback, opt_thisobj, _isAll) {
 	if(_isAll === void 0)_isAll = true;//Default value = true
 	var result = _isAll;
-	this.forEach(function(value, index) {
-		if(result == _isAll)result = !!callback.call(opt_thisobj, value, index, this);
+	Array.prototype.forEach.call(this, function(value, index) {
+		if(result == _isAll)result = !!_call(callback, opt_thisobj, value, index, this);
 	});
 	return result;
 }
 
 /**
- * Проверяет, чтобы хотябы один элемент массива соответствовал некоторому критерию [JavaScript 1.6]
+ * RUS: Проверяет, чтобы хотябы один элемент массива соответствовал некоторому критерию [JavaScript 1.6]
+ * ES5 15.4.4.17
+ * http://es5.github.com/#x15.4.4.17
+ * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/some
  * @this {Object}
  * @param {Function} callback критерий соответствия. По-умочанию - что элемент существует
  * @param {Object=} opt_thisobj Контент в рамках которого мы будем вызывать функцию
  * @return {boolean}
  */
 if(!Array.prototype.some)Array.prototype.some = function(callback, opt_thisobj) {
-	return Array.prototype.every(callback, opt_thisobj, false);
+	return Array.prototype.every.call(this, callback, opt_thisobj, false);
 }
 
 /**
@@ -804,57 +781,14 @@ if(!Array.prototype.some)Array.prototype.some = function(callback, opt_thisobj) 
  * @return {Array}
  */
 if (!Array.prototype.map)Array.prototype.map = function(callback, thisArg) {
-    var T, Result, k;
-
-    if(this == null)throw new TypeError(" this is null or not defined");  
-
-	var O = Object(this),// 1. Let O be the result of calling ToObject passing the |this| value as the argument.  
-		len = O.length >>> 0;// 2. Let lenValue be the result of calling the Get internal method of O with the argument "length".  
-							 // 3. Let len be ToUint32(lenValue).  
-
-	// 4. If IsCallable(callback) is false, throw a TypeError exception.  
-	// See: http://es5.github.com/#x9.11  
-	if ({}.toString.call(callback) != "[object Function]")
-		throw new TypeError(callback + " is not a function"); 
-
-	if(thisArg)T = thisArg;// 5. If thisArg was supplied, let T be thisArg; else let T be undefined.  
-
-	// 6. Let Result be a new array created as if by the expression new Array(len) where Array is  
-	// the standard built-in constructor with that name and len is the value of len.  
-	Result = new Array(len);  
-
-	k = 0;// 7. Let k be 0  
-
-	while(k < len) {// 8. Repeat, while k < len
-		var kValue, mappedValue;  
-
-		// a. Let Pk be ToString(k).  
-		//   This is implicit for LHS operands of the in operator  
-		// b. Let kPresent be the result of calling the HasProperty internal method of O with argument Pk.  
-		//   This step can be combined with c  
-		// c. If kPresent is true, then  
-		if (k in O) { 
-			kValue = O[ k ];// i. Let kValue be the result of calling the Get internal method of O with argument Pk.    
-
-			// ii. Let mappedValue be the result of calling the Call internal method of callback  
-			// with T as the this value and argument list containing kValue, k, and O.  
-			mappedValue = callback.call(T, kValue, k, O);  
-
-			// iii. Call the DefineOwnProperty internal method of Result with arguments  
-			// Pk, Property Descriptor {Value: mappedValue, Writable: true, Enumerable: true, Configurable: true},  
-			// and false.  
-
-			// In browsers that support Object.defineProperty, use the following:  
-			// Object.defineProperty(Result, Pk, { value: mappedValue, writable: true, enumerable: true, configurable: true });  
-
-			// For best browser support, use the following:  
-			Result[k] = mappedValue;  
-		}
-		// d. Increase k by 1.  
-		k++;  
-	}  
-
-	return Result;// 9. return Result
+	var result;
+	
+	Array.prototype.forEach.call(this, function(v, k, obj) {
+		var mappedValue = _call(callback, thisArg, v, k, obj);
+		result[k] = v;
+	})
+	
+    return result;
 };
 
 /**
@@ -872,45 +806,32 @@ Array['isArray'] = Array['isArray'] || function(obj) {
 // Based on https://github.com/paulmillr/es6-shim/
 
 /**
- * Преведение к массиву
- * EN: toArray function
- * Original Array.from (from https://github.com/paulmillr/es6-shim/) have lack of IE7 support with string (Array.from("somestring") -> [])
+ * toArray function
+ * RUS: Преведение к массиву
  * 
  * @param {*} iterable object
  * @return {Array}
  */
-Array['from'] = Array['from'] || function(iterable) {
-	var result;
+Array["from"] = Array["from"] || function(iterable) {
+	var object = _toObject(iterable),
+		result = [];
+		
+	for(var key = 0, length = object.length >>> 0; key < length; key++) {
+		if(key in object)
+			result[key] = object[key];
+	}
 
-	var _length = iterable.length,
-		_i = 0;
-						
-	try {//Попробуем применить Array.prototype.slice на наш объект
-		results = Array.prototype.slice.apply(iterable);//An idea from https://github.com/Quby/Fn.js/blob/master/fn.js::_.toArray
-		//Match result length of elements with initial length of elements
-		if(results.length === _length)return results;//Проверка !!!
-	}
-	catch(e) {//IE throw error with iterable == "[object NodeList]"
-		//не получилось! -> выполняем обычную переборку
-	}
-	
-	results = [];
-	for( ; _i < _length ; ++_i)results.push(
-		iterable.charAt ? iterable.charAt(_i) : //typeof iterable == "string". [IElt8] IE < 8 support
-			iterable[_i] //typeof iterable == "object" with 'length' prop
-	);
-	
-	return results;
-};
+	return result;
+}
 
 /**
- * Преведение к массиву состоящему из аргументов функции
- * EN: return array of arguments of this function
+ * return array of arguments of this function
+ * RUS: Преведение к массиву состоящему из аргументов функции
  * 
  * @param {...} args
  * @return {Array}
  */
-Array['of'] = Array['of'] || function(args) {
+Array["of"] = Array["of"] || function(args) {
 	return Array.prototype.slice.call(arguments);
 }
 
@@ -921,13 +842,7 @@ Array['of'] = Array['of'] || function(args) {
 /*  ======================================================================================  */
 /*  ================================  String.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-if(browser.msie && browser.msie < 9) {
-//[BUGFIX] IE < 9 substr() with negative value not working in IE
-	String.prototype._itlt9_substr_ = String.prototype.substr;
-	String.prototype.substr = function(start, length) {
-		return this._itlt9_substr_(start < 0 ? (start = this.length + start, start) < 0 ? 0 : start : start, length);
-	}
-}
+
 
 /**
  * Removes whitespace from both ends of the string.
@@ -978,28 +893,19 @@ document.createElement = function() {
 /*  ======================================  Events  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
 if(document.addEventListener) {//fix [add|remove]EventListener for all browsers that support it
-	(function () {
-		// FF fails when you "forgot" the optional parameter for addEventListener and removeEventListener
-		// Agr!!! FF 3.6 Unable to override addEventListener https://bugzilla.mozilla.org/show_bug.cgi?id=428229
-		// Opera didn't do anything without optional parameter
-		var _rightBehavior = false,
-			dummy = function () {
-				_rightBehavior = true
-			};
-		var el_proto = global["Node"].prototype
-		function fixEventListener(elementToFix) {
+	// FF fails when you "forgot" the optional parameter for addEventListener and removeEventListener
+	// Agr!!! FF 3.6 Unable to override addEventListener https://bugzilla.mozilla.org/show_bug.cgi?id=428229
+	// Opera didn't do anything without optional parameter
+	var _rightBehavior = false,
+		dummy = function () {
+			_rightBehavior = true
+		};
+	var el_proto = global["Node"].prototype
+	function fixEventListener(elementToFix) {
+		if(elementToFix) {
 			var old_addEventListener = elementToFix.addEventListener,
 				old_removeEventListener = elementToFix.removeEventListener;
 				
-			/*Object.defineProperty(elementToFix, "addEventListener", {value : function (type, listener, optional) {
-				optional = optional || false;
-				return old_addEventListener.call(this, type, listener, optional);
-			}})
-			Object.defineProperty(elementToFix, "removeEventListener", {value : function (type, listener, optional) {
-				optional = optional || false;
-				return old_removeEventListener.call(this, type, listener, optional);
-			}})*/
-			
 			elementToFix.addEventListener = function (type, listener, optional) {
 				optional = optional || false;
 				return old_addEventListener.call(this, type, listener, optional);
@@ -1011,384 +917,31 @@ if(document.addEventListener) {//fix [add|remove]EventListener for all browsers 
 			}
 			//elementToFix.removeEventListener.shim = true;
 		}
-		function fixEventListenerAll() {
-			global["document"] && fixEventListener(global["document"]);
-			fixEventListener(global);
-			global["HTMLDocument"] && fixEventListener(global["HTMLDocument"].prototype);
-			global["Window"] && fixEventListener(global["Window"].prototype);
-			fixEventListener(el_proto);
-			//if(!browser.testElement.addEventListener.shim)
-				//console.error("shim dosn't work")
-		}
-		try {
-			browser.testElement.addEventListener("click", dummy);
-			if(browser.testElement.click)
-				browser.testElement.click();//testing
-			else //If !browser.testElement.click -> modern browsers
-				_rightBehavior = true;
-		} catch (e) {
-		
-		} finally {
-			if(!_rightBehavior)fixEventListenerAll()
-			document.removeEventListener("click", dummy);
-		}
-	})();
-}
-else {//fix [add|remove]EventListener & dispatchEvent for IE < 9
-(function() {
-//	TODO:: использовать наработки https://github.com/arexkun/Vine
-//		   использовать наработки https://github.com/kbjr/Events.js
-/*
-dispatchEvent
-This method allows the dispatch of events into the implementations event model. Events dispatched in this manner will have the same capturing and bubbling behavior as events dispatched directly by the implementation. The target of the event is the EventTarget on which dispatchEvent is called. 
-Parameters 
-evt of type Event
-Specifies the event type, behavior, and contextual information to be used in processing the event.
-Return Value 
-boolean	
-The return value of dispatchEvent indicates whether any of the listeners which handled the event called preventDefault. If preventDefault was called the value is false, else the value is true.
-
-Exceptions 
-EventException	
-UNSPECIFIED_EVENT_TYPE_ERR: Raised if the Event's type was not specified by initializing the event before dispatchEvent was called. Specification of the Event's type as null or an empty string will also trigger this exception
-*/
-
-var preventDefault_ = function(){this.returnValue = false};
-var stopPropagation_ = function(){this.cancelBubble = true};
-
-var guid = 0,// текущий номер обработчика
-	//Т.к. мы кладём всё в один контейнер "_", нужно убедится, что названия свойств не будут пересикаться с другими названиями из другой части библиотеки a.js (a.ielt8.htc и a.ie6.htc)
-	handleUUID = "_h_9e2",// Некий уникальный идентификатор
-	eventsUUID = "_e_8vj";// Некий уникальный идентификатор
-	
-function fixEvent(event){
-	// один объект события может передаваться по цепочке разным обработчикам
-	// при этом кроссбраузерная обработка будет вызвана только 1 раз
-	// Снизу, в функции commonHandle,, мы должны проверять на !event.isFixed
-	event.isFixed = true;// пометить событие как обработанное
-
-	//http://javascript.gakaa.com/event-detail.aspx
-	if(event.type === "click" && !event.detail)event.detail = 1;
-	
-	// добавить preventDefault/stopPropagation для IE
-	event.preventDefault || (event.preventDefault = preventDefault_);
-	event.stopPropagation || (event.stopPropagation = stopPropagation_);
-
-	event.target || (event.target = event.srcElement || document);// добавить target для IE
-
-	// добавить relatedTarget в IE, если это нужно
-	if(event.relatedTarget === void 0 && event.fromElement)
-		event.relatedTarget = event.fromElement == event.target ? event.toElement : event.fromElement;
-
-	// вычислить pageX/pageY для IE
-	if(event.pageX == null && event.clientX != null) {
-		var html = document.documentElement, body = document.body;
-		/*event.pageX = event.clientX + (html && html.scrollLeft || body && body.scrollLeft || 0) - (html.clientLeft || 0);
-		event.pageY = event.clientY + (html && html.scrollTop || body && body.scrollTop || 0) - (html.clientTop || 0);*/
-		//Новая вервия нуждающаяся в проверки
-		event.pageX = event.clientX + (window.pageXOffset || html.scrollLeft || body.scrollLeft || 0) - (html.clientLeft || 0);
-		event.pageY = event.clientY + (window.pageYOffset || html.scrollTop || body.scrollTop || 0) - (html.clientTop || 0);
 	}
-
-	// записать нажатую кнопку мыши в which для IE. 1 == левая; 2 == средняя; 3 == правая
-	event.which || event.button && (event.which = event.button & 1 ? 1 : event.button & 2 ? 3 : event.button & 4 ? 2 : 0);
-		
-	// событие DOMAttrModified
-	//  TODO:: недоделано
-	// TODO:: Привести event во всех случаях (для всех браузеров) в одинаковый вид с newValue, prevValue, propName и т.д.
-	if(!event.attrName && event.propertyName)event.attrName = event.propertyName.split('.')[0];//IE При изменении style.width в propertyName передаст именно style.width, а не style, как нам надо
-
-	return event
-}
-
-// вспомогательный универсальный обработчик. Вызывается в контексте элемента всегда this = element
-function commonHandle(event) {
-	var thisObj = this,
-		_ = thisObj["_"],
-		errors = [],//Инициализуется массив errors для исключений
-		errorsMessages = [];
-	
-	if(!_ || !_[eventsUUID])return;
-	
-	var handlers = _[eventsUUID][event.type];
-	
-	if(!(event = event || window.event).isFixed)event = fixEvent(event);// получить объект события и проверить, подготавливали мы его для IE или нет
-
-	for(var g in handlers)if(handlers.hasOwnProperty(g)) {
-		var handler = handlers[g];
-		
-		try {
-			//Передаём контекст и объект event, результат сохраним в event['result'] для передачи значения дальше по цепочке
-			if((event['result'] = handler.call(this, event)) === false) {//Если вернели false - остановим обработку функций
-				event.preventDefault()
-				event.stopPropagation()
-			}
-		}
-		catch(e) { 
-			errors.push(e);//Все исключения - добавляем в массив, при этом не прерывая цепочку обработчиков.
-			errorsMessages.push(e.message);
-		}
-		
-		if(event.stopNow)break;//Мгновенная остановка обработки событий
-	}
-	
-	if(errors.length == 1) {//Если была только одна ошибка - кидаем ее дальше
-		throw errors[0]
-	}
-	else if(errors.length > 1) {//Иначе делаем общий объект Error со списком ошибок в свойстве errors и кидаем его
-		var e = new Error("Multiple errors thrown : " + event.type + " : " + " : " + errorsMessages.join("|"));
-		e.errors = errors;
-		throw e;
-	}
-}
-
-/* TODO:: Code for IE8 in a.ie8.js file*/
-if(!document.addEventListener)global.addEventListener = document.addEventListener = function(_type, _handler, useCapture) {
-	if(typeof _handler != "function")return;
-	
-	var thisObj = this;
-	
-	if(_type == "DOMContentLoaded") {
-		//IE
-		document.write("<script id=\"__ie_onload\" defer=\"defer\" src=\"javascript:void(0)\"><\/script>");
-		var a = document.getElementById("__ie_onload");
-		a.onreadystatechange = function(e) {
-			var n = this;
-			if(n.readyState == "complete")commonHandle.call(thisObj, {"type" : _type});
-		}
-	}
-	/* TODO:: DOMAttrModified
-	else if(_type == "DOMAttrModified") {
-	
-	}
-	*/
-	
-	/*
-	TODO::
-	Reference: http://www.w3.org/TR/DOM-Level-2-Events/events.html#Events-EventTarget
-	If multiple identical EventListeners are registered on the same EventTarget with the same parameters the duplicate instances are discarded. They do not cause the EventListener to be called twice and since they are discarded they do not need to be removed with the removeEventListener method.
-	*/
-	
-	
-	var _ = thisObj["_"];
-	if(!_)_ = thisObj["_"] = {};
-	
-	// исправляем небольшой глюк IE с передачей объекта window
-	if(thisObj.setInterval && (thisObj != global && !thisObj.frameElement))thisObj = global;
-	
-	//Назначить функции-обработчику уникальный номер. По нему обработчик можно будет легко найти в списке events[type].
-	//Если мы передали в функцию свой guid - мы установили его выше.
-	if(!_handler.guid)_handler.guid = ++guid;
-	
-	//Инициализовать служебную структуру events и обработчик _[handleUUID]. 
-	//Обработчик _[handleUUID] фильтрует редко возникающую ошибку, когда событие отрабатывает после unload'а страницы. 
-	//Основная же его задача - передать вызов универсальному обработчику commonHandle с правильным указанием текущего элемента this. 
-	//Как и events, _[handleUUID] достаточно инициализовать один раз для любых событий.
-	if(!_[eventsUUID]) {
-		_[eventsUUID] = {};
-		_[handleUUID] = function(event) {
-			if(event !== void 0)
-				return commonHandle.call(thisObj, event);
-		}
-	}
-	
-	//Если обработчиков такого типа событий не существует - инициализуем events[type] и вешаем
-	// _[handleUUID] как обработчик на elem для запуска браузером по событию type.
-	if(!_[eventsUUID][_type]) {
-		_[eventsUUID][_type] = {};
-
-		thisObj.attachEvent('on' + _type, _[handleUUID]);
-	}
-	
-	//Добавляем пользовательский обработчик в список elem[eventsUUID][type] под заданным номером. 
-	//Так как номер устанавливается один раз, и далее не меняется - это приводит к ряду интересных фич.
-	// Например, запуск add с одинаковыми аргументами добавит событие только один раз.
-	_[eventsUUID][_type][_handler.guid] = _handler;
-	
-	//return _handler.guid;
-}
-
-if(!document.removeEventListener)global.removeEventListener = document.removeEventListener = function(_type, _handler) {
-	var thisObj = this,
-		_ = thisObj["_"];		
-	if(typeof _handler != "function" || !_handler.guid || !_)return;
-	var handlers = _[eventsUUID] && _[eventsUUID][_type];//Получить список обработчиков
-	
-	delete handlers[_handler.guid];//Удалить обработчик по его номеру
-
-	for(var any in handlers)if(handlers.hasOwnProperty(any))return;//TODO: проверить, что тут делается. Глупость какая-то.Проверить, не пуст ли список обработчиков
-	//Если пуст, то удалить служебный обработчик и очистить служебную структуру events[type]
-	thisObj.detachEvent("on" + _type, _[handleUUID]);
-
-	delete _[eventsUUID][_type];
-
-	//Если событий вообще не осталось - удалить events и _[handleUUID] за ненадобностью.
-	for(var any in _[eventsUUID])if(_[eventsUUID].hasOwnProperty(any))return;
-	
-	delete _[handleUUID];
-	delete _[eventsUUID];
-}
-
-/**
- * @param {string} event is an event object to be dispatched.
- * @this {Element} is the target of the event.
- * @return {boolean} The return value is false if at least one of the event handlers which handled this event called preventDefault. Otherwise it returns true.
- */
-if(!document.dispatchEvent)global.dispatchEvent = document.dispatchEvent = function(event) {
-	
-	/**
-	 * @type {Node}
-	 */
-	var thisObj = this;
-	
 	try {
-		return thisObj.fireEvent("on" + event.type, event);
-	}
-	catch(e) {
-		//custome events
-		if(e["number"] === -2147024809) {//"Недопустимый аргумент."
-			//event._custom_event_ = true;//FOR DEBUG
-			var node = thisObj;
-			//Всплываем событие
-			while(!event.cancelBubble && node) {//Если мы вызвали stopPropogation() - больше не всплываем событие
-				commonHandle.call(node, event);
-				//Если у события отключено всплытие - не всплываем его
-				node = event.bubbles ? (node === document ? window : node.parentNode) : null;
-			}
-			
-			return !event.cancelBubble;
-		}
-		else throw e;
-	}
-}
-
-if(!document.createEvent) {/*IE < 9 ONLY*/
-	/**
-	 * @param {string=} _type
-	 * @param {boolean=} _bubbles
-	 * @param {boolean=} _cancelable
-	 */
-	function _initEvent(_type, _bubbles, _cancelable) {
-		if(_type == void 0 || _bubbles == void 0 || _cancelable == void 0) {
-			//WRONG_ARGUMENTS_ERR
-			throw new Error('WRONG_ARGUMENTS_ERR');
-		}
-		var thisObj = this;
+		browser.testElement.addEventListener("click", dummy);
+		if(browser.testElement.click)
+			browser.testElement.click();//testing
+		else //If !browser.testElement.click -> modern browsers
+			_rightBehavior = true;
+	} catch (e) {
 	
-		thisObj.type = _type;
-		//this.cancelBubble = //TODO:: <-- testing Глупость ???
-		//	!(this.bubbles = _bubbles);
-		thisObj.bubbles = _bubbles;
-		thisObj.cancelable = _cancelable;//https://developer.mozilla.org/en/DOM/event.cancelable
-		
-		thisObj.isTrusted = false;
-		thisObj.target = null;		
-	}
-	function _initCustomEvent(_type, _bubbles, _cancelable, _detail) {
-		//https://developer.mozilla.org/en/DOM/CustomEvent
-		_initEvent.call(this, _type, _bubbles, _cancelable);
-		
-		this.detail = _detail;
-	}
-	function _initUIEvent(_type, _bubbles, _cancelable, _view, _detail) {
-		//https://developer.mozilla.org/en/DOM/event.initUIEvent
-		_initCustomEvent.call(this, _type, _bubbles, _detail);
-		
-		this.view = _view;
-	}
-	function _initMouseEvent(_type, _bubbles, _cancelable, _view, 
-                     _detail, _screenX, _screenY, _clientX, _clientY, 
-                     _ctrlKey, _altKey, _shiftKey, _metaKey, 
-                     _button, _relatedTarget) {
-		var thisObj = this;
-		//https://developer.mozilla.org/en/DOM/event.initMouseEvent
-		_initUIEvent.call(thisObj, _type, _bubbles, _cancelable, _view, _detail);
-		
-		thisObj.screenX = _screenX;
-		thisObj.screenY = _screenY;
-		thisObj.clientX = _clientX;
-		thisObj.clientY = _clientY;
-        thisObj.ctrlKey = _ctrlKey;
-		thisObj.altKey = _altKey;
-		thisObj.shiftKey = _shiftKey;
-		thisObj.metaKey = _metaKey;
-		thisObj.button = _button;
-		thisObj.relatedTarget = _relatedTarget;
-	}
-	/*
-	_type in [DOMAttrModified, DOMCharacterDataModified, DOMNodeInserted, DOMNodeInsertedIntoDocument, DOMNodeRemoved, DOMNodeRemovedFromDocument, DOMSubtreeModified]
-	_attrChange in [MutationEvent.MODIFICATION, MutationEvent.ADDITION, MutationEvent.REMOVA]
-	*/
-	function _initMutationEvent(_type, _bubbles, _cancelable, _relatedNode, _prevValue, _newValue, _attrName, _attrChange) {
-		var thisObj = this;
-		//http://help.dottoro.com/ljifcdwx.php
-		_initEvent.call(thisObj, _type, _bubbles, _cancelable);
-		
-		thisObj.relatedNode = _relatedNode;
-		thisObj.prevValue = _prevValue;
-		thisObj.newValue = _newValue;
-		thisObj.attrName = _attrName;
-        thisObj.attrChange = _attrChange;
-	}
-	//No "MutationNameEvent": eventObject.initMutationNameEvent and "TextEvent"/"TextEvents": eventObject.initTextEvent, "KeyboardEvent":eventObject.initKeyEvent implimentation because of lack major browsers support
-
-	/**
-	 * https://developer.mozilla.org/en/DOM/document.createEvent
-	 * @param {string} eventType is a string that represents the type of event to be created. Possible event types include "UIEvents", "MouseEvents", "MutationEvents", and "HTMLEvents". See https://developer.mozilla.org/en/DOM/document.createEvent#Notes section for details.
-	 */
-	document.createEvent = function(eventType) {
-		var eventObject;
-		
-		eventObject = document.createEventObject();
-		
-		eventObject.returnValue = true;//default value
-		eventObject.initEvent = _initEvent;
-		eventObject.initCustomEvent = _initCustomEvent;
-		eventObject.initUIEvent = _initUIEvent;
-		eventObject.initMouseEvent = _initMouseEvent;
-		eventObject.initMutationEvent = _initMutationEvent;
-		
-		return eventObject;
-	}
-}
-
-})();
-}
-
-/*
-	@deprecate Оставлено только для совместимости
-	@namespace Класс для работы с событиями
-	22.11.11    ver.last Объект устарел. Сделал events-shim для IE < 9 вместо этого объекта
-	02.08.11    ver.2.2.1 Добавил экспортируемые функции Events.addEventListener и Events.removeEventListener
-	19.01.11	ver.2.2.0.1 (!)Исправил небольшой баг в Opera в fixEvent, связаный с вычислением event.relatedTarget
-	15.11.10	ver.2.2.0::Важное: выключил возможность игнорировать событие по guid, т.к. неюзабельно
-	30.09.10	ver.2.1.3
-	Event -> Events
-*/
-/*var Events = global["Events"] = (function() {
-	return {
-		//Объект, в котором хранятся пары "название события"-"пользовательская функция добавления"
-		//"пользовательская функция добавления" должна возвращать guid функции добавленной к событию
-		userAdd : {},
-
-		//Синонимы для типов событий. Используются для игнорирования виртуальных событий.
-		//Заполняется вместе с userAdd
-		typeSinonims : [],
-
-		//добавить обработчик события.
-		add: function(elem, type, handler) {
-			elem.addEventListener(type, handler, false);
-		},
-
-		// удалить обработчик события
-		remove: function(elem, type, handler) {
-			elem.removeEventListener(type, handler, false);
+	} finally {
+		if(!_rightBehavior) {//fixEventListenerAll
+			[global["document"],
+			 global["HTMLDocument"] && global["HTMLDocument"].prototype,
+			 global["Window"] && global["Window"].prototype,
+			 el_proto
+			].forEach(fixEventListener);
 		}
+		document.removeEventListener("click", dummy);
 	}
-}())*/
+}
+else {
+	//[add|remove]EventListener not supported
+}
 
 // new Event(...) and new CustomEvent(...) from github.com/Raynos/DOM-shim/ with my fixing
-
 // Chrome throws error if using Error
 // IE9 says Event is an object and not a function -.- 
 // IE8 doesn't like it and gives a different error messsage!
@@ -1412,13 +965,6 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
         new Event("click");
     } catch (e) {
         //Убрал проверку на текст ошибки, т.к., по моему, она лишняя. И, таки да, в IE на русской ОС эта проверка ошибочна :(
-		/*if (e.type === "illegal_invocation" ||
-            e.message === "Object doesn't support this action" ||
-            e.message === "Object doesn't support property or method 'initEvent'" ||
-            e.message === "CustomEvent is not a constructor" ||
-            e.message === "Type error" ||
-            e.message === "NOT_SUPPORTED_ERR"
-        )*/
 		global["Event"] = _Event
 		
         if(eventProto)_Event.prototype = eventProto;//В IE < 8 не удастся получить Event.prototype
@@ -1456,13 +1002,6 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
         var c = new CustomEvent("magic");
     } catch (e) {
         //Убрал проверку на текст ошибки, т.к., по моему, она лишняя. И, таки да, в IE на русской ОС эта проверка ошибочна :(
-		/*if (e.type === "illegal_invocation" ||
-            e.message === "Object doesn't support this action" ||
-            e.message === "Object doesn't support property or method 'initEvent'" ||
-            e.message === "CustomEvent is not a constructor" ||
-            e.message === "Type error" ||
-            e.message === "NOT_SUPPORTED_ERR"
-        )*/
 		global["CustomEvent"] = _CustomEvent
 			
         if(customEventProto)_CustomEvent.prototype = customEventProto;//В IE < 8 не удастся получить CustomEvent.prototype
@@ -1478,25 +1017,26 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 /*  Some of from https://github.com/Raynos/DOM-shim/  */
 
 // IE < 8 support in a.ielt8.js and a.ielt8.htc
-var nodeProto = global["Node"] && global["Node"].prototype || 
-				   /*ielt8*/(global["_ielt8_Element_proto"] = {});
+var nodeProto = global["Node"].prototype;
 
 //Add JS 1.8 Element property classList				   
 if(!("classList" in browser.testElement)) {
-	Object.defineProperty(nodeProto, "classList", {"get" : function() {
-		var thisObj = this,
-			cont = (browser.msie && browser.msie < 8 && (
-				thisObj._ || (thisObj._ = {}))//Положим _cachedClassList в контейнер "_" для IE < 8
-			) || thisObj,
-			_cachedClassList = "__ccl_00lh__";
-		
-		if(!cont[_cachedClassList])cont[_cachedClassList] = new global["Utils"]["Dom"]["DOMStringCollection"](thisObj.getAttribute("class"), function() {
-			thisObj.setAttribute("class", this.value);//this instanceof Utils.Dom.DOMStringCollection
-			if(thisObj.className != this.value)thisObj.className = this.value;
-		})
-		
-		return cont[_cachedClassList];
-	}, "ielt8" : true});
+	Object.defineProperty(nodeProto, "classList", {
+		"get" : function() {
+			var thisObj = this,
+				cont = (browser.msie && browser.msie < 8 && (
+					thisObj._ || (thisObj._ = {}))//Положим _cachedClassList в контейнер "_" для IE < 8
+				) || thisObj,
+				_cachedClassList = "__ccl_00lh__";
+			
+			if(!cont[_cachedClassList])cont[_cachedClassList] = new global["Utils"]["Dom"]["DOMStringCollection"](thisObj.getAttribute("class"), function() {
+				thisObj.setAttribute("class", this.value);//this instanceof Utils.Dom.DOMStringCollection
+				if(thisObj.className != this.value)thisObj.className = this.value;
+			})
+			
+			return cont[_cachedClassList];
+		},
+		"ielt8" : true});
 }
 
 // Fix "children" property in IE < 9
@@ -1558,7 +1098,6 @@ if(browser.testElement.childElementCount == undefined)Object.defineProperties(no
 }
 )
 
-
 function _recursivelyWalk(nodes, cb) {
     for (var i = 0, len = nodes.length; i < len; i++) {
         var node = nodes[i],
@@ -1575,18 +1114,6 @@ function _recursivelyWalk(nodes, cb) {
     }
 };
 
-var attr = "getElementsByClassName";
-if(!(attr in browser.testElement))document[attr] = nodeProto[attr] = function(clas) {
-	var ar = [];
-	
-	clas && _recursivelyWalk(this.childNodes, function (el, index) {
-		if (el.nodeType == 1 && el.classList.contains(clas)) {
-			ar.push(el);
-		}
-	});
-	
-	return ar;
-};
 
 if(!("insertAfter" in browser.testElement)) {
 	/**
@@ -1603,34 +1130,6 @@ if(!("insertAfter" in browser.testElement)) {
 	};
 };
 
-var _compareDocumentPosition_ = 'compareDocumentPosition';
-if(!(_compareDocumentPosition_ in document)) {
-	var __name,
-		__n1 = __name || 'DOCUMENT_POSITION_';//Use '__name || ' only for GCC not to inline __n1 param. In this case __name MUST be undefined
-	document[_compareDocumentPosition_] = nodeProto[_compareDocumentPosition_] = function(b) {
-		var a = this;
-		
-		//compareDocumentPosition from http://ejohn.org/blog/comparing-document-position/
-		return a.contains ?
-				(a != b && a.contains(b) && 16) +
-				(a != b && b.contains(a) && 8) +
-				(a.sourceIndex >= 0 && b.sourceIndex >= 0 ?
-					(a.sourceIndex < b.sourceIndex && 4) +
-					(a.sourceIndex > b.sourceIndex && 2) :
-				1) +
-			0 : 0;
-	};
-	__name = 'DISCONNECTED';
-	document[__n1 + __name] = nodeProto[__n1 + __name] = 0x01;
-	__name = 'PRECEDING';
-	document[__n1 + __name] = nodeProto[__n1 + __name] = 0x02;
-	__name = 'FOLLOWING';
-	document[__n1 + __name] = nodeProto[__n1 + __name] = 0x04;
-	__name = 'CONTAINS';
-	document[__n1 + __name] = nodeProto[__n1 + __name] = 0x08;
-	__name = 'CONTAINED_BY';
-	document[__n1 + __name] = nodeProto[__n1 + __name] = 0x10;
-};
 
 // Emuleted HTMLTimeElement
 if(!(global["HTMLTimeElement"] && global["HTMLTimeElement"].prototype))
@@ -1662,17 +1161,13 @@ Object.defineProperty((global["HTMLUnknownElement"] && global["HTMLUnknownElemen
 try {
 	document.importNode(browser.testElement);
 } catch (e) {
-	if (e["number"] === -2147418113 ||//e.message === "Argument not optional" // IE выводит сообщения на локальном языке, поэтому это не сработает
-		e["result"] === 2153185281 ||//e.message === "Not enough arguments" // FF
-		e["code"] === 6//e.message === "WRONG_ARGUMENTS_ERR" // Opera
-	) {
-		var importNode = document.importNode;
-		document.importNode = function (node, bool) {
-			if (bool === void 0) {
-				bool = true;
-			}
-			return importNode.call(this, node, bool);
+	var importNode = document.importNode;
+	delete document.importNode;
+	document.importNode = function (node, bool) {
+		if (bool === void 0) {
+			bool = true;
 		}
+		return importNode.call(this, node, bool);
 	}
 }
 
@@ -1882,25 +1377,6 @@ global["inherit"] = function(Child, Parent) {
 /*  =======================================================================================  */
 /*  ======================================  Network  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-/*
- * Получение XHR
- * @return {XMLHttpRequest}
- 
-var getXmlHttp = XMLHttpRequest ? function(){ return new XMLHttpRequest() } : 
-function() {
-  var xmlhttp;
-  try {
-    xmlhttp = new ActiveXObject("Msxml2.XMLHTTP");
-  } catch (e) {
-    try {
-      xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
-    } catch (E) {
-      xmlhttp = null;
-    }
-  }
-  return xmlhttp;
-}*/
-if(!global.XMLHttpRequest)global.XMLHttpRequest = ActiveXObject.bind(global, "Microsoft.XMLHTTP");
 
 /**
  * Функция посылки запроса к файлу на сервере
@@ -2021,25 +1497,6 @@ SendRequest.guid = 0;
 /*  ======================================================================================  */
 /*  =======================================  Utils  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-/*
- * TODO:: In external file
- * Проверка, является ли объект объектом типа HTMLElement
- * @param {!Object} obj Проверяемый объект
- * @return {boolean}
- */
-/*global["isHTMLElement"] = function(obj) {
-	try {
-		if(obj instanceof Element)return true;
-	}
-	catch(e) {//IE doesn't give you access to the HTMLElement prototype
-		try {
-			if(obj.nodeType == 1)return true;
-		}
-		catch(b) {}
-	}
-	return false;
-}
-*/
 
 /**
  * Внешняя forEach для массивов и объектов
@@ -2096,13 +1553,11 @@ function randomString(length) {
 
 /**
  * toArray function for Array-like collection, number and string
- * Преобразует 'Array-like коллекцию с числовыми ключами'/число/строку в массив.
+ * RUS: Преобразует 'Array-like коллекцию с числовыми ключами'/число/строку в массив.
  * Можно задать выборку через start и end. Трактовка start и end аналогичная функции Array::slice
  *  Если start отрицателен, то он будет трактоваться как arrayObj.length+start (т.е. start'ый элемент с конца массива). 
  *  Если end отрицателен, то он будет трактоваться как arrayObj.length+end (т.е. end'ый элемент с конца массива).
  *  Если второй параметр не указан, то экстракция продолжится до конца массива. Если end < start, то будет создан пустой массив.
- * @version 2.4
- *  changeLog: 2.4 using Array.from
  * @param {Object|Array|number|string|NodeList} iterable Любой Array-like объект, любой объект, число или строка
  * @param {number=} start Индекс элемента в массиве, с которого будет начинаться новый массив.
  * @param {number=} end Индекс элемента в массиве, на котором новый массив завершится.
@@ -2118,7 +1573,7 @@ var $A = global["$A"] = function(iterable, start, end, forse) {
 	}
 	start = start || 0;//Default value
 	
-	var type = typeof iterable, results, trySlice = true,
+	var type = typeof iterable, results,
 		//args потому, что IE не понимает, когда в функцию Array::slice передают undefined вместо start и/или end
 		args = [start];
 	if(end)args.push(end);
@@ -2128,8 +1583,7 @@ var $A = global["$A"] = function(iterable, start, end, forse) {
 		type = "string";
 	}
 	
-	//IE не умеет выполнять Array.prototype.slice для "string" и "number"
-	if(browser.msie < 9 && type == "string")trySlice = false;
+	iterable = _toObject(iterable);
 	
 	if(typeof iterable.length == "number") {
 		
@@ -2139,7 +1593,7 @@ var $A = global["$A"] = function(iterable, start, end, forse) {
 		
 		_length = _end - _start;
 				
-		if(trySlice) try {//Попробуем применить Array.prototype.slice на наш объект
+		try {//Попробуем применить Array.prototype.slice на наш объект
  			results = Array.prototype.slice.apply(iterable, args);//An idea from https://github.com/Quby/Fn.js/blob/master/fn.js::_.toArray
 			//Match result length of elements with initial length of elements
 			if(results.length === _length)return results;//Проверка !!!
@@ -2149,11 +1603,7 @@ var $A = global["$A"] = function(iterable, start, end, forse) {
 		}
 		
 		results = [];
-		for( ; _start < _end ; ++_start)results.push(
-			iterable.charAt ? 
-				iterable.charAt(_start) : //typeof iterable == "string"
-				iterable[_start] //typeof iterable == "object" with 'length' prop
-		);
+		for( ; _start < _end ; ++_start)results.push(iterable[_start]);
 		
 		return results;
 	}
@@ -2170,14 +1620,9 @@ var $A = global["$A"] = function(iterable, start, end, forse) {
 
 /**
  * Object.keys-like function for Array-like collection, number and string
- * Достаёт ключи объекта/массива и возвращяет их в виде массива
+ * RUS: Достаёт ключи объекта/массива и возвращяет их в виде массива
  * @param {Object|Array|number|string} iterable
  * @param {boolean=} forse Для typeof iterable == "object" смотреть свойства в цепочки прототипов объекта
- * @version 2.5
- *  changeLog: 2.5[16.06.2011] [*bug]В IE. Не доставал ключи, если iterable это arguments
-			   2.1[31.05.2011] Вернул параметр forse для type == "object"
-			   2  [24.05.2011] Добавил обработку number и string. Добавил вызов Object.keys, который должен быть реализован. Убрал параметр forse, т.к. не соответствует сигнатуре Object.keys
- *			   1  [--.04.2011] Initial realese
  */
 var $K = global["$K"] = function(iterable, forse) {
 	var type = typeof iterable,
@@ -2203,16 +1648,6 @@ var $K = global["$K"] = function(iterable, forse) {
 	return results;
 }
 
-/* Minimum JSON JavaScript implementation */
-/* Реализуем минимальную функциональность JSON */
-/*
-Bad practice, because other libs can't detect lack of JSON support
-if(!global.JSON)global.JSON = {
-	parse : function(text) {
-		return text && !(/[^,:{}\[\]0-9.\-+Eaeflnr-u \n\r\t]/.test(text.replace(/"(\\.|[^"\\])*"/g, ''))) &&
-			eval('(' + text + ')') || null;
-	}
-}*/
 
 /**
  * Создаёт универсальный обработчик для всех или нескольких вложенных элементов
@@ -2296,13 +1731,6 @@ global["bubbleEventListener"] = function bubbleEventListener(attribute, namedFun
 /*  ======================================================================================  */
 /*  ========================================  DOM  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-// IE8 window.addEventListener does not exist
-// From https://github.com/Raynos/DOM-shim/
-/*if(!global.addEventListener && document.addEventListener) {
-    global.addEventListener = document.addEventListener.bind(document);
-    global.removeEventListener = document.removeEventListener.bind(document);
-    global.dispatchEvent = document.dispatchEvent.bind(document);
-}*/
 
 /**
  * document.getElementById alias
@@ -2462,143 +1890,19 @@ var $$0 = global["$$0"] = function(selector, root) {
 }
 
 // window.getComputedStyle fix
-;(function () {
-if(!global.getComputedStyle) {//IE < 9
-	/**
-	 * @link https://developer.mozilla.org/en/DOM/window.getComputedStyle
-	 * getCurrentStyle - функция возвращяет текущий стиль элемента
-	 * @param {?Node} obj HTML-Элемент
-	 * @param {?string} pseudoElt A string specifying the pseudo-element to match. Must be null (or not specified) for regular elements.
-	 * @this {Window}
-	 * @return {CSSStyleDeclaration} Стиль элемента
-	 */
+//FF say that pseudoElt param is required
+try {
+	global.getComputedStyle(browser.testElement)
+}
+catch(e) {
+	var old = global.getComputedStyle;
 	global.getComputedStyle = function(obj, pseudoElt) {
-		return obj.currentStyle;
+		return old.call(global, obj, pseudoElt || null)
 	}
-}
-else {
-	//FF say that pseudoElt param is required
-	try {
-		global.getComputedStyle(browser.testElement)
-	}
-	catch(e) {
-		var old = global.getComputedStyle;
-		global.getComputedStyle = function(obj, pseudoElt) {
-			return old.call(global, obj, pseudoElt || null)
-		}
-	}
-}
-})();
-
-/** Example of making a document HTML5 element safe
- * Функция "включает" в IE < 9 HTML5 элементы
- * Используется, если никакая другая аналогичная функция не используется
- */
-function html5_document(doc) { // pass in a document as an argument
-	// create an array of elements IE does not support
-	var html5_elements_array = 'abbr article aside audio canvas command datalist details figure figcaption footer header hgroup keygen mark meter nav output progress section source summary time video'.split(' '),
-		a = -1;
-
-	while (++a < html5_elements_array.length) { // loop through array
-		if(doc.createElement)doc.createElement(html5_elements_array[a]); // pass html5 element into createElement method on document
-	}
-
-	return doc; // return document, great for safeDocumentFragment = html5_document(document.createDocumentFragment());
-} // critique: array could exist outside the function for improved performance?
-
-
-//Исправляем для IE<9 создание DocumentFragment, для того, чтобы функция работала с HTML5
-if(browser.msie && browser.msie < 9) {
-	var msie_CreateDocumentFragment = function() {
-		var df = 
-			msie_CreateDocumentFragment.orig.call ? //В IE6 у функции createDocumentFragment нету call
-			msie_CreateDocumentFragment.orig.call(this) :
-			(this["__fake__cdf"] = msie_CreateDocumentFragment.orig)();
-		
-		if(!df.querySelector)df.querySelector = document.querySelector;
-		if(!df.querySelectorAll)df.querySelectorAll = document.querySelectorAll;
-		
-		return html5_document(df);
-	}
-	msie_CreateDocumentFragment.orig = document.createDocumentFragment;
-	
-	document.createDocumentFragment = msie_CreateDocumentFragment;
-}
-
-
-/**
- * Issue: <HTML5_elements> become <:HTML5_elements> when element is cloneNode'd
- * Solution: use an alternate cloneNode function, the default is broken and should not be used in IE anyway (for example: it should not clone events)
- * В Internet Explorer'е функция <HTMLElement>.cloneNode "ломает" теги HTML5 при клонировании,
- *  поэтому нужно использовать альтернативный способ клонирования
- *
- * Больше по теме: http://pastie.org/935834
- *
- * Функция клонирует DOM-элемент
- * Альтернатива <Node>.cloneNode в IE < 9. В остальных браузерах просто вызывается <Node>.cloneNode
- * Дополнительно, функция удаляет id у вновь склонированного элемента, если delete_id != false
- * @param {Node|Element} element Элемент для клонирования
- * @param {boolean=} include_all [false] Клонировать ли все дочерние элементы? По-умолчанию, false
- * @param {boolean=} delete_id [false] Удалить аттрибут id из нового элемента? По-умолчанию, false
- * @version 3
- *  chacgeLog: 3 [23.11.2011 19:00] Переделал. include_all and delete_id default now false. Передаю в nodeProto в качестве cloneNode для IE < 9
- *			   2 [06.07.2011 20:00] Добавил поддержку клонирования td и tr для IE < 9
- *			   1 [--.--.2011 --:--] Initial release
- */
-var _cloneElement = global["cloneElement"] = function(element, include_all, delete_id) {//Экспортируем cloneElement для совместимости и для вызова напрямую	
-	// Обновляем функцию _cloneElement
-	if(document.createDocumentFragment !== _cloneElement.oldCreateDocumentFragment && _cloneElement.safeElement != false)
-		_cloneElement.safeElement = 
-			(!!browser.msie && browser.msie < 9)
-			?
-			(_cloneElement.oldCreateDocumentFragment = document.createDocumentFragment).call(document).appendChild(document.createElement("div"))
-			:
-			false;
-	
-	include_all === void 0 ? include_all = false : 0;
-	delete_id === void 0 ? delete_id = false : 0;
-	
-	var result;
-	
-	//Следующий вариант не работает с HTML5
-	//if(_cloneElement.safeDocumentFragment) {
-		//result = _cloneElement.safeDocumentFragment.appendChild(document.createElement("div"));//Создаём новый элемент
-		
-	if(_cloneElement.safeElement) {//Мы присваеваем _cloneElement.safeDocumentFragment только если браузер - IE < 9
-		_cloneElement.safeElement.innerHTML = "";//Очистим от предыдущих элементов
-		
-		if(include_all && /td|tr/gi.test(element.tagName)) {//Только для элементов td и tr
-			//Хак для IE < 9, для нормального копирования ячеек таблицы
-			if(element.tagName.toUpperCase() == "TR") {
-				_cloneElement.safeElement.innerHTML = "<table><tbody>" + element.outerHTML + "</tbody></table>";
-				result = _cloneElement.safeElement.firstChild.firstChild.firstChild;
-			}
-			else if(element.tagName.toUpperCase() == "TD") {
-				_cloneElement.safeElement.innerHTML = "<table><tbody><tr>" + element.outerHTML + "</tr></tbody></table>";
-				result = _cloneElement.safeElement.firstChild.firstChild.firstChild.firstChild;
-			}
-		}		
-		else {
-			if(include_all)_cloneElement.safeElement.innerHTML = element.outerHTML; // set HTML5-safe element's innerHTML as input element's outerHTML
-			else _cloneElement.safeElement.innerHTML = element.outerHTML.replace(element.innerHTML, "");
-		
-			result = _cloneElement.safeElement.firstChild; // return HTML5-safe element's first child, which is an outerHTML clone of the input element
-		}
-	}
-	else result = element.cloneNode(include_all);
-	
-	if(delete_id && result.id)result.id = "";
-	
-	return result;
-}
-
-if(browser.msie && browser.msie < 9) {
-	//nodeProto["_cloneNode_"] = browser.testElement.cloneNode;//Original function
-	nodeProto["cloneNode"] = function(deep){return _cloneElement(this, deep)};
 }
 
 //Events
-if(!browser.testElement.addEventListener && (!browser.msie || browser.msie > 7)) {
+if(!browser.testElement.addEventListener) {
 	nodeProto.addEventListener = global.addEventListener;
 	nodeProto.removeEventListener = global.removeEventListener;
 	nodeProto.createEvent = global.createEvent;
@@ -2679,56 +1983,5 @@ if (console && !DEBUG) {
 /*  ======================================================================================  */
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  DEBUG  =====================================  */
 
-/* end ФУНКЦИИ ДЛЯ РАБОТЫ */
-
-/*  ======================================================================================  */
-/*  ======================================================================================  */
-/*  ======================================================================================  */
-/*  ===================================  Функции сайта  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
-/*  ======================================================================================  */
-
-/**
- * @namespace объект со специфическими свойствами магазина
- */
-var Site = global["Site"] = {
-	/*Export begin*/
-	/* Константы */
-	/** Исходный заголовок страницы
-	 * @const 
-	 * @type {string} */
-	"title" : document.title,
-	/** @const 
-	 * @type {string} */
-	"path" : location.protocol + "//" + location.host + location.pathname,
-	/* Переменные */
-
-	"inits" : [],
-	"afterLoads" : [],
-	/*Export end*/
-	
-	/* Функции */
-	afterPageLoad : function() {
-		if(browser.noDocumentReadyState)document.readyState = "complete";
-		
-		for(var i in Site["afterLoads"])if(Site["afterLoads"].hasOwnProperty(i) && typeof (i = Site["afterLoads"][i]) == "function")i();		
-	},
-	
-	/**
-	 * Инициализация сайта
-	 */
-	init : function() {
-		if(browser.noDocumentReadyState)document.readyState = "interactive";
-		
-		//Добавим к тегу <HTML> класс с названием браузера/движка
-		document.documentElement.className += (" " + browser.names.join(" "));
-		
-		for(var i in Site["inits"])if(Site["inits"].hasOwnProperty(i) && typeof (i = Site["inits"][i]) == "function")i();
-	}
-}
-
-/***----------------- СТАРТ ------------------***/
-
-global.addEventListener('DOMContentLoaded', Site.init, false);
-global.addEventListener('load', Site.afterPageLoad, false);
 
 })(window);
