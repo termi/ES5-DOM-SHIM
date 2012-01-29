@@ -46,12 +46,15 @@ if(!Function.prototype.bind)Function.prototype.bind = function(object, var_args)
 
 /** @type {Object}
  * @const */
-var browser = global["browser"] = {
+var browser = {
 /** @type {string}
  * @const */
 	agent : navigator.userAgent.toLowerCase()
 };
 browser.names = browser.agent.match(/(msie)/gi);
+/** @type {number} */
+var len = browser.names.length;
+while(len-- > 0)browser[browser.names[len]] = true;
 /** @type {boolean}
  * @const */
 browser.msie = browser["msie"] = browser["msie"] && !browser.opera;
@@ -73,7 +76,7 @@ if(!global["HTMLElement"])global["HTMLElement"] = global["Element"];//IE8
 if(!global["Node"])global["Node"] = global["Element"];//IE8
 
 //Not sure if it wrong. TODO:: tests for this
-if(!global["DocumentFragment"])global["DocumentFragment"] = global["Document"];//For IE8
+if(!global["DocumentFragment"])global["DocumentFragment"] = global["Document"] || global["HTMLDocument"];//For IE8
 
 
 
