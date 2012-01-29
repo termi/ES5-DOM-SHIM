@@ -5,6 +5,8 @@ based on:
 - https://github.com/paulmillr/es6-shim
 - https://github.com/Raynos/DOM-shim
 
+__Next__: [work in progress](https://github.com/termi1uc1/ES5-DOM-SHIM/tree/dev)
+
 ## Adding to html:
 `in a HEAD section`
     
