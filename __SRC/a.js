@@ -32,10 +32,7 @@ function(global) {
 /*  ======================================================================================  */
 /*  ==================================  Function prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-/*
- * Fix Function.prototype.apply to work with generic array-like object instead of an array
- * test: (function(a,b,c){console.log(a.id+"|"+b.id+"|"+c.id)}).apply(null, {0:{id:0},1:{id:1},2:{id:2},length:3})
- */
+//Fix Function.prototype.apply to work with generic array-like object instead of an array
 try {
 	isNaN.apply(null, {})
 }
