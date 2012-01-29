@@ -9,13 +9,13 @@ __Status__: Stable, but need carefully use in IE < 9
 
 ## Goal
 
- - Normalizing the DOM across all browsers
+ - Normalizing the JS and DOM across all browsers
  - Less code & file size
  - IE6+ support
  - Include all we need from ES5, ES6 and DOM shim in one file
 
 ## Install
- - For modern browsers and IE8+:
+ - For modern browsers and IE9+:
   - Add main script in `head` section
   
             <script src="a.js"></script>
