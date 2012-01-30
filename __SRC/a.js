@@ -1757,6 +1757,56 @@ var $ = global["$"] = function(id) {
 	return id;
 };
 
+
+/**
+ * Получение эллементов по классам и тэгам
+ * @param {!string} selector Строка с CSS3-селектором
+ * @param {Document|HTMLElement|Node|Array.<HTMLElement>=} roots Список элементов в которых мы будем искать
+ * @param {boolean=} isFirst ищем только первый
+ * @return {Array.<HTMLElement>} Список найденных элементов
+ * @version 2
+ */
+var $$ = global["$$"] = function(selector, roots/*, noCache*/, isFirst) {
+	//$$N.test = $$N["test"];//$$N["test"] TODO:: добавить в $$N["test"] проверку на нестандартные селекторы
+	//TODO:: вернуть назад поддержку нестандартных псевдо-классов
+	//if(document.querySelector && !($$N.test && $$N.test.test(selector)) {
+	roots = roots || document;
+	/* replace not quoted args with quoted one -- Safari doesn't understand either */
+	//if(browser.safary)//[termi 30.01.12]commented it due not actual for now
+	//	selector = selector.replace(/=([^\]]+)/, '="$1"');
+	
+	var isSpecialMod = /[>\+\~]/.test(selector.charAt(0)) || 
+					/(\,>)|(\,\+)|(\,\~)/.test(selector),
+		i = -1,
+		root;
+	
+	if(document.querySelector) {
+		var result = [];
+		
+		if(selector) {
+			if(isSpecialMod) {//spetial selectors like ">*", "~div", "+a"
+				//Мы надеемся :(, что в селекторе не бедет [attrName=","]
+				//TODO:: переделать сплитер, чтобы он правильно работал даже для [attrName=","]
+				selector = selector.split(",")["unique"]();
+				
+				while(root = selector[++i])
+					result = $$.N(root, roots, result);
+					
+				return result;
+			}
+			
+			if(!Array.isArray(roots))return Array["from"](roots.querySelectorAll(selector));
+						
+			while(root = roots[++i] && (!isFirst || !result.length))
+				result.concat(Array["from"](root.querySelectorAll(selector)))
+			
+		}
+		
+		return result;
+	}
+	
+	throw new Error("querySelector not supported")
+}
 /**
  * Функция возвращяет массив элементов выбранных по CSS3-велектору. 
  * Также добавляет во все наёденные элементы объекты-контейнеры '_'. '_' можно использовать для хранения переменных,
@@ -1794,7 +1844,7 @@ var $ = global["$"] = function(id) {
  *             1.2   [23.02.2011 20:50] Изменён алгоритм вызова querySelector если первый символ в selector = [>|+|~]
  *  TODO:: Изучить код https://github.com/ded/qwery - может быть будет что-нибуть полезное
  */
-function $$N(selector, roots, prefetchResult, isFirst) {
+$$.N = function(selector, roots, prefetchResult, isFirst) {
 	//TODO:: Не засовывать в result те элементы, которые уже были туда засованы
 	roots = !roots ? [d] : (Array.isArray(roots) ? roots : [roots]);
 	
@@ -1819,7 +1869,7 @@ function $$N(selector, roots, prefetchResult, isFirst) {
 			if(isSpecialMod) {
 				if(rt == document)noway = true;//Бесполезно вызывать селекторы с начальными >, + или ~ для document
 				else {
-					if(!rt.id)rt.id = $$N.str_for_id + $$N.uid_for_id++;
+					if(!rt.id)rt.id = $$.N.str_for_id + $$.N.uid_for_id++;
 					specialSelector = "#" + rt.id + selector;
 					rt = rt.parentNode;
 				}
@@ -1836,59 +1886,9 @@ function $$N(selector, roots, prefetchResult, isFirst) {
 	throw new Error("querySelector not supported")
 }
 /** @type {string} создания уникального идентификатора (HTMLElement.id) */
-$$N.str_for_id = "r" + randomString(6);
+$$.N.str_for_id = "r" + randomString(6);
 /** @type {number} Инкреминтируемое поле для создания уникального идентификатора. Используется вместе с $$N.str_for_id */
-$$N.uid_for_id = 0;
-
-/**
- * Получение эллементов по классам и тэгам
- * @param {!string} selector Строка с CSS3-селектором
- * @param {Document|HTMLElement|Node|Array.<HTMLElement>=} roots Список элементов в которых мы будем искать
- * @param {boolean=} isFirst ищем только первый
- * @return {Array.<HTMLElement>} Список найденных элементов
- * @version 2
- */
-var $$ = global["$$"] = function(selector, roots/*, noCache*/, isFirst) {
-	//$$N.test = $$N["test"];//$$N["test"] TODO:: добавить в $$N["test"] проверку на нестандартные селекторы
-	//TODO:: вернуть назад поддержку нестандартных псевдо-классов
-	//if(document.querySelector && !($$N.test && $$N.test.test(selector)) {
-	roots = roots || document;
-	/* replace not quoted args with quoted one -- Safari doesn't understand either */
-	//if(browser.safary)//[termi 30.01.12]commented it due not actual for now
-	//	selector = selector.replace(/=([^\]]+)/, '="$1"');
-	
-	var isSpecialMod = /[>\+\~]/.test(selector.charAt(0)) || 
-					/(\,>)|(\,\+)|(\,\~)/.test(selector),
-		i = -1,
-		root;
-	
-	if(document.querySelector) {
-		var result = [];
-		
-		if(selector) {
-			if(isSpecialMod) {//spetial selectors like ">*", "~div", "+a"
-				//Мы надеемся :(, что в селекторе не бедет [attrName=","]
-				//TODO:: переделать сплитер, чтобы он правильно работал даже для [attrName=","]
-				selector = selector.split(",")["unique"]();
-				
-				while(root = selector[++i])
-					result = $$N(root, roots, result);
-					
-				return result;
-			}
-			
-			if(!Array.isArray(roots))return Array["from"](roots.querySelectorAll(selector));
-						
-			while(root = roots[++i] && (!isFirst || !result.length))
-				result.concat(Array["from"](root.querySelectorAll(selector)))
-			
-		}
-		
-		return result;
-	}
-	
-	throw new Error("querySelector not supported")
-}
+$$.N.uid_for_id = 0;
 
 /**
  * @param {!string} selector
