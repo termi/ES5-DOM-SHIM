@@ -16,18 +16,71 @@
 
 /** @define {boolean} */
 var IS_DEBUG = false;
+/** @define {boolean} */
+var INCLUDE_EXTRAS = true;
 /** @const @type {boolean} */
 var DEBUG = IS_DEBUG && !!(window && window.console);
 
 var /** @const */funcType = "function";
 
 ;(
-/** Переопределяем глобальную переменную для модулей
+/**
  * @type {Window}
  * @const */
 function(global) {
 
 "use strict";
+
+
+/*  =======================================================================================  */
+/*  ======================================  Classes  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+/**
+ * Расширяем 'obj' объект свойствами из объекта/объектов в списке аргументов со 2го аргумента
+ * @param {Object} obj Object to extend
+ * @param {...} ravArgs extentions
+ */
+Object["append"] = function(obj, ravArgs) {
+	for(var i = 1; i < arguments.length; i++) {
+		var extension = arguments[i];
+		for(var key in extension)
+			if(!extension.hasOwnProperty || extension.hasOwnProperty(key))obj[key] = extension[key];
+	}
+	
+	return obj;
+}
+
+
+/**
+ * Наследует класс Child от Parent - фактически, только добавляет prototype Parent в цепочку прототипов Child. Не выполняет инициализирующий код содержащийся в конструкторе Parent, поэтому в конструкторе Child нужно дополнительно вызвать Child.superclass.constructor.call(this, ...)
+ * @param {Function} Child
+ * @param {Function} Parent
+ */
+Object["inherit"] = function(Child, Parent) {
+	(Child.prototype = Object.create(Child["superclass"] = Parent.prototype)).constructor = Child;
+}
+
+/*
+	Quick way to define prototypes; much less verbose than standard 
+	foobar.prototype.someFunc = function() lists. See ApplicationCache
+	defined below for example use.
+
+	@param f Function object/constructor to add to.
+	@param addMe Object literal that contains the properties/methods to
+		add to f's prototype.
+	TODO:: jsdoc's и описать
+*/
+/*global["append"] = function(f, addMe) {
+	for (var i in addMe) {
+		f.prototype[i] = addMe[i];
+	}
+}*/
+
+
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Classes  ======================================  */
+/*  =======================================================================================  */
+
+
 
 /*  ======================================================================================  */
 /*  ==================================  Function prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
@@ -68,34 +121,18 @@ if(!Function.prototype.bind)Function.prototype.bind = function(object, var_args)
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Function prototype  ==================================  */
 /*  =======================================================================================  */
 
-// --------------- ================ Browser detection ================ ---------------
-//Определение браузера.
-//Код: https://gist.github.com/989440
-//Разъяснение: http://habrahabr.ru/blogs/javascript/115841/
-//TODO:: Всесторонне протестировать
-/*var browser = (function () {
-    var w = this.Worker,
-        l = w && (w.prototype + "").length;
-
-    return {
-        mozilla: l == 36, // is Firefox?
-        opera: l == 33, // is Opera?
-        safari: l == 24, // is Safari?
-        chrome: l == 15, // is Chrome?
-        msie: !w       // is IE?
-    }
-})()
-*/
-
-//Определение браузера и поддерживаемых возможностей
-//Если что-то еще понадобится, можно посмотреть тут https://github.com/mrdoob/system.js
 /** @type {Object}
  * @const */
-var browser = global["browser"] = {
+var browser = global["browser"] || (global["browser"] = {
 /** @type {string}
  * @const */
 	agent : navigator.userAgent.toLowerCase()
-};
+});
+
+if(INCLUDE_EXTRAS) {
+
+//Определение браузера и поддерживаемых возможностей
+//Если что-то еще понадобится, можно посмотреть тут https://github.com/mrdoob/system.js
 
 /** @type {Array}
  * @const */
@@ -139,13 +176,7 @@ if(browser.msie)for(var i = 6 ; i < 11 ; i++)//IE from 6 to 10
 		break;
 	}
 browser["msie"] = browser.msie;
-//Определяем поддерживаемые браузером технолигии
-/** @type {Node}
- * @const */
-browser.testElement = document.createElement('div');
-/** @type {boolean}
- * @const */
-browser.isPlaceholder = document.createElement("INPUT").placeholder != undefined;
+
 /** @type {string}
  * @const */
 browser["cssPrefix"] = 
@@ -155,36 +186,44 @@ browser["cssPrefix"] =
 	browser.msie ? "ms" : 
 	"";
 	
-	
-	
+}
+
+
 	
 
-var _hasOwnProperty = Function.prototype.call.bind(Object.prototype.hasOwnProperty),
-	_call = function(_function) {
+var /** @type {HTMLElement}
+	 * @const */
+	_testElement = document.createElement('div')
+	
+  , _hasOwnProperty = Function.prototype.call.bind(Object.prototype.hasOwnProperty)
+  
+  , _call = function(_function) {
 		// If no callback function or if callback is not a callable function
 		// it will throw TypeError
         Function.prototype.call.apply(_function, arguments)
-	},
+	}
 	
 	//Fixed `toObject` to work for strings in IE8 and Rhino. Added test spec for `forEach`.
 	//https://github.com/kriskowal/es5-shim/pull/94
-	need_prepareString = (function(strObj) {
+  , need_prepareString = (function(strObj) {
 		// Check failure of by-index access of string characters (IE < 9)
 		// and failure of `0 in strObj` (Rhino)
 		return strObj[0] != "a" || !(0 in strObj);
-	})(Object("a")),
-	_toObject = function(obj) {
-		if (obj == null) { // this matches both null and undefined
+	})(Object("a"))
+	
+  , _toObject = function(obj) {
+		if (obj == null) // this matches both null and undefined
 			throw new TypeError(); // TODO message
-		}
+		
 		// If the implementation doesn't support by-index access of
 		// string characters (ex. IE < 9), split the string
-		if (need_prepareString && typeof obj == "string" && obj) {
+		if (need_prepareString && typeof obj == "string" && obj)
 			return obj.split("");
-		}
+		
 		return Object(obj);
-	},
-	_throwDOMException = function(errStr) {
+	}
+	
+  , _throwDOMException = function(errStr) {
 		var ex = Object.create(DOMException.prototype);
 		ex.code = ex[errStr];
 		ex.message = errStr +': DOM Exception ' + this.code;
@@ -192,9 +231,6 @@ var _hasOwnProperty = Function.prototype.call.bind(Object.prototype.hasOwnProper
 	}
 	
 	
-if(!document.readyState)browser.noDocumentReadyState = true;
-if(browser.noDocumentReadyState)document.readyState = "uninitialized";
-
 if(!global["HTMLDocument"])global["HTMLDocument"] = global["Document"];//For IE9
 if(!global["Document"])global["Document"] = global["HTMLDocument"];//For IE8
 //TODO:: for IE < 8 :: if(!global["Document"] && !global["HTMLDocument"])global["Document"] = global["HTMLDocument"] = ??;//for IE < 8
@@ -597,22 +633,22 @@ if (!Object.defineProperties || definePropertiesFallback) {
 
 /**
  * Non-standart method
+ * https://gist.github.com/1044540
  * Create a new Array with the all unique items
  * @return {Array}
  */
-if(!Array.prototype["unique"])Array.prototype["unique"] = function() {
-    var hash = {},
-		result = [],
-		array = this;
-	
-    for(var i = 0, l = array.length; i < l; ++i) {
-        if(!_hasOwnProperty(hash, array[i])) { //it works with objects! in FF, at least
-            hash[array[i]] = true;
-            result.push(array[i]);
-        }
-    }
-    return result;
-}
+if(!Array.prototype["unique"])Array.prototype["unique"] = (function(a) {
+  return function() {     // with a function that
+    return this.filter(a) // filters by the cached function
+  }
+})(
+  function(a,b,c) {       // which
+    return c.indexOf(     // finds out whether the array contains
+      a,                  // the item
+      b + 1               // after the current index
+    ) < 0                 // and returns false if it does.
+  }
+);
 
 /*
 for Array.prototype.reduce and Array.prototype.reduceRight
@@ -699,16 +735,17 @@ if(!Array.prototype.reduceRight)Array.prototype.reduceRight = function(accumulat
 /*
 From https://developer.mozilla.org/en/JavaScript/Reference/global_Objects/Array/filter
 */
-if(!Array.prototype.filter)Array.prototype.filter = function(fun, thisp) {  
+if(!Array.prototype.filter)Array.prototype.filter = function(callbackfn, thisp) {
+	// ES5 : "If IsCallable(callbackfn) is false, throw a TypeError exception." in "_call" function
+	
 	var thisArray = _toObject(this),
 		len = this.length >>> 0;
-	if (typeof fun != funcType)throw new TypeError();  
 
 	var res = [];
 	for (var i = 0; i < len; i++)
 		if (i in thisArray) {  
-			var val = thisArray[i];// in case fun mutates this  
-			if(fun.call(thisp, val, i, thisArray))res.push(val);
+			var val = thisArray[i];// in case callbackfn mutates this  
+			if(_call(callbackfn, thisp, val, i, thisArray))res.push(val);
 		}
 
 	return res;
@@ -718,12 +755,12 @@ if(!Array.prototype.filter)Array.prototype.filter = function(fun, thisp) {
  * http://es5.github.com/#x15.4.4.18
  * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/array/forEach
  */
-if(!Array.prototype.forEach)Array.prototype.forEach = function(iterator, context) {
+var _forEach = Array.prototype.forEach || (Array.prototype.forEach = function(iterator, context) {
 	var thisArray = _toObject(this);
 	for(var i in thisArray)
 		if(_hasOwnProperty(thisArray, i))
 			_call(iterator, context, thisArray[i], parseInt(i, 10), thisArray);
-}
+})
 
 /* ES5 15.4.4.14
  * http://es5.github.com/#x15.4.4.14
@@ -740,6 +777,7 @@ if(!Array.prototype.indexOf)Array.prototype.indexOf = function(obj, n) {
  * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/lastIndexOf
  */
 if(!Array.prototype.lastIndexOf)Array.prototype.lastIndexOf = function(obj, i) {
+	//TODO:: "slice" not in _toObject(this)
 	return _toObject(this).slice(0).reverse().indexOf(obj, i)
 }
 
@@ -756,7 +794,7 @@ if(!Array.prototype.lastIndexOf)Array.prototype.lastIndexOf = function(obj, i) {
 if(!Array.prototype.every)Array.prototype.every = function(callback, opt_thisobj, _isAll) {
 	if(_isAll === void 0)_isAll = true;//Default value = true
 	var result = _isAll;
-	Array.prototype.forEach.call(this, function(value, index) {
+	_forEach.call(this, function(value, index) {
 		if(result == _isAll)result = !!_call(callback, opt_thisobj, value, index, this);
 	});
 	return result;
@@ -788,7 +826,7 @@ if(!Array.prototype.some)Array.prototype.some = function(callback, opt_thisobj) 
 if (!Array.prototype.map)Array.prototype.map = function(callback, thisArg) {
 	var result;
 	
-	Array.prototype.forEach.call(this, function(v, k, obj) {
+	_forEach.call(this, function(v, k, obj) {
 		var mappedValue = _call(callback, thisArg, v, k, obj);
 		result[k] = v;
 	})
@@ -797,10 +835,10 @@ if (!Array.prototype.map)Array.prototype.map = function(callback, thisArg) {
 };
 
 /**
+ * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/isArray
  * Проверка, является ли объект массивом
- * EN: Is a given value an array?
- * Delegates to ECMA5's native Array.isArray
- * @param {*} Проверяемый объект 
+ * EN: Returns true if an object is an array, false if it is not.
+ * @param {*} obj The object to be checked
  * @return {boolean}
  */
 Array['isArray'] = Array['isArray'] || function(obj) {
@@ -847,7 +885,14 @@ Array["of"] = Array["of"] || function(args) {
 /*  ======================================================================================  */
 /*  ================================  String.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-
+/**
+ * String repeat
+ * @param {!number} count Кол-во повторений
+ * @return {string} Результирующая строка
+ */
+if(!String.prototype.repeat)String.prototype.repeat = function(count) {
+	return Array(++count).join(this + "");
+}
 
 /**
  * Removes whitespace from both ends of the string.
@@ -865,31 +910,31 @@ if(!String.prototype.trim)String.prototype.trim = function() {
 	//return str.slice(0, i + 1);
 }
 
+//from https://github.com/paulmillr/es6-shim/blob/master/es6-shim.js
+if(!String.prototype.startsWith)String.prototype.startsWith = function(substring) {
+	return this.indexOf(substring) === 0;
+}
+
+if(!String.prototype.endsWith)String.prototype.endsWith = function(substring) {
+	var substr = String(substring),
+		index = this.lastIndexOf(substr);
+	return index >= 0 && index === this.length - substr.length;
+}
+
+if(!String.prototype.contains)String.prototype.contains = function(s) {
+	return this.indexOf(s) !== -1;
+}
+
+if(!String.prototype.toArray)String.prototype.toArray = function() {
+	return this.split('');
+}
+
+
 // TODO::
 //  1. Maybe https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/String/TrimRight ?
 //  2. Maybe https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/String/TrimLeft ?
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  String.prototype  ==================================  */
-/*  ======================================================================================  */
-
-/*  ======================================================================================  */
-/*  ================================  Document  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
-
-/*
-TODO::
-;(function() {
-var origin = document.createElement;
-document.createElement = function() {
-	var el = origin.apply(document, arguments);
-	
-	//FIX IE lt 8 Element.prototype
-	
-}
-})();
-*/
-
-
-/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Document  ==================================  */
 /*  ======================================================================================  */
 
 
@@ -924,10 +969,10 @@ if(document.addEventListener) {//fix [add|remove]EventListener for all browsers 
 		}
 	}
 	try {
-		browser.testElement.addEventListener("click", dummy);
-		if(browser.testElement.click)
-			browser.testElement.click();//testing
-		else //If !browser.testElement.click -> modern browsers
+		_testElement.addEventListener("click", dummy);
+		if(_testElement.click)
+			_testElement.click();//testing
+		else //If !_testElement.click -> modern browsers
 			_rightBehavior = true;
 	} catch (e) {
 	
@@ -1025,7 +1070,7 @@ else {
 var nodeProto = global["Node"].prototype;
 
 //Add JS 1.8 Element property classList				   
-if(!("classList" in browser.testElement)) {
+if(!("classList" in _testElement)) {
 	Object.defineProperty(nodeProto, "classList", {
 		"get" : function() {
 			var thisObj = this,
@@ -1045,7 +1090,7 @@ if(!("classList" in browser.testElement)) {
 }
 
 // Fix "children" property in IE < 9
-if(!("children" in browser.testElement) || browser.msie && browser.msie < 9)
+if(!("children" in _testElement) || browser.msie && browser.msie < 9)
 	Object.defineProperty(nodeProto, "children", {"get" : function() {
 		var arr = [],
 			child = this.firstChild;
@@ -1059,7 +1104,7 @@ if(!("children" in browser.testElement) || browser.msie && browser.msie < 9)
 	}, "ielt8" : true});
 
 // Traversal for IE < 9 and other
-if(browser.testElement.childElementCount == undefined)Object.defineProperties(nodeProto, {
+if(_testElement.childElementCount == undefined)Object.defineProperties(nodeProto, {
 	"firstElementChild" : {
 		"get" : function() {
 		    var node = this;
@@ -1120,7 +1165,7 @@ function _recursivelyWalk(nodes, cb) {
 };
 
 
-if(!("insertAfter" in browser.testElement)) {
+if(!("insertAfter" in _testElement)) {
 	/**
 	 * NON STANDART METHOD
 	 * Вставляет DOM-элемент вслед за определённым DOM-элементом
@@ -1164,7 +1209,7 @@ Object.defineProperty((global["HTMLUnknownElement"] && global["HTMLUnknownElemen
 // FF thinks the argument is not optional
 // Opera agress that its not optional
 try {
-	document.importNode(browser.testElement);
+	document.importNode(_testElement);
 } catch (e) {
 	var importNode = document.importNode;
 	delete document.importNode;
@@ -1187,15 +1232,15 @@ try {
 		}
 		
 		try {
-			browser.testElement.addEventListener('DOMAttrModified', callback, false);
+			_testElement.addEventListener('DOMAttrModified', callback, false);
 			p.setAttribute('id', 'target');
 		}
 		catch(e) {
 			
 		}
 		finally {
-			if(browser.testElement.removeEventListener)
-				browser.testElement.removeEventListener('DOMAttrModified', callback, false);
+			if(_testElement.removeEventListener)
+				_testElement.removeEventListener('DOMAttrModified', callback, false);
 		}
 		
 		return flag;
@@ -1204,7 +1249,7 @@ try {
 	if(DEBUG)console.log("DOMAttrModified not supported")
 	
 	if(!isDOMAttrModifiedSupported()
-	   && browser.testElement.dispatchEvent //[temporary]TODO:: remove this when "DOMAttrModified" event whould be imulated in IE < 9
+	   && _testElement.dispatchEvent //[temporary]TODO:: remove this when "DOMAttrModified" event whould be imulated in IE < 9
 	   ) {
 		/**
 		 * @param {Function} oldHandle
@@ -1233,8 +1278,8 @@ try {
 			}
 		}
 	
-		nodeProto.setAttribute = new_set_remove_Attribute(nodeProto.setAttribute || browser.testElement.setAttribute/*IE < 8*/)
-		nodeProto.removeAttribute = new_set_remove_Attribute(nodeProto.removeAttribute || browser.testElement.removeAttribute/*IE < 8*/, 3)//3 === REMOVAL
+		nodeProto.setAttribute = new_set_remove_Attribute(nodeProto.setAttribute || _testElement.setAttribute/*IE < 8*/)
+		nodeProto.removeAttribute = new_set_remove_Attribute(nodeProto.removeAttribute || _testElement.removeAttribute/*IE < 8*/, 3)//3 === REMOVAL
 	}
 })();
 
@@ -1329,55 +1374,6 @@ if(!("control" in document.createElement("label"))) (function() {
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  HTMLLabelElement.prototype  ==================================  */
 /*  ======================================================================================  */
-
-/*  =======================================================================================  */
-/*  ======================================  Classes  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
-
-/**
- * Расширяем 'obj' объект свойствами из объекта/объектов в списке аргументов со 2го аргумента
- * @param {Object} obj Object to extend
- * @param {...} ravArgs extentions
- */
-Object.append = function(obj, ravArgs) {
-	for(var i = 1; i < arguments.length; i++) {
-		var extension = arguments[i];
-		for(var key in extension)
-			if(!extension.hasOwnProperty || extension.hasOwnProperty(key))obj[key] = extension[key];
-	}
-	
-	return obj;
-}
-
-
-/**
- * Наследует класс Child от Parent - фактически, только добавляет prototype Parent в цепочку прототипов Child. Не выполняет инициализирующий код содержащийся в конструкторе Parent, поэтому в конструкторе Child нужно дополнительно вызвать Child.superclass.constructor.call(this, ...)
- * @param {Function} Child
- * @param {Function} Parent
- */
-global["inherit"] = function(Child, Parent) {
-	(Child.prototype = Object.create(Child["superclass"] = Parent.prototype)).constructor = Child;
-}
-
-/*
-	Quick way to define prototypes; much less verbose than standard 
-	foobar.prototype.someFunc = function() lists. See ApplicationCache
-	defined below for example use.
-
-	@param f Function object/constructor to add to.
-	@param addMe Object literal that contains the properties/methods to
-		add to f's prototype.
-	TODO:: jsdoc's и описать
-*/
-/*global["append"] = function(f, addMe) {
-	for (var i in addMe) {
-		f.prototype[i] = addMe[i];
-	}
-}*/
-
-
-/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Classes  ======================================  */
-/*  =======================================================================================  */
-
 
 /*  =======================================================================================  */
 /*  ======================================  Network  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
@@ -1502,7 +1498,7 @@ SendRequest.guid = 0;
 /*  ======================================================================================  */
 /*  =======================================  Utils  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-
+if(INCLUDE_EXTRAS) {
 /**
  * Внешняя forEach для массивов и объектов
  * Не использует встроенный в Array метод forEach, для того, чтобы сделать прерывание по iterator.call() == false
@@ -1517,19 +1513,6 @@ global["forEach"] = function forEach(obj, iterator, context) {
 		if(_hasOwnProperty(obj, key))if(iterator.call(context, obj[key], key, obj) === false)break;
     return obj;
 }
-/**
- * String repeat
- * @param {!string} str Исходная строка
- * @param {!number} count Кол-во повторений
- * @return {string} Результирующая строка
- */
-var repeatString = global["repeatString"] = function(str, count) {
-	return Array(++count).join(str);
-	/*OLD:
-	var / @type {string} /s = "";
-	while(count-- > 0)s += str;
-	return s;*/
-}
 
 /**
  * Random string
@@ -1539,8 +1522,7 @@ var repeatString = global["repeatString"] = function(str, count) {
  * TODO:: Поддержка length > 10. Сейчас получается хрень: randomString(14) == "l.5lqc17jlpzt(e+13)"
  */
 var randomString = global["randomString"] = function(length) {
-	/*Вместо вызова функции repeatString вставил тело этой функции - для улучшения производительности*/
-    return (Math.round(Math.random() * parseInt(Array(++length).join("z"), 36))).toString(36);//36 - 0-9a-z
+    return (Math.round(Math.random() * parseInt("z".repeat(++length), 36))).toString(36);//36 - 0-9a-z
 }
 /* OLD::
 function randomString(length) {
@@ -1727,6 +1709,7 @@ global["bubbleEventListener"] = function bubbleEventListener(attribute, namedFun
 		}
 }
 
+}//if(INCLUDE_EXTRAS)
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Utils  ======================================  */
 /*  ======================================================================================  */
@@ -1736,7 +1719,28 @@ global["bubbleEventListener"] = function bubbleEventListener(attribute, namedFun
 /*  ======================================================================================  */
 /*  ========================================  DOM  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
+// window.getComputedStyle fix
+//FF say that pseudoElt param is required
+try {
+	global.getComputedStyle(_testElement)
+}
+catch(e) {
+	var old = global.getComputedStyle;
+	global.getComputedStyle = function(obj, pseudoElt) {
+		return old.call(global, obj, pseudoElt || null)
+	}
+}
 
+//Events
+if(!_testElement.addEventListener) {
+	nodeProto.addEventListener = global.addEventListener;
+	nodeProto.removeEventListener = global.removeEventListener;
+	nodeProto.createEvent = global.createEvent;
+	nodeProto.dispatchEvent = global.dispatchEvent;
+}
+
+
+if(INCLUDE_EXTRAS) {
 /**
  * document.getElementById alias
  * Получение элемента по ID и добавление в него объекта-контейнера '_'. '_' можно использовать для хранения переменных,
@@ -1849,8 +1853,8 @@ var $$ = global["$$"] = function(selector, roots/*, noCache*/, isFirst) {
 	//if(document.querySelector && !($$N.test && $$N.test.test(selector)) {
 	roots = roots || document;
 	/* replace not quoted args with quoted one -- Safari doesn't understand either */
-	if(browser.safary)
-		selector = selector.replace(/=([^\]]+)/, '="$1"');
+	//if(browser.safary)//[termi 30.01.12]commented it due not actual for now
+	//	selector = selector.replace(/=([^\]]+)/, '="$1"');
 	
 	var isSpecialMod = /[>\+\~]/.test(selector.charAt(0)) || 
 					/(\,>)|(\,\+)|(\,\~)/.test(selector),
@@ -1893,26 +1897,7 @@ var $$ = global["$$"] = function(selector, roots/*, noCache*/, isFirst) {
 var $$0 = global["$$0"] = function(selector, root) {	
 	return $$(selector, root, true)[0];
 }
-
-// window.getComputedStyle fix
-//FF say that pseudoElt param is required
-try {
-	global.getComputedStyle(browser.testElement)
-}
-catch(e) {
-	var old = global.getComputedStyle;
-	global.getComputedStyle = function(obj, pseudoElt) {
-		return old.call(global, obj, pseudoElt || null)
-	}
-}
-
-//Events
-if(!browser.testElement.addEventListener) {
-	nodeProto.addEventListener = global.addEventListener;
-	nodeProto.removeEventListener = global.removeEventListener;
-	nodeProto.createEvent = global.createEvent;
-	nodeProto.dispatchEvent = global.dispatchEvent;
-}
+}//if(INCLUDE_EXTRAS)
 
 /*  ======================================================================================  */
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  DOM  =======================================  */
@@ -1920,6 +1905,7 @@ if(!browser.testElement.addEventListener) {
 /*  =======================================================================================  */
 /*  ========================================  DEBUG  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
+if(INCLUDE_EXTRAS) {
 // Делаем консоль более "дружелюбной" 
 // http://habrahabr.ru/blogs/javascript/116852/
 // https://github.com/theshock/console-cap/blob/master/console.js
@@ -1984,9 +1970,11 @@ if (console && !DEBUG) {
 
 })( typeof console === 'undefined' ? null : console );
 
+}//if(INCLUDE_EXTRAS)
 
 /*  ======================================================================================  */
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  DEBUG  =====================================  */
 
 
+	
 })(window);

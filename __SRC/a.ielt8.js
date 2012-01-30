@@ -1,11 +1,34 @@
-﻿// This file MUST be in <head> section of document
+﻿// ==ClosureCompiler==
+// @compilation_level SIMPLE_OPTIMIZATIONS
+// @output_file_name a.ielt8.js
+// ==/ClosureCompiler==
+
+// This file MUST be in <head> section of document
 
 // TODO:: see http://pkario.blogspot.com/2010/09/javascript-event-handling-all-browsers.html
 // required window.browser.msie
 
 ;(function() {
 
-if(window._ielt8_Element_proto) {//IE < 8 polifill
+//CONFIG START
+var /** @const*/
+	__URL_TO_ELEMENT_BEHAVIOR__='/a.ielt8.htc',
+	/** @const*/
+	__URL_TO_IE6_ELEMENT_BEHAVIOR__='/a.ie6.ielt8.htc',
+	/** @const*/
+	__STYLE_ID="ielt8_style_prev_for_behaviour";
+//CONFIG END
+	
+
+var nodeProp = window.Node.prototype,
+	browser = window.browser;
+
+if(!document.readyState) {
+	browser.noDocumentReadyState = true;
+	document.readyState = "uninitialized";
+}
+	
+if(nodeProp["ielt8"]) {//IE < 8 polifill
 
 window["__ielt8__wontfix"] = [];//TODO:: use it to extend 'OBJECT' tag with compareDocumentPosition, getElementsByClassName and etc functions
 
@@ -30,6 +53,10 @@ var __getAtt = window["_ielt8_getAttributes"] = function() {
 }
 __getAtt.notAnAttribute = {"insertAfter" : 1, "getElementsByClassName" : 1, "compareDocumentPosition" : 1, "_" : 1, "getAttribute" : 1, "setAttribute" : 1, "addEventListener" : 1, "removeEventListener" : 1, "dispatchEvent" : 1, "cloneNode" : 1, "quersySelectorAll" : 1, "quersySelector" : 1}
 //
+
+nodeProp.hasAttribute = function(name) {
+	return __getAtt.call(this)[name];
+}
 
 /**
  * Функция возвращяет массив элементов выбранных по CSS3-велектору. 
@@ -437,6 +464,29 @@ if(!document.querySelectorAll)document.querySelectorAll = window["_ielt8_querySe
 if(!document.querySelector)document.querySelector = window["_ielt8_querySelector"] = queryOneManySelector;
 
 
+/*  ======================================================================================  */
+/*  ================================  Document  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+var originCreateElement = document.createElement;
+document.createElement = function() {
+	var el = origin.apply(document, arguments);
+	
+	//FIX IE lt 8 Element.prototype
+	Object.append(el, nodeProto);
+	
+	return el;
+}
+
+
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Document  ==================================  */
+/*  ======================================================================================  */
+
+global.addEventListener('DOMContentLoaded', function() {
+	if(browser.noDocumentReadyState)document.readyState = "interactive";
+}, false);
+global.addEventListener('load', function() {
+	if(browser.noDocumentReadyState)document.readyState = "complete";
+}, false);
 
 
 
@@ -448,12 +498,6 @@ if(!document.querySelector)document.querySelector = window["_ielt8_querySelector
 
 
 
-
-
-
-var __URL_TO_ELEMENT_BEHAVIOR__='/a.ielt8.htc',
-	__URL_TO_IE6_ELEMENT_BEHAVIOR__='/a.ie6.ielt8.htc',
-	__STYLE_ID="ielt8_style_prev_for_behaviour";
 
 var prevStyle=document.getElementById(__STYLE_ID),add="";
 if(prevStyle){
@@ -461,7 +505,7 @@ add=prevStyle.getAttribute("data-url")||"";
 prevStyle.id="";
 }
 
-if(window.browser.msie < 7)add+=(" url(\"" + __URL_TO_IE6_ELEMENT_BEHAVIOR__ + "\") ")
+if(browser.msie < 7)add+=(" url(\"" + __URL_TO_IE6_ELEMENT_BEHAVIOR__ + "\") ")
 
 add+=" url(\""+__URL_TO_ELEMENT_BEHAVIOR__+"\") ";
 

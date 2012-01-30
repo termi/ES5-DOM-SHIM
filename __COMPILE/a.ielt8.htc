@@ -1,42 +1,51 @@
 <PUBLIC:COMPONENT lightWeight="true">
 <PUBLIC:PROPERTY NAME="classList" GET="a" />
 <PUBLIC:PROPERTY NAME="attributes" GET="b" />
-<PUBLIC:PROPERTY NAME="children" GET="g" />
-<PUBLIC:PROPERTY NAME="firstElementChild" GET="c" />
-<PUBLIC:PROPERTY NAME="lastElementChild" GET="d" />
-<PUBLIC:PROPERTY NAME="nextElementSibling" GET="f" />
-<PUBLIC:PROPERTY NAME="previousElementSibling" GET="h" />
-<PUBLIC:PROPERTY NAME="childElementCount" GET="j" />
-<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_DISCONNECTED" GET="q" />
-<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_PRECEDING" GET="w" />
-<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_FOLLOWING" GET="e" />
-<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_CONTAINS" GET="r" />
-<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_CONTAINED_BY" GET="t" />
+<PUBLIC:PROPERTY NAME="children" GET="c" />
+<PUBLIC:PROPERTY NAME="dataset" GET="e" />
+<PUBLIC:PROPERTY NAME="firstElementChild" GET="f" />
+<PUBLIC:PROPERTY NAME="lastElementChild" GET="g" />
+<PUBLIC:PROPERTY NAME="nextElementSibling" GET="h" />
+<PUBLIC:PROPERTY NAME="previousElementSibling" GET="i" />
+<PUBLIC:PROPERTY NAME="childElementCount" GET="k" />
+<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_DISCONNECTED" GET="l" />
+<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_PRECEDING" GET="m" />
+<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_FOLLOWING" GET="n" />
+<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_CONTAINS" GET="o" />
+<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_CONTAINED_BY" GET="p" />
+<PUBLIC:PROPERTY NAME="control" GET="q" />
+<PUBLIC:PROPERTY NAME="labels" GET="l" />
 <SCRIPT>
-var m=window._ielt8_Element_proto,
-g=m.getchildren,
-a=m.getclassList,
-d=m.getlastElementChild,
-c=m.getfirstElementChild,
-f=m.getnextElementSibling,
-h=m.getpreviousElementSibling,
-j=m.getchildElementCount;
-var q=function(){return 1},
-w=function(){return 2},
-e=function(){return 4},
-r=function(){return 8},
-t=function(){return 16};
-if(!this.compareDocumentPosition)this.compareDocumentPosition=m.compareDocumentPosition;
-if(!this.getElementsByClassName)this.getElementsByClassName=m.getElementsByClassName;
-if(!this.insertAfter)this.insertAfter=m.insertAfter;
+var np=window.Node.prototype,
+a=np.getclassList,
+b=window._ielt8_getAttributes,
+c=np.getchildren,
+e=np.getdataset,
+f=np.getfirstElementChild,
+g=np.getlastElementChild,
+h=np.getnextElementSibling,
+i=np.getpreviousElementSibling,
+k=np.getchildElementCount,
+l=function(){return 1},
+m=function(){return 2},
+n=function(){return 4},
+o=function(){return 8},
+p=function(){return 16},
+q=np.getcontrol,
+l=np.getlabels;
+if(this!=window){
+if(!this.hasAttribute)this.hasAttribute=np.hasAttribute;
+if(!this.compareDocumentPosition)this.compareDocumentPosition=np.compareDocumentPosition;
+if(!this.getElementsByClassName)this.getElementsByClassName=np.getElementsByClassName;
+if(!this.insertAfter)this.insertAfter=np.insertAfter;
 if(!this.addEventListener)this.addEventListener=window.addEventListener;
 if(!this.removeEventListener)this.removeEventListener=window.removeEventListener;
 if(!this.dispatchEvent)this.dispatchEvent=window.dispatchEvent;
-if(this.cloneNode!==m.cloneNode)this.cloneNode=m.cloneNode;
+if(this.cloneNode!==np.cloneNode)this.cloneNode=np.cloneNode;
 if(!this._)this._={};
 if(!this._.__ielt8_attributes__)this._.__ielt8_attributes__=this.attributes;
-var b=window._ielt8_getAttributes;
 if(!this.querySelectorAll)this.querySelectorAll=window._ielt8_querySelectorAll;
 if(!this.querySelector)this.querySelector=window._ielt8_querySelector;
+}
 </SCRIPT>
 </PUBLIC:COMPONENT>

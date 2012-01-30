@@ -2,6 +2,7 @@
 <PUBLIC:PROPERTY NAME="classList" GET="getClassList" />
 <PUBLIC:PROPERTY NAME="attributes" GET="getAttributes" />
 <PUBLIC:PROPERTY NAME="children" GET="getChildren" />
+<PUBLIC:PROPERTY NAME="dataset" GET="getDataset" />
 <PUBLIC:PROPERTY NAME="firstElementChild" GET="getFirstElementChild" />
 <PUBLIC:PROPERTY NAME="lastElementChild" GET="getLastElementChild" />
 <PUBLIC:PROPERTY NAME="nextElementSibling" GET="getNextElementSibling" />
@@ -14,7 +15,28 @@
 <PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_CONTAINS" GET="getDPC" />
 <PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_CONTAINED_BY" GET="getDPCB" />
 
+<PUBLIC:PROPERTY NAME="control" GET="getControl" />
+<PUBLIC:PROPERTY NAME="labels" GET="getLabels" />
+
 <SCRIPT>
+/*@requared window.Node.prototype = { ielt8 : true }*/
+var Element_proto=window.Node.prototype,
+	getChildren=Element_proto.getchildren,
+	getClassList=Element_proto.getclassList,
+	getLastElementChild=Element_proto.getlastElementChild,
+	getFirstElementChild=Element_proto.getfirstElementChild,
+	getNextElementSibling=Element_proto.getnextElementSibling,
+	getPreviousElementSibling=Element_proto.getpreviousElementSibling,
+	getChildElementCount=Element_proto.getchildElementCount,
+	getDataset=Element_proto.getdataset,
+	getDPD=function(){return 0x01},
+	getDPP=function(){return 0x02},
+	getDPF=function(){return 0x04},
+	getDPC=function(){return 0x08},
+	getDPCB=function(){return 0x10},
+	getControl=np.getcontrol,
+	getLabels=np.getlabels;
+	
 if(this != window) {//Strange IE bug where this === window
 	if(!this.compareDocumentPosition)this.compareDocumentPosition=Element_proto.compareDocumentPosition;
 	if(!this.compareDocumentPosition)window.__ielt8__wontfix.push(this);//'OBJECT' tag
@@ -25,6 +47,7 @@ if(this != window) {//Strange IE bug where this === window
 	if(!this.removeEventListener)this.removeEventListener=window.removeEventListener;
 	if(!this.dispatchEvent)this.dispatchEvent=window.dispatchEvent;
 	if(this.cloneNode!==Element_proto.cloneNode)this.cloneNode=Element_proto.cloneNode;
+	if(!this.hasAttribute)this.hasAttribute!==Element_proto.hasAttribute;
 
 	if(!this.querySelectorAll)this.querySelectorAll=window._ielt8_querySelectorAll;
 	if(!this.querySelector)this.querySelector=window._ielt8_querySelector;
@@ -42,31 +65,6 @@ if(this != window) {//Strange IE bug where this === window
 var getAttributes = window._ielt8_getAttributes;
 //attributes property end
 
-/*@requared window._ielt8_Element_proto = {
- *  getclassList : <Function>,
- *  getfirstElementChild : <Function>,
- *  getlastElementChild : <Function>,
- *  getfirstElementChild : <Function>,
- *  getnextElementSibling : <Function>,
- *  getpreviousElementSibling : <Function>,
- *  getchildElementCount : <Function>,
- *  insertAfter : <Function>,
- *  getElementsByClassName : <Function>,
- *  compareDocumentPosition : <Function>
- * }*/
-var Element_proto=window._ielt8_Element_proto,
-	getChildren=Element_proto.getchildren,
-	getClassList=Element_proto.getclassList,
-	getLastElementChild=Element_proto.getlastElementChild,
-	getFirstElementChild=Element_proto.getfirstElementChild,
-	getNextElementSibling=Element_proto.getnextElementSibling,
-	getPreviousElementSibling=Element_proto.getpreviousElementSibling,
-	getChildElementCount=Element_proto.getchildElementCount,
-	getDPD=function(){return 0x01},
-	getDPP=function(){return 0x02},
-	getDPF=function(){return 0x04},
-	getDPC=function(){return 0x08},
-	getDPCB=function(){return 0x10};
 
 </SCRIPT>
 </PUBLIC:COMPONENT>

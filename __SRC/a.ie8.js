@@ -71,7 +71,7 @@ if(browser.msie)for(var i = 6 ; i < 11 ; i++)//IE from 6 to 10
 //Emulating HEAD for ie < 9
 document.head || (document.head = document.getElementsByTagName('head')[0]);
 
-if(!global["Element"])(global["Element"] = {}).prototype = {};//IE < 8
+if(!global["Element"])((global["Element"] = {}).prototype = {})["ielt8"] = true;//IE < 8
 if(!global["HTMLElement"])global["HTMLElement"] = global["Element"];//IE8
 if(!global["Node"])global["Node"] = global["Element"];//IE8
 
@@ -687,6 +687,9 @@ var _cloneElement = global["cloneElement"] = function(element, include_all, dele
 			else _cloneElement.safeElement.innerHTML = element.outerHTML.replace(element.innerHTML, "");
 		
 			result = _cloneElement.safeElement.firstChild; // return HTML5-safe element's first child, which is an outerHTML clone of the input element
+			
+			//FIX IE lt 8 Element.prototype
+			if(nodeProto["ielt8"])Object.append(el, nodeProto);
 		}
 	}
 	else result = element.cloneNode(include_all);
@@ -704,5 +707,9 @@ if(browser.msie && browser.msie < 9) {
 
 /*  ======================================================================================  */
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  DOM  =======================================  */
+
+
+
+
 
 })(window);
