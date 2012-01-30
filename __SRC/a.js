@@ -951,23 +951,7 @@ if(document.addEventListener) {//fix [add|remove]EventListener for all browsers 
 			_rightBehavior = true
 		};
 	var el_proto = global["Node"].prototype
-	function fixEventListener(elementToFix) {
-		if(elementToFix) {
-			var old_addEventListener = elementToFix.addEventListener,
-				old_removeEventListener = elementToFix.removeEventListener;
-				
-			elementToFix.addEventListener = function (type, listener, optional) {
-				optional = optional || false;
-				return old_addEventListener.call(this, type, listener, optional);
-			}
-			//elementToFix.addEventListener.shim = true;
-			elementToFix.removeEventListener = function (type, listener, optional) {
-				optional = optional || false;
-				return old_removeEventListener.call(this, type, listener, optional);
-			}
-			//elementToFix.removeEventListener.shim = true;
-		}
-	}
+	
 	try {
 		_testElement.addEventListener("click", dummy);
 		if(_testElement.click)
@@ -982,7 +966,23 @@ if(document.addEventListener) {//fix [add|remove]EventListener for all browsers 
 			 global["HTMLDocument"] && global["HTMLDocument"].prototype,
 			 global["Window"] && global["Window"].prototype,
 			 el_proto
-			].forEach(fixEventListener);
+			].forEach(function (elementToFix) {
+				if(elementToFix) {
+					var old_addEventListener = elementToFix.addEventListener,
+						old_removeEventListener = elementToFix.removeEventListener;
+						
+					elementToFix.addEventListener = function (type, listener, optional) {
+						optional = optional || false;
+						return old_addEventListener.call(this, type, listener, optional);
+					}
+					//elementToFix.addEventListener.shim = true;
+					elementToFix.removeEventListener = function (type, listener, optional) {
+						optional = optional || false;
+						return old_removeEventListener.call(this, type, listener, optional);
+					}
+					//elementToFix.removeEventListener.shim = true;
+				}
+			});
 		}
 		document.removeEventListener("click", dummy);
 	}
@@ -1378,7 +1378,7 @@ if(!("control" in document.createElement("label"))) (function() {
 /*  =======================================================================================  */
 /*  ======================================  Network  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-
+if(INCLUDE_EXTRAS) {
 /**
  * Функция посылки запроса к файлу на сервере
  * TODO:: Переделать на объект-замыкание AJAX и не использовать global для хранения флагов/настроек
@@ -1491,6 +1491,7 @@ var SendRequest = global["SendRequest"] = function(path, args, onDone, onError, 
 }
 SendRequest.guid = 0;
 
+}//if(INCLUDE_EXTRAS)
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Network  ======================================  */
 /*  =======================================================================================  */
