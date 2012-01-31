@@ -18,18 +18,18 @@ var /** @const*/
 	/** @const*/
 	__STYLE_ID="ielt8_style_prev_for_behaviour";
 //CONFIG END
-	
-Object.defineProperty["ielt8"] = true;
 
 var nodeProp = window.Node.prototype,
 	browser = window.browser;
-
+	
 if(!document.readyState) {
 	browser.noDocumentReadyState = true;
 	document.readyState = "uninitialized";
 }
 	
-if(nodeProp["ielt8"]) {//IE < 8 polifill
+if(nodeProp["ie"]) {//IE < 8 polifill
+
+nodeProp["ielt8"] = Object.defineProperty["ielt8"] = true;
 
 window["__ielt8__wontfix"] = [];//TODO:: use it to extend 'OBJECT' tag with compareDocumentPosition, getElementsByClassName and etc functions
 

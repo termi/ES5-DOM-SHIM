@@ -10,9 +10,10 @@ __Status__: Beta
 ## Goal
 
  - Normalizing the JS and DOM across all browsers
- - Less code & file size
+ - Less code (eg less closures, reusable functions) & file size
  - IE6+ support
  - Include all we need from ES5, ES6 and DOM shim in one file
+ - some extra stuff (if you don't need it, use `a.noextras.js` instead of `a.js`)
 
 ## Install
  - For modern browsers and IE9+:
@@ -64,8 +65,7 @@ http://jsperf.com/es5-dom-shim-test
 ## TODO
 0. Tests
 1. fix getAttribute/setAttribute for IE6,7 (it should differentiate attributes and properties with same names)
-2. element.dataset
-**
+2. element.dataset (http://code.eligrey.com/html5/dataset/latest/html5-dataset.js)
 9. http://dvcs.w3.org/hg/url/raw-file/tip/Overview.html
 
 ## License

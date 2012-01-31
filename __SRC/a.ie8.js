@@ -71,7 +71,7 @@ if(browser.msie)for(var i = 6 ; i < 11 ; i++)//IE from 6 to 10
 //Emulating HEAD for ie < 9
 document.head || (document.head = document.getElementsByTagName('head')[0]);
 
-if(!global["Element"])((global["Element"] = {}).prototype = {})["ielt8"] = true;//IE < 8
+if(!global["Element"])((global["Element"] = {}).prototype = {})["ie"] = true;//fake prototype for IE < 8
 if(!global["HTMLElement"])global["HTMLElement"] = global["Element"];//IE8
 if(!global["Node"])global["Node"] = global["Element"];//IE8
 

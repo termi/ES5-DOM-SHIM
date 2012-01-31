@@ -10,18 +10,13 @@
  * @version 4
  * TODO:: eng comments
  *        dateTime prop for IE < 8
- *        export isHTMLElement ?
  */
 
-
+// CONFIG
 /** @define {boolean} */
 var IS_DEBUG = false;
 /** @define {boolean} */
 var INCLUDE_EXTRAS = true;
-/** @const @type {boolean} */
-var DEBUG = IS_DEBUG && !!(window && window.console);
-
-var /** @const */funcType = "function";
 
 ;(
 /**
@@ -30,6 +25,11 @@ var /** @const */funcType = "function";
 function(global) {
 
 "use strict";
+
+/** @const @type {boolean} */
+var DEBUG = IS_DEBUG && !!(window && window.console);
+
+var /** @const */funcType = "function";
 
 
 /** @type {Object}
@@ -573,7 +573,7 @@ if (!Object.defineProperty || definePropertyFallback) {
             */
 
             if (object.__defineGetter__ && 
-				(object.__lookupGetter__(property) || object.__lookupGetter__(property))) {
+				(object.__lookupGetter__(property) || object.__lookupSetter__(property))) {
                 // As accessors are supported only on engines implementing
                 // `__proto__` we can safely override `__proto__` while defining
                 // a property to make sure that we don't hit an inherited
@@ -916,7 +916,7 @@ if(!String.prototype["contains"])String.prototype["contains"] = function(s) {
 	return !!~this.indexOf(s);
 }
 
-if(!String.prototype.toArray)String.prototype.toArray = function() {
+if(!String.prototype["toArray"])String.prototype["toArray"] = function() {
 	return this.split('');
 }
 
@@ -1285,11 +1285,7 @@ Implement HTML*Element.labels
 https://developer.mozilla.org/en/DOM/HTMLInputElement
 http://www.w3.org/TR/html5/forms.html#dom-lfe-labels
 */
-if(!("labels" in document.createElement("input"))) (function() {
-	/*var HTMLInputElement_prototype = 
-		global["HTMLInputElement"] && global["HTMLInputElement"].prototype ||
-		nodeProto;*/
-		
+if(!("labels" in document.createElement("input")))
 	Object.defineProperty(nodeProto, "labels", {
 		enumerable: true,
 		"get" : function() {
@@ -1318,7 +1314,6 @@ if(!("labels" in document.createElement("input"))) (function() {
 			return result;
 		}
 	});
-})();
 
 /*  ======================================================================================  */
 
@@ -1330,7 +1325,7 @@ Implement HTMLLabelElement.control
 https://developer.mozilla.org/en/DOM/HTMLLabelElement
 http://www.w3.org/TR/html5/forms.html#dom-label-control
 */
-if(!("control" in document.createElement("label"))) (function() {
+if(!("control" in document.createElement("label")))
 	Object.defineProperty(global["HTMLLabelElement"] && global["HTMLLabelElement"].prototype || nodeProto, "control", {
 		enumerable: true,
 		"get" : function() {
@@ -1348,8 +1343,6 @@ if(!("control" in document.createElement("label"))) (function() {
 				) || null;
 		}
 	});
-
-})();
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  HTMLLabelElement.prototype  ==================================  */
 /*  ======================================================================================  */
@@ -1808,20 +1801,6 @@ var $$ = global["$$"] = function(selector, roots/*, noCache*/, isFirst) {
  * @param {boolean=} isFirst ищем только первый
  * @return {Array.<HTMLElement>}
  * @version 2
- *  changeLog: 2     [24.11.2011 02:00] * Вынес querySelectorAll implementation в a.ielt8.js
- *             1.5.5 [24.11.2011 00:00] * $$(">*", document), $$("~*", document), $$("+*", document) теперь вернёт [] - пустой результат
-										- нестандартные псевдо-классы ":parent" и ":text-only" больше не поддерживаются
- *			   1.5.4 [11.07.2011 13:58] [*Bug]Включил поддержку символа "-" в названиях класса и идентификатора
- *			   1.5.3 [25.05.2011 13:42] [*Bug]Исправил баг с CSS-аттрибут-селектором '&='
- *			   1.5.2 [11.05.2011 13:36] [*Bug]Исправил баг, когда пытался получить tagName у childNodes[n] у которого nodeType != 1
- *			   1.5.1 [06.05.2011 14:34] [*Bug]Поправил баг появляющийся в "strict mode", когда mod не был объявлен
- * 			   1.5   [05.05.2011 17:03] [*Bug]Свойство tagName сравнивалось с tag из селектора в неправильном регистре
- *			   1.4.1 [09.04.2011  1:00] Имплементация нестандартных псевдо-классов :parent и :text-only
- *			   1.4   [09.04.2011  0:40] [*Bug]Элемент по-умолчанию должен быть document(было document.body)
- *			   1.3.1 [22.03.2011 13.05] [*Bug]Исправил баг со свойством $$N.str_for_id (добавил букву "r" в начало)
- *             1.3   [21.03.2011 19.21] [*Bug]Исправил баг с селектором вида ",<selecrot>" при использовании querySelector
- *             1.2   [23.02.2011 20:50] Изменён алгоритм вызова querySelector если первый символ в selector = [>|+|~]
- *  TODO:: Изучить код https://github.com/ded/qwery - может быть будет что-нибуть полезное
  */
 $$.N = function(selector, roots, prefetchResult, isFirst) {
 	//TODO:: Не засовывать в result те элементы, которые уже были туда засованы
