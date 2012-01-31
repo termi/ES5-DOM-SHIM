@@ -5,7 +5,7 @@ based on:
 - https://github.com/paulmillr/es6-shim
 - https://github.com/Raynos/DOM-shim
 
-__Status__: Stable, but need carefully use in IE < 9
+__Status__: Beta
 
 ## Goal
 
@@ -62,8 +62,8 @@ http://jsperf.com/es5-dom-shim-test
 2. Incompatibility with http://code.google.com/p/ie7-js/ [working on it]
 
 ## TODO
-0. fix getAttribute/setAttribute for IE6,7 (it should differentiate attributes and properties with same names)
-1. hasAttribute
+0. Tests
+1. fix getAttribute/setAttribute for IE6,7 (it should differentiate attributes and properties with same names)
 2. element.dataset
 **
 9. http://dvcs.w3.org/hg/url/raw-file/tip/Overview.html
