@@ -19,6 +19,7 @@ var /** @const*/
 	__STYLE_ID="ielt8_style_prev_for_behaviour";
 //CONFIG END
 	
+Object.defineProperty["ielt8"] = true;
 
 var nodeProp = window.Node.prototype,
 	browser = window.browser;

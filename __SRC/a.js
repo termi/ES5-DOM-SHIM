@@ -32,95 +32,6 @@ function(global) {
 "use strict";
 
 
-/*  =======================================================================================  */
-/*  ======================================  Classes  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
-
-/**
- * Расширяем 'obj' объект свойствами из объекта/объектов в списке аргументов со 2го аргумента
- * @param {Object} obj Object to extend
- * @param {...} ravArgs extentions
- */
-Object["append"] = function(obj, ravArgs) {
-	for(var i = 1; i < arguments.length; i++) {
-		var extension = arguments[i];
-		for(var key in extension)
-			if(!extension.hasOwnProperty || extension.hasOwnProperty(key))obj[key] = extension[key];
-	}
-	
-	return obj;
-}
-
-
-/**
- * Наследует класс Child от Parent - фактически, только добавляет prototype Parent в цепочку прототипов Child. Не выполняет инициализирующий код содержащийся в конструкторе Parent, поэтому в конструкторе Child нужно дополнительно вызвать Child.superclass.constructor.call(this, ...)
- * @param {Function} Child
- * @param {Function} Parent
- */
-Object["inherit"] = function(Child, Parent) {
-	(Child.prototype = Object.create(Child["superclass"] = Parent.prototype)).constructor = Child;
-}
-
-/*
-	Quick way to define prototypes; much less verbose than standard 
-	foobar.prototype.someFunc = function() lists. See ApplicationCache
-	defined below for example use.
-
-	@param f Function object/constructor to add to.
-	@param addMe Object literal that contains the properties/methods to
-		add to f's prototype.
-	TODO:: jsdoc's и описать
-*/
-/*global["append"] = function(f, addMe) {
-	for (var i in addMe) {
-		f.prototype[i] = addMe[i];
-	}
-}*/
-
-
-/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Classes  ======================================  */
-/*  =======================================================================================  */
-
-
-
-/*  ======================================================================================  */
-/*  ==================================  Function prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
-
-//Fix Function.prototype.apply to work with generic array-like object instead of an array
-// test: function test(a,b){console.log(a,b)};test.apply(null, {0:1,1:2,length:2})
-var trueApply = false;
-try {
-	trueApply = isNaN.apply(null, {})
-}
-catch(e) { }
-if(!trueApply) {
-	var ofa = Function.prototype.apply
-	Function.prototype.apply = function(t, args) {
-		if(!(args instanceof Object) && args.length == void 0)
-			throw TypeError("Function.prototype.apply: Arguments list has wrong type");
-			
-		args = Array["from"](args);
-		
-		return ofa.call(this, t, args);
-	}
-}
-
-/**
- * From prototypejs (prototypejs.org)
- * Wraps the function in another, locking its execution scope to an object specified by thisObj.
- * @param {Object} object
- * @param {...} var_args
- * @return {Function}
- * @version 2
- */
-if(!Function.prototype.bind)Function.prototype.bind = function(object, var_args) {
-	var __method = this, args = Array.prototype.slice.call(arguments, 1);
-	return function() {
-		return __method.apply(object, args.concat(Array.prototype.slice.call(arguments, 0)));
-	}
-}
-/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Function prototype  ==================================  */
-/*  =======================================================================================  */
-
 /** @type {Object}
  * @const */
 var browser = global["browser"] || (global["browser"] = {
@@ -186,8 +97,98 @@ browser["cssPrefix"] =
 	browser.msie ? "ms" : 
 	"";
 	
+}//if(INCLUDE_EXTRAS)
+
+
+/*  =======================================================================================  */
+/*  ======================================  Classes  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+/**
+ * Расширяем 'obj' объект свойствами из объекта/объектов в списке аргументов со 2го аргумента
+ * @param {Object} obj Object to extend
+ * @param {...} ravArgs extentions
+ */
+Object["append"] = function(obj, ravArgs) {
+	for(var i = 1; i < arguments.length; i++) {
+		var extension = arguments[i];
+		for(var key in extension)
+			if(!extension.hasOwnProperty || extension.hasOwnProperty(key))obj[key] = extension[key];
+	}
+	
+	return obj;
 }
 
+
+/**
+ * Наследует класс Child от Parent - фактически, только добавляет prototype Parent в цепочку прототипов Child. Не выполняет инициализирующий код содержащийся в конструкторе Parent, поэтому в конструкторе Child нужно дополнительно вызвать Child.superclass.constructor.call(this, ...)
+ * @param {Function} Child
+ * @param {Function} Parent
+ */
+Object["inherit"] = function(Child, Parent) {
+	(Child.prototype = Object.create(Child["superclass"] = Parent.prototype)).constructor = Child;
+}
+
+/*
+	Quick way to define prototypes; much less verbose than standard 
+	foobar.prototype.someFunc = function() lists. See ApplicationCache
+	defined below for example use.
+
+	@param f Function object/constructor to add to.
+	@param addMe Object literal that contains the properties/methods to
+		add to f's prototype.
+	TODO:: jsdoc's и описать
+*/
+/*global["append"] = function(f, addMe) {
+	for (var i in addMe) {
+		f.prototype[i] = addMe[i];
+	}
+}*/
+
+
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Classes  ======================================  */
+/*  =======================================================================================  */
+
+
+
+
+/*  ======================================================================================  */
+/*  ==================================  Function prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+//Fix Function.prototype.apply to work with generic array-like object instead of an array
+// test: function test(a,b){console.log(a,b)};test.apply(null, {0:1,1:2,length:2})
+var trueApply = false;
+try {
+	trueApply = isNaN.apply(null, {})
+}
+catch(e) { }
+if(!trueApply) {
+	var ofa = Function.prototype.apply
+	Function.prototype.apply = function(t, args) {
+		if(!(args instanceof Object) && args.length == void 0)
+			throw TypeError("Function.prototype.apply: Arguments list has wrong type");
+			
+		args = Array["from"](args);
+		
+		return ofa.call(this, t, args);
+	}
+}
+
+/**
+ * From prototypejs (prototypejs.org)
+ * Wraps the function in another, locking its execution scope to an object specified by thisObj.
+ * @param {Object} object
+ * @param {...} var_args
+ * @return {Function}
+ * @version 2
+ */
+if(!Function.prototype.bind)Function.prototype.bind = function(object, var_args) {
+	var __method = this, args = Array.prototype.slice.call(arguments, 1);
+	return function() {
+		return __method.apply(object, args.concat(Array["from"](arguments)));
+	}
+}
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Function prototype  ==================================  */
+/*  =======================================================================================  */
 
 	
 
@@ -197,10 +198,17 @@ var /** @type {HTMLElement}
 	
   , _hasOwnProperty = Function.prototype.call.bind(Object.prototype.hasOwnProperty)
   
-  , _call = function(_function) {
+  , /**
+	 * Call _function
+	 * @param {Function} _function
+	 * @param {...} var_args
+	 * @return {*} mixed
+	 * @version 2
+	 */
+	_call = function(_function, var_args) {
 		// If no callback function or if callback is not a callable function
 		// it will throw TypeError
-        Function.prototype.call.apply(_function, arguments)
+        return Function.prototype.call.apply(_function, Array.prototype.slice.call(arguments, 1))
 	}
 	
 	//Fixed `toObject` to work for strings in IE8 and Rhino. Added test spec for `forEach`.
@@ -225,8 +233,8 @@ var /** @type {HTMLElement}
 	
   , _throwDOMException = function(errStr) {
 		var ex = Object.create(DOMException.prototype);
-		ex.code = ex[errStr];
-		ex.message = errStr +': DOM Exception ' + this.code;
+		ex.code = DOMException[errStr];
+		ex.message = errStr +': DOM Exception ' + ex.code;
 		throw ex;
 	}
 	
@@ -283,7 +291,7 @@ var methods = {
 	remove: function(token) {
 		this.checkToken(token);
 
-		var i, thisObj = this;
+		var i, l, thisObj = this;
 		while((i = thisObj._container.indexOf(token)) !== -1) {
 			delete thisObj._container[i];//[BUG*fix]prevente strange bug in FireFox 8 then after thisObj._splice(i, 1) this.length == 0 but this[0] return value O_0//DOTO:: проверить
 			thisObj._container.splice(i, 1);
@@ -324,10 +332,10 @@ var methods = {
 		
 		if(isChange) {
 			for(var i = 0 ; i < this.length ; ++i)
-				delete thisObj[i];
+				delete this[i];
 			this.length = 0;
 			this._container = [];
-			thisObj.value = "";
+			this.value = "";
 		}
 
 		if(string && (string = string.trim()))
@@ -348,7 +356,7 @@ DOMStringCollection.prototype.toString = function(){return this.value||""}
 /*  =======================================================================================  */
 
 // --------------- ================ es5 shim ================ ---------------
-// Source https://github.com/kriskowal/es5-shim/blob/master/es5-shim.js
+// Based on https://github.com/kriskowal/es5-shim/blob/master/es5-shim.js
 
 /*  =======================================================================================  */
 /*  =================================  Object prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
@@ -384,7 +392,7 @@ Object.keys = Object.keys || (function () {
             'propertyIsEnumerable',
             'constructor'
         ],
-        hasDontEnumBug = !{toString:null}.propertyIsEnumerable(DontEnums[0]),
+        hasDontEnumBug = !{"toString":null}.propertyIsEnumerable(DontEnums[0]),
         DontEnumsLength = DontEnums.length;
  
     return function (o) {
@@ -571,7 +579,7 @@ if (!Object.defineProperty || definePropertyFallback) {
                 // a property to make sure that we don't hit an inherited
                 // accessor.
                 var prototype = object.__proto__;
-                object.__proto__ = prototypeOfObject;
+                object.__proto__ = Object.prototype;
                 // Deleting a property anyway since getter / setter may be
                 // defined on object itself.
                 delete object[property];
@@ -583,7 +591,7 @@ if (!Object.defineProperty || definePropertyFallback) {
             }
         } else {
             if (!object.__defineGetter__) {
-                if(descriptor["ielt8"]) {
+                if(Object.defineProperty["ielt8"]) {//Set `Object.defineProperty["ielt8"] = true` in a.ielt8.js
 					if(descriptor["get"] !== void 0)
 						object["get" + property] = descriptor["get"];
 					if(descriptor["set"] !== void 0)
@@ -631,6 +639,43 @@ if (!Object.defineProperties || definePropertiesFallback) {
 /*  ======================================================================================  */
 /*  ==================================  Array.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
+
+/*  ================================ ES6 ==================================  */
+// Based on https://github.com/paulmillr/es6-shim/
+
+var _arrayFrom = 
+/**
+ * toArray function
+ * RUS: Преведение к массиву
+ * 
+ * @param {*} iterable object
+ * @return {Array}
+ */
+Array["from"] || (Array["from"] = function(iterable) {
+	if(Array.isArray(iterable))return iterable;
+
+	var object = _toObject(iterable),
+		result = [];
+		
+	for(var key = 0, length = object.length >>> 0; key < length; key++) {
+		if(key in object)
+			result[key] = object[key];
+	}
+
+	return result;
+})
+
+/**
+ * return array of arguments of this function
+ * RUS: Преведение к массиву состоящему из аргументов функции
+ * 
+ * @param {...} args
+ * @return {Array}
+ */
+Array["of"] = Array["of"] || function(args) {
+	return Array.prototype.slice.call(arguments);
+}
+
 /**
  * Non-standart method
  * https://gist.github.com/1044540
@@ -650,10 +695,11 @@ if(!Array.prototype["unique"])Array.prototype["unique"] = (function(a) {
   }
 );
 
-/*
-for Array.prototype.reduce and Array.prototype.reduceRight
-*/
-function _testLength(l) {
+/*  ================================ ES5 ==================================  */
+// Based on https://github.com/kriskowal/es5-shim/blob/master/es5-shim.js
+
+
+function _testLength(l) {//for Array.prototype.reduce and Array.prototype.reduceRight
 	if((l === 0 || l === null) && (arguments.length <= 1))// == on purpose to test 0 and false.// no value to return if no initial value, empty array
 		throw new TypeError("Array length is 0 and no second argument");
 }
@@ -671,24 +717,25 @@ function _testLength(l) {
  */
 if(!Array.prototype.reduce)Array.prototype.reduce = function(accumulator, initialValue) {
 	// ES5 : "If IsCallable(callbackfn) is false, throw a TypeError exception." in "_call" function
-	  
-	var l = this.length, i = 0;
+
+	var thisArray = _toObject(this),
+		l = thisArray.length, i = 0;
 	
 	_testLength(l);
 	  
-	initialValue || (initialValue = (i++, this[0]));
+	initialValue || (initialValue = (i++, thisArray[0]));
 	
 	for( ; i < l ; ++i) {
-	  if(i in this)
-	    initialValue = _call(accumulator, undefined, initialValue, this[i], i, this);
+	  if(i in thisArray)
+	    initialValue = _call(accumulator, undefined, initialValue, thisArray[i], i, thisArray);
 	}
 
 	return initialValue;
 };
 
-/*
-TODO:: jsdoc
-https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/reduceRight
+/**
+ * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/reduceRight
+ *
 Apply a function simultaneously against two values of the array (from right-to-left) as to reduce it to a single value.
 reduceRight executes the callback function once for each element present in the array, excluding holes in the array, receiving four arguments: the initial value (or value from the previous callback call), the value of the current element, the current index, and the array over which iteration is occurring.
 
@@ -699,35 +746,11 @@ array.reduceRight(function(previousValue, currentValue, index, array) {
 
 The first time the function is called, the previousValue and currentValue can be one of two values. If an initialValue was provided in the call to reduceRight, then previousValue will be equal to initialValue and currentValue will be equal to the last value in the array. If no initialValue was provided, then previousValue will be equal to the last value in the array and currentValue will be equal to the second-to-last value.
 
-Parameters
-callback
-Function to execute on each value in the array.
-initialValue
-Object to use as the first argument to the first call of the callback.
-*/
+ * @param {Function} accumulator Function to execute on each value in the array.
+ * @param {*} initialValue Object to use as the first argument to the first call of the callback.
+ */
 if(!Array.prototype.reduceRight)Array.prototype.reduceRight = function(accumulator, initialValue)  {
-	// ES5 : "If IsCallable(callbackfn) is false, throw a TypeError exception." in "_call" function
-	  
-    var l = this.length >>> 0, k = l - 1;
-	
-	_testLength(l);
-	
-	if(!initialValue)do {
-		if(k in this) {
-			initialValue = this[k--];
-			break;
-		}
-
-		// if array contains no values, no initial value to return
-		if (--k < 0)
-		throw new TypeError();
-	}
-	while(true);
-
-	for( ; k >= 0 ; --k)if(k in this)
-		initialValue = _call(accumulator, undefined, initialValue, this[k], k, t);
-
-    return initialValue;
+	return _arrayFrom(this).reverse().reduce(accumulator, initialValue);
 };
 
 
@@ -767,7 +790,7 @@ var _forEach = Array.prototype.forEach || (Array.prototype.forEach = function(it
  * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/indexOf
  */
 if(!Array.prototype.indexOf)Array.prototype.indexOf = function(obj, n) {
-	var thisArray = _toObject(this);
+	var thisArray = _arrayFrom(this);
 	for(var i = n || 0, l = thisArray.length ; i < l ; i++)
 		if(thisArray[i] === obj)return i;
 	return -1;
@@ -777,8 +800,9 @@ if(!Array.prototype.indexOf)Array.prototype.indexOf = function(obj, n) {
  * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/lastIndexOf
  */
 if(!Array.prototype.lastIndexOf)Array.prototype.lastIndexOf = function(obj, i) {
-	//TODO:: "slice" not in _toObject(this)
-	return _toObject(this).slice(0).reverse().indexOf(obj, i)
+	var thisArray = _arrayFrom(this);
+	
+	return thisArray.slice(0).reverse().indexOf(obj, i)
 }
 
 /**
@@ -845,39 +869,6 @@ Array['isArray'] = Array['isArray'] || function(obj) {
 	return !!(obj && obj.concat && obj.unshift && !obj.callee);
 };
 
-/*  ================================ ES6 ==================================  */
-// Based on https://github.com/paulmillr/es6-shim/
-
-/**
- * toArray function
- * RUS: Преведение к массиву
- * 
- * @param {*} iterable object
- * @return {Array}
- */
-Array["from"] = Array["from"] || function(iterable) {
-	var object = _toObject(iterable),
-		result = [];
-		
-	for(var key = 0, length = object.length >>> 0; key < length; key++) {
-		if(key in object)
-			result[key] = object[key];
-	}
-
-	return result;
-}
-
-/**
- * return array of arguments of this function
- * RUS: Преведение к массиву состоящему из аргументов функции
- * 
- * @param {...} args
- * @return {Array}
- */
-Array["of"] = Array["of"] || function(args) {
-	return Array.prototype.slice.call(arguments);
-}
-
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Array.prototype  ==================================  */
 /*  ======================================================================================  */
@@ -911,18 +902,18 @@ if(!String.prototype.trim)String.prototype.trim = function() {
 }
 
 //from https://github.com/paulmillr/es6-shim/blob/master/es6-shim.js
-if(!String.prototype.startsWith)String.prototype.startsWith = function(substring) {
+if(!String.prototype["startsWith"])String.prototype["startsWith"] = function(substring) {
 	return this.indexOf(substring) === 0;
 }
 
-if(!String.prototype.endsWith)String.prototype.endsWith = function(substring) {
+if(!String.prototype["endsWith"])String.prototype["endsWith"] = function(substring) {
 	var substr = String(substring),
 		index = this.lastIndexOf(substr);
 	return index >= 0 && index === this.length - substr.length;
 }
 
-if(!String.prototype.contains)String.prototype.contains = function(s) {
-	return this.indexOf(s) !== -1;
+if(!String.prototype["contains"])String.prototype["contains"] = function(s) {
+	return !!~this.indexOf(s);
 }
 
 if(!String.prototype.toArray)String.prototype.toArray = function() {
@@ -998,28 +989,24 @@ else {
 // Firefox also says no
 // Safari says me too, me too!
 // Opera throws a DOM exception instead ¬_¬
-;(function () {
-	// Event constructor
-	var _Event = function (type, dict) {
-		var e = document.createEvent("Events");
-		
-		dict = dict || {};
-		e.initEvent(type, dict.bubbles || false, dict.cancelable || false);
-		
-		return e;
-	};
+var _Event = function (type, dict) {// Event constructor
+	var e = document.createEvent("Events");
 	
-	var eventProto;
-    try {
-		eventProto = Event.prototype;
-        new Event("click");
-    } catch (e) {
-        //Убрал проверку на текст ошибки, т.к., по моему, она лишняя. И, таки да, в IE на русской ОС эта проверка ошибочна :(
-		global["Event"] = _Event
-		
-        if(eventProto)_Event.prototype = eventProto;//В IE < 8 не удастся получить Event.prototype
-    }
-})();
+	dict = dict || {};
+	e.initEvent(type, dict.bubbles || false, dict.cancelable || false);
+	
+	return e;
+};
+
+var eventProto;
+try {
+	eventProto = Event.prototype;
+	new Event("click");
+} catch (e) {
+	global["Event"] = _Event
+	
+	if(eventProto)_Event.prototype = eventProto;//В IE < 8 не удастся получить Event.prototype
+}
 
 // Chrome calling .initEvent on a CustomEvent object is a no-no
 // IE9 doesn't like it either
@@ -1027,36 +1014,32 @@ else {
 // Firefox agrees this cannot be done
 // Safari says lul wut?
 // Opera says have another DOM exception!
-;(function () {
-	// CustomEvent constructor
-	var _CustomEvent = function (type, dict) {
-		var e;
-		try {
-			e = document.createEvent("CustomEvent");
-		}
-		catch(err) {//FF 3.6 cant create "CustomEvent"
-			e = document.createEvent("Event");
-		}
-					
-		dict = dict || {};
-		dict.detail = (dict.detail !== void 0) ? dict.detail : null;
-		(e.initCustomEvent || (e.detail = dict.detail, e.initEvent)).call
-			(e, type, dict.bubbles || false, dict.cancelable || false, dict.detail);
-		
-		return e;
-	};
+var _CustomEvent = function (type, dict) {// CustomEvent constructor
+	var e;
+	try {
+		e = document.createEvent("CustomEvent");
+	}
+	catch(err) {//FF 3.6 cant create "CustomEvent"
+		e = document.createEvent("Event");
+	}
+				
+	dict = dict || {};
+	dict.detail = (dict.detail !== void 0) ? dict.detail : null;
+	(e.initCustomEvent || (e.detail = dict.detail, e.initEvent)).call
+		(e, type, dict.bubbles || false, dict.cancelable || false, dict.detail);
+	
+	return e;
+};
 
-	var customEventProto;
-    try {
-		customEventProto = (global["CustomEvent"] || Event).prototype;//global использую, чтобы ошибка раньше времени не возникла и был шанс получить Event.prototype
-        var c = new CustomEvent("magic");
-    } catch (e) {
-        //Убрал проверку на текст ошибки, т.к., по моему, она лишняя. И, таки да, в IE на русской ОС эта проверка ошибочна :(
-		global["CustomEvent"] = _CustomEvent
-			
-        if(customEventProto)_CustomEvent.prototype = customEventProto;//В IE < 8 не удастся получить CustomEvent.prototype
-    }
-})();
+var customEventProto;
+try {
+	customEventProto = (global["CustomEvent"] || Event).prototype;//global использую, чтобы ошибка раньше времени не возникла и был шанс получить Event.prototype
+	var c = new CustomEvent("magic");
+} catch (e) {
+	global["CustomEvent"] = _CustomEvent
+		
+	if(customEventProto)_CustomEvent.prototype = customEventProto;//В IE < 8 не удастся получить CustomEvent.prototype
+}
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Events  ======================================  */
 /*  ======================================================================================  */
@@ -1085,8 +1068,7 @@ if(!("classList" in _testElement)) {
 			})
 			
 			return cont[_cachedClassList];
-		},
-		"ielt8" : true});
+		}});
 }
 
 // Fix "children" property in IE < 9
@@ -1101,7 +1083,7 @@ if(!("children" in _testElement) || browser.msie && browser.msie < 9)
 		}
 
 		return arr;
-	}, "ielt8" : true});
+	}});
 
 // Traversal for IE < 9 and other
 if(_testElement.childElementCount == undefined)Object.defineProperties(nodeProto, {
@@ -1116,7 +1098,7 @@ if(_testElement.childElementCount == undefined)Object.defineProperties(nodeProto
 		    while(node && node.nodeType != 1) node = node.nextSibling;
 		    // возвращаем результат
 		    return node;
-		}, "ielt8" : true
+		}
 	},
 	"lastElementChild" : {
 		"get" : function() {
@@ -1124,26 +1106,26 @@ if(_testElement.childElementCount == undefined)Object.defineProperties(nodeProto
 		    node = node.lastChild;
 		    while(node && node.nodeType != 1) node = node.previousSibling;
 		    return node;
-		}, "ielt8" : true
+		}
 	},
 	"nextElementSibling" : {
 		"get" : function() {
 		    var node = this;
 		    while(node = node.nextSibling) if(node.nodeType == 1) break;
 		    return node;
-		}, "ielt8" : true
+		}
 	},
 	"previousElementSibling" : {
 		"get" : function() {
 		    var node = this;
 		    while(node = node.previousSibling) if(node.nodeType == 1) break;
     		return node;
-		}, "ielt8" : true
+		}
 	},
 	"childElementCount" : {
 		"get" : function() {
     		if(this.children)return this.children.length;//requared this.children
-		}, "ielt8" : true
+		}
 	}
 }
 )
@@ -1164,6 +1146,7 @@ function _recursivelyWalk(nodes, cb) {
     }
 };
 
+if(INCLUDE_EXTRAS) {
 
 if(!("insertAfter" in _testElement)) {
 	/**
@@ -1180,6 +1163,7 @@ if(!("insertAfter" in _testElement)) {
 	};
 };
 
+} //if(INCLUDE_EXTRAS)
 
 // Emuleted HTMLTimeElement
 if(!(global["HTMLTimeElement"] && global["HTMLTimeElement"].prototype))
@@ -1201,8 +1185,7 @@ Object.defineProperty((global["HTMLUnknownElement"] && global["HTMLUnknownElemen
 		}
 		
 		return null;
-	},
-	"ielt8" : true
+	}
 });
 
 // IE9 thinks the argument is not optional
@@ -1223,65 +1206,63 @@ try {
 
 
 // Fix Chrome problem with DOMAttrModified event | http://blog.silkapp.com/2009/10/mutation-events-what-happen/
-;(function () {
-	function isDOMAttrModifiedSupported() {
-		var flag = false; 
-		
-		function callback() {
-			flag = true;
-		}
-		
-		try {
-			_testElement.addEventListener('DOMAttrModified', callback, false);
-			p.setAttribute('id', 'target');
-		}
-		catch(e) {
-			
-		}
-		finally {
-			if(_testElement.removeEventListener)
-				_testElement.removeEventListener('DOMAttrModified', callback, false);
-		}
-		
-		return flag;
+function isDOMAttrModifiedSupported() {
+	var flag = false; 
+	
+	function callback() {
+		flag = true;
 	}
 	
-	if(DEBUG)console.log("DOMAttrModified not supported")
-	
-	if(!isDOMAttrModifiedSupported()
-	   && _testElement.dispatchEvent //[temporary]TODO:: remove this when "DOMAttrModified" event whould be imulated in IE < 9
-	   ) {
-		/**
-		 * @param {Function} oldHandle
-		 * @param {number=} attrChange
-		 */
-		var new_set_remove_Attribute = function(oldHandle, attrChange) {
-			return function(name, val) {
-				/**
-				 * @type {MutationEvents}
-				 */
-				var e = document.createEvent("MutationEvents"); 
-				/**
-				 * @type {String}
-				 */
-				var prev = this.getAttribute(name);
-				oldHandle.apply(this, arguments);
-				e.initMutationEvent("DOMAttrModified", true, true, null, prev, 
-					((attrChange || val === null) ? "" : val),
-					name,
-					attrChange || ((prev == null) ? 
-						2://e.ADDITION :
-						1//e.MODIFICATION
-								  )
-				);
-				this.dispatchEvent(e);
-			}
-		}
-	
-		nodeProto.setAttribute = new_set_remove_Attribute(nodeProto.setAttribute || _testElement.setAttribute/*IE < 8*/)
-		nodeProto.removeAttribute = new_set_remove_Attribute(nodeProto.removeAttribute || _testElement.removeAttribute/*IE < 8*/, 3)//3 === REMOVAL
+	try {
+		_testElement.addEventListener('DOMAttrModified', callback, false);
+		p.setAttribute('id', 'target');
 	}
-})();
+	catch(e) {
+		
+	}
+	finally {
+		if(_testElement.removeEventListener)
+			_testElement.removeEventListener('DOMAttrModified', callback, false);
+	}
+	
+	return flag;
+}
+
+if(DEBUG)console.log("DOMAttrModified not supported")
+
+if(!isDOMAttrModifiedSupported()
+   && _testElement.dispatchEvent //[temporary]TODO:: remove this when "DOMAttrModified" event whould be imulated in IE < 9
+   ) {
+	/**
+	 * @param {Function} oldHandle
+	 * @param {number=} attrChange
+	 */
+	var new_set_remove_Attribute = function(oldHandle, attrChange) {
+		return function(name, val) {
+			/**
+			 * @type {MutationEvents}
+			 */
+			var e = document.createEvent("MutationEvents"); 
+			/**
+			 * @type {String}
+			 */
+			var prev = this.getAttribute(name);
+			oldHandle.apply(this, arguments);
+			e.initMutationEvent("DOMAttrModified", true, true, null, prev, 
+				((attrChange || val === null) ? "" : val),
+				name,
+				attrChange || ((prev == null) ? 
+					2://e.ADDITION :
+					1//e.MODIFICATION
+							  )
+			);
+			this.dispatchEvent(e);
+		}
+	}
+
+	nodeProto.setAttribute = new_set_remove_Attribute(nodeProto.setAttribute || _testElement.setAttribute/*IE < 8*/)
+	nodeProto.removeAttribute = new_set_remove_Attribute(nodeProto.removeAttribute || _testElement.removeAttribute/*IE < 8*/, 3)//3 === REMOVAL
+}
 
 
 
@@ -1298,7 +1279,7 @@ try {
 /*  ================================  HTMLTextAreaElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 /*  ================================  HTMLSelectElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-var labelableElements = ["INPUT", "BUTTON", "KEYGEN", "METER", "OUTPUT", "PROGRESS", "TEXTAREA", "SELECT"];
+var labelableElements = "INPUT BUTTON KEYGEN METER OUTPUT PROGRESS TEXTAREA SELECT";
 /*
 Implement HTML*Element.labels
 https://developer.mozilla.org/en/DOM/HTMLInputElement
@@ -1312,7 +1293,7 @@ if(!("labels" in document.createElement("input"))) (function() {
 	Object.defineProperty(nodeProto, "labels", {
 		enumerable: true,
 		"get" : function() {
-			if(!~labelableElements.indexOf(this.nodeName))
+			if(labelableElements["contains"](this.nodeName))
 				return void 0;
 			
 			var node = this,
@@ -1321,7 +1302,7 @@ if(!("labels" in document.createElement("input"))) (function() {
 				 * @type {Array}
 				 */
 				result = this.id ?
-					Array["from"](document.querySelectorAll("label[for='" + this.id + "']")) :	
+					_arrayFrom(document.querySelectorAll("label[for='" + this.id + "']")) :	
 					[],
 				_lastInTreeOrder_index = result.length - 1;
 
@@ -1335,8 +1316,7 @@ if(!("labels" in document.createElement("input"))) (function() {
 				}
 				
 			return result;
-		},
-		"ielt8" : true
+		}
 	});
 })();
 
@@ -1362,12 +1342,11 @@ if(!("control" in document.createElement("label"))) (function() {
 			
 			return _recursivelyWalk(this.childNodes,
 					function(el) {
-						if(~labelableElements.indexOf(el.nodeName))
+						if(labelableElements["contains"](el.nodeName))
 							return el
 					}
 				) || null;
-		},
-		"ielt8" : true
+		}
 	});
 
 })();
@@ -1557,7 +1536,7 @@ var $A = global["$A"] = function(iterable, start, end, forse) {
 	if(!iterable || start + end === 0)return [];
 	if(start == end == void 0) {
 		if(Array.isArray(iterable))return iterable;
-		return Array["from"](iterable);
+		return _arrayFrom(iterable);
 	}
 	start = start || 0;//Default value
 	
@@ -1618,7 +1597,7 @@ var $K = global["$K"] = function(iterable, forse) {
 		results;
 		
 	if(type == "object") {
-		if(browser.msie && iterable.length && !(iterable instanceof Array))iterable = Array["from"](iterable);//Если Arguments
+		if(browser.msie && iterable.length && !(iterable instanceof Array))iterable = _arrayFrom(iterable);//Если Arguments
 		if(forse) {
 			results = [];
 			for(var i in iterable)results.push(i);
@@ -1659,7 +1638,7 @@ global["bubbleEventListener"] = function bubbleEventListener(attribute, namedFun
 		   (typeof namedFunctions != "object" && typeof namedFunctions != funcType))	
 				console.error("bubbleEventListener::namedFunctions must be an Object or Function")
 		else if(typeof namedFunctions == "object") {
-			if(!Array["from"](namedFunctions).length)console.error("bubbleEventListener::no functions are sets")
+			if(!_arrayFrom(namedFunctions).length)console.error("bubbleEventListener::no functions are sets")
 			else {
 				var s = true;
 				$K(namedFunctions).forEach(function(key){
@@ -1795,10 +1774,10 @@ var $$ = global["$$"] = function(selector, roots/*, noCache*/, isFirst) {
 				return result;
 			}
 			
-			if(!Array.isArray(roots))return Array["from"](roots.querySelectorAll(selector));
+			if(!Array.isArray(roots))return _arrayFrom(roots.querySelectorAll(selector));
 						
 			while(root = roots[++i] && (!isFirst || !result.length))
-				result.concat(Array["from"](root.querySelectorAll(selector)))
+				result.concat(_arrayFrom(root.querySelectorAll(selector)))
 			
 		}
 		
@@ -1877,7 +1856,7 @@ $$.N = function(selector, roots, prefetchResult, isFirst) {
 			else specialSelector = selector;
 			if(noway){}
 			else if(isFirst)result.push(rt.querySelector(specialSelector));
-			else result = result.concat(Array["from"](rt.querySelectorAll(specialSelector)));
+			else result = result.concat(_arrayFrom(rt.querySelectorAll(specialSelector)));
 		}
 		
 		return result;
