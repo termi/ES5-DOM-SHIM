@@ -6,61 +6,67 @@
 // This file MUST be in <head> section of document
 
 // TODO:: see http://pkario.blogspot.com/2010/09/javascript-event-handling-all-browsers.html
-// required window.browser.msie
+// required: 
+//	a.ie8.js [window.browser.msie, window.Node, ...]
 
-;(function() {
+;(function(global) {
 
 //CONFIG START
 var /** @const*/
-	__URL_TO_ELEMENT_BEHAVIOR__='/a.ielt8.htc',
+	__URL_TO_ELEMENT_BEHAVIOR__     = '/a.ielt8.htc',
 	/** @const*/
-	__URL_TO_IE6_ELEMENT_BEHAVIOR__='/a.ie6.ielt8.htc',
+	__URL_TO_IE6_ELEMENT_BEHAVIOR__ = '/a.ie6.ielt8.htc',
 	/** @const*/
-	__STYLE_ID="ielt8_style_prev_for_behaviour";
+	__STYLE_ID                      = "ielt8_style_prev_for_behaviour";
 //CONFIG END
 
-var nodeProp = window.Node.prototype,
-	browser = window.browser;
+var nodeProp = global.Node.prototype,//Note: for IE < 8 `Node` and `Node.prototype` is just an JS objects created in a.ie8.js
+	browser = global.browser,
+	noDocumentReadyState;
 	
 if(!document.readyState) {
-	browser.noDocumentReadyState = true;
+	noDocumentReadyState = true;
 	document.readyState = "uninitialized";
 }
 	
-if(nodeProp["ie"]) {//IE < 8 polifill
+if(nodeProp["ie"] && browser.msie < 8) {//IE < 8 polifill
 
 nodeProp["ielt8"] = Object.defineProperty["ielt8"] = true;
 
-window["__ielt8__wontfix"] = [];//TODO:: use it to extend 'OBJECT' tag with compareDocumentPosition, getElementsByClassName and etc functions
+//global["__ielt8__wontfix"] = [];//TODO:: use it to extend 'OBJECT' tag with compareDocumentPosition, getElementsByClassName and etc functions
 
 // Node.attributes path for IE < 8
 // No Node.attributes patch for document.head :(
-var __getAtt = window["_ielt8_getAttributes"] = function() {
+// [BUG]: '`attribute` shim dosn't work on `OBJECT` element
+var __notAnAttribute = {"insertAfter" : 1, "getElementsByClassName" : 1, "compareDocumentPosition" : 1, "_" : 1, "hasAttribute" : 1, "getAttribute" : 1, "setAttribute" : 1, "addEventListener" : 1, "removeEventListener" : 1, "dispatchEvent" : 1, "cloneNode" : 1, "quersySelectorAll" : 1, "quersySelector" : 1},
+	__getAtt = global["_ielt8_getAttributes"] = function() {
 	/*
 	[BUG]strange behavior on 'object' element: IE < 8 won't create '_' container
 	*/
-	var tmp = this._ && this._["__ielt8_attributes__"],
+	var tmp = this._ && this._["__ielt8_attributes__"],//__ielt8_attributes__ seted in .htc file
 		res = {length : 0},
 		val;
 	
-	if(!tmp)throw Error("__ielt8_attributes__ is required")
+	//if(!tmp)throw Error("__ielt8_attributes__ is required")
+	if(!tmp)return [];
 	
-	for(var i = 0, l = tmp.length, k = 0 ; i < l ; i++)if((val = tmp[i]).specified && !(val.name in __getAtt.notAnAttribute)){
+	for(var i = 0, l = tmp.length, k = 0 ; i < l ; i++)if((val = tmp[i]).specified && !(val.name in __notAnAttribute)){
 		res[k++] = val;
 		res[tmp[i].name] = val;
 		res.length++;
 	}
 	return res;
 }
-__getAtt.notAnAttribute = {"insertAfter" : 1, "getElementsByClassName" : 1, "compareDocumentPosition" : 1, "_" : 1, "getAttribute" : 1, "setAttribute" : 1, "addEventListener" : 1, "removeEventListener" : 1, "dispatchEvent" : 1, "cloneNode" : 1, "quersySelectorAll" : 1, "quersySelector" : 1}
-//
 
+/*
+hasAttribute shim
+*/
 nodeProp.hasAttribute = function(name) {
 	return __getAtt.call(this)[name];
 }
 
 /**
- * Функция возвращяет массив элементов выбранных по CSS3-велектору. 
+ * Функция возвращяет массив элементов выбранных по CSS3-селектору. 
  * Также добавляет во все наёденные элементы объекты-контейнеры '_'. '_' можно использовать для хранения переменных,
  *  связанных с данным элементом, чтобы не захламлять пространство имён объекта
  * Множественные селекторы, разделённые знаком "," не поддерживаются (смотрите функцию $$)
@@ -461,8 +467,8 @@ function queryOneManySelector(selector) {
 }
 
 
-if(!document.querySelectorAll)document.querySelectorAll = window["_ielt8_querySelectorAll"] = queryManySelector;
-if(!document.querySelector)document.querySelector = window["_ielt8_querySelector"] = queryOneManySelector;
+if(!document.querySelectorAll)document.querySelectorAll = global["_ielt8_querySelectorAll"] = queryManySelector;
+if(!document.querySelector)document.querySelector = global["_ielt8_querySelector"] = queryOneManySelector;
 
 
 /*  ======================================================================================  */
@@ -482,12 +488,20 @@ document.createElement = function() {
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Document  ==================================  */
 /*  ======================================================================================  */
 
-global.addEventListener('DOMContentLoaded', function() {
-	if(browser.noDocumentReadyState)document.readyState = "interactive";
+/*  =======================================================================================  */
+/*  ======================================  Network  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+if(!global.XMLHttpRequest)global.XMLHttpRequest = ActiveXObject.bind(global, "Microsoft.XMLHTTP");
+
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Network  ======================================  */
+/*  =======================================================================================  */
+
+global.addEventListener('DOMContentLoaded', function() {//Emulated method
+	if(noDocumentReadyState)document.readyState = "interactive";
 }, false);
-global.addEventListener('load', function() {
-	if(browser.noDocumentReadyState)document.readyState = "complete";
-}, false);
+global.attachEvent('onload', function() {//Native method
+	if(noDocumentReadyState)document.readyState = "complete";
+});
 
 
 
@@ -515,4 +529,4 @@ document.write("<style id='"+__STYLE_ID+"' data-url='"+add+"'>html,body,div,span
 [BUG]there is no 'object' tag in this style, because IE < 8 won't apply behavior to 'object' element
 */
 }
-})();
+})(window);

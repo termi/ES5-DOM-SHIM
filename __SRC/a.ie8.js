@@ -7,7 +7,9 @@
 // ==/ClosureCompiler==
 /**
  * ES5 and DOM shim for IE < 9
- * @version 1
+ * @version 1.2
+ * required:
+ *  - Object.append
  */
 
 
@@ -65,7 +67,12 @@ if(browser.msie)for(var i = 6 ; i < 11 ; i++)//IE from 6 to 10
 		break;
 	}
 	
-	
+var _throwDOMException = function(errStr) {
+		var ex = Object.create(DOMException.prototype);
+		ex.code = DOMException[errStr];
+		ex.message = errStr +': DOM Exception ' + ex.code;
+		throw ex;
+	}
 	
 
 //Emulating HEAD for ie < 9
@@ -139,7 +146,7 @@ if(!_DOMException) {
 /*  ======================================  Events  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
 //fix [add|remove]EventListener & dispatchEvent for IE < 9
-(function() {
+
 //	TODO:: использовать наработки https://github.com/arexkun/Vine
 //		   использовать наработки https://github.com/kbjr/Events.js
 /*
@@ -172,6 +179,8 @@ function fixEvent(event){
 	event.isFixed = true;// пометить событие как обработанное
 
 	//http://javascript.gakaa.com/event-detail.aspx
+	//http://www.w3.org/TR/2011/WD-DOM-Level-3-Events-20110531/#event-type-click
+	//indicates the current click count; the attribute value must be 1 when the user begins this action and increments by 1 for each click.
 	if(event.type === "click" && !event.detail)event.detail = 1;
 	else if(event.type === "dblclick" && !event.detail)event.detail = 2;
 	
@@ -309,8 +318,6 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 	//Так как номер устанавливается один раз, и далее не меняется - это приводит к ряду интересных фич.
 	// Например, запуск add с одинаковыми аргументами добавит событие только один раз.
 	_[eventsUUID][_type][_handler.guid] = _handler;
-	
-	//return _handler.guid;
 }
 
 if(!document.removeEventListener)global.removeEventListener = document.removeEventListener = function(_type, _handler) {
@@ -457,20 +464,10 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 	}
 }
 
-})();
-
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Events  ======================================  */
 /*  ======================================================================================  */
 
-
-/*  =======================================================================================  */
-/*  ======================================  Network  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
-
-if(!global.XMLHttpRequest)global.XMLHttpRequest = ActiveXObject.bind(global, "Microsoft.XMLHTTP");
-
-/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Network  ======================================  */
-/*  =======================================================================================  */
 
 /*  ======================================================================================  */
 /*  ========================================  DOM  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
@@ -497,27 +494,34 @@ http://www.alistapart.com/articles/crossbrowserscripting
 if(!document.importNode)document.importNode = function(node, allChildren) {
 	/* find the node type to import */
 	switch (node.nodeType) {
-		case document.ELEMENT_NODE:
-			/* create a new element */
-			var newNode = document.createElement(node.nodeName);
+		case 1://document.ELEMENT_NODE:
+			var newNode = document.createElement(node.nodeName),//create a new element
+				attrs = node.attributes,
+				attr,
+				_childNodes;
+				
 			/* does the node have any attributes to add? */
-			if (node.attributes && node.attributes.length > 0)
+			if (attrs && attrs.length > 0)
 				/* add all of the attributes */
-				for (var i = 0, il = node.attributes.length; i < il;)
-					newNode.setAttribute(node.attributes[i].nodeName, node.getAttribute(node.attributes[i++].nodeName));
+				for (var i = 0, il = attrs.length ; i < il ;) {
+					attr = node.attributes[i++];
+					newNode.setAttribute(attr.nodeName, node.getAttribute(attr.nodeName));
+				}
 			/* are we going after children too, and does the node have any? */
-			if (allChildren && node.childNodes && node.childNodes.length > 0)
+			if (allChildren && (_childNodes = node.childNodes) && _childNodes.length > 0)
 				/* recursively get all of the child nodes */
-				for (var i = 0, il = node.childNodes.length; i < il;)
-					newNode.appendChild(document._importNode(node.childNodes[i++], allChildren));
+				for (var i = 0, il = _childNodes.length; i < il;)
+					newNode.appendChild(document.importNode(_childNodes[i++], allChildren));
 			return newNode;
-			break;
-		case document.TEXT_NODE:
-		case document.CDATA_SECTION_NODE:
-		case document.COMMENT_NODE:
+		break;
+		
+		case 3://document.TEXT_NODE:
+		case 4://document.CDATA_SECTION_NODE:
+		case 8://document.COMMENT_NODE:
 			return document.createTextNode(node.nodeValue);
-			break;
+		break;
 	}
+	_throwDOMException("NOT_SUPPORTED_ERR");
 };
 
 function _recursivelyWalk(nodes, cb) {
@@ -619,7 +623,7 @@ if(browser.msie && browser.msie < 9) {
 		
 		if(global["DocumentFragment"] === global["Document"]) {
 			//if DocumentFragment is a fake DocumentFragment -> append each instance with Document methods
-			Object.append(df, global["DocumentFragment"]);//TODO: tests
+			Object["append"](df, global["DocumentFragment"].prototype);//TODO: tests
 		}
 		
 		return html5_document(df);
@@ -689,7 +693,7 @@ var _cloneElement = global["cloneElement"] = function(element, include_all, dele
 			result = _cloneElement.safeElement.firstChild; // return HTML5-safe element's first child, which is an outerHTML clone of the input element
 			
 			//FIX IE lt 8 Element.prototype
-			if(nodeProto["ielt8"])Object.append(el, nodeProto);
+			if(nodeProto["ielt8"])Object["append"](el, nodeProto);
 		}
 	}
 	else result = element.cloneNode(include_all);
