@@ -16,7 +16,7 @@ __Status__: Beta
  - some extra stuff (if you don't need it, use `a.noextras.js` instead of `a.js`)
 
 ## Install
- - For modern browsers and IE9+:
+ - For modern browsers:
   - Add main script in `head` section
   
             <script src="a.js"></script>

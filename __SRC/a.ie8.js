@@ -1,4 +1,4 @@
-// ==ClosureCompiler==
+п»ї// ==ClosureCompiler==
 // @compilation_level ADVANCED_OPTIMIZATIONS
 // @warning_level VERBOSE
 // @jscomp_warning missingProperties
@@ -12,16 +12,17 @@
  *  - Object.append
  */
 
-
+//GCC DEFINES START
 /** @define {boolean} */
 var IS_DEBUG = false;
+//GCC DEFINES END
+
+;(function(global) {
+
 /** @const @type {boolean} */
 var DEBUG = IS_DEBUG && !!(window && window.console);
 
 var /** @const */funcType = "function";
-
-;(function(global) {
-
 
 /*  ======================================================================================  */
 /*  ==================================  Function prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
@@ -147,8 +148,8 @@ if(!_DOMException) {
 
 //fix [add|remove]EventListener & dispatchEvent for IE < 9
 
-//	TODO:: использовать наработки https://github.com/arexkun/Vine
-//		   использовать наработки https://github.com/kbjr/Events.js
+//	TODO:: РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ РЅР°СЂР°Р±РѕС‚РєРё https://github.com/arexkun/Vine
+//		   РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ РЅР°СЂР°Р±РѕС‚РєРё https://github.com/kbjr/Events.js
 /*
 dispatchEvent
 This method allows the dispatch of events into the implementations event model. Events dispatched in this manner will have the same capturing and bubbling behavior as events dispatched directly by the implementation. The target of the event is the EventTarget on which dispatchEvent is called. 
@@ -167,108 +168,109 @@ UNSPECIFIED_EVENT_TYPE_ERR: Raised if the Event's type was not specified by init
 var preventDefault_ = function(){this.returnValue = false};
 var stopPropagation_ = function(){this.cancelBubble = true};
 
-var guid = 0,// текущий номер обработчика
-	//Т.к. мы кладём всё в один контейнер "_", нужно убедится, что названия свойств не будут пересикаться с другими названиями из другой части библиотеки a.js (a.ielt8.htc и a.ie6.htc)
-	handleUUID = "_h_9e2",// Некий уникальный идентификатор
-	eventsUUID = "_e_8vj";// Некий уникальный идентификатор
+var guid = 0,// С‚РµРєСѓС‰РёР№ РЅРѕРјРµСЂ РѕР±СЂР°Р±РѕС‚С‡РёРєР°
+	//Рў.Рє. РјС‹ РєР»Р°РґС‘Рј РІСЃС‘ РІ РѕРґРёРЅ РєРѕРЅС‚РµР№РЅРµСЂ "_", РЅСѓР¶РЅРѕ СѓР±РµРґРёС‚СЃСЏ, С‡С‚Рѕ РЅР°Р·РІР°РЅРёСЏ СЃРІРѕР№СЃС‚РІ РЅРµ Р±СѓРґСѓС‚ РїРµСЂРµСЃРёРєР°С‚СЊСЃСЏ СЃ РґСЂСѓРіРёРјРё РЅР°Р·РІР°РЅРёСЏРјРё РёР· РґСЂСѓРіРѕР№ С‡Р°СЃС‚Рё Р±РёР±Р»РёРѕС‚РµРєРё a.js (a.ielt8.htc Рё a.ie6.htc)
+	handleUUID = "_h_9e2",// РќРµРєРёР№ СѓРЅРёРєР°Р»СЊРЅС‹Р№ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ
+	eventsUUID = "_e_8vj";// РќРµРєРёР№ СѓРЅРёРєР°Р»СЊРЅС‹Р№ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ
 	
 function fixEvent(event){
-	// один объект события может передаваться по цепочке разным обработчикам
-	// при этом кроссбраузерная обработка будет вызвана только 1 раз
-	// Снизу, в функции commonHandle,, мы должны проверять на !event.isFixed
-	event.isFixed = true;// пометить событие как обработанное
+	// РѕРґРёРЅ РѕР±СЉРµРєС‚ СЃРѕР±С‹С‚РёСЏ РјРѕР¶РµС‚ РїРµСЂРµРґР°РІР°С‚СЊСЃСЏ РїРѕ С†РµРїРѕС‡РєРµ СЂР°Р·РЅС‹Рј РѕР±СЂР°Р±РѕС‚С‡РёРєР°Рј
+	// РїСЂРё СЌС‚РѕРј РєСЂРѕСЃСЃР±СЂР°СѓР·РµСЂРЅР°СЏ РѕР±СЂР°Р±РѕС‚РєР° Р±СѓРґРµС‚ РІС‹Р·РІР°РЅР° С‚РѕР»СЊРєРѕ 1 СЂР°Р·
+	// РЎРЅРёР·Сѓ, РІ С„СѓРЅРєС†РёРё commonHandle,, РјС‹ РґРѕР»Р¶РЅС‹ РїСЂРѕРІРµСЂСЏС‚СЊ РЅР° !event.isFixed
+	event.isFixed = true;// РїРѕРјРµС‚РёС‚СЊ СЃРѕР±С‹С‚РёРµ РєР°Рє РѕР±СЂР°Р±РѕС‚Р°РЅРЅРѕРµ
 
 	//http://javascript.gakaa.com/event-detail.aspx
 	//http://www.w3.org/TR/2011/WD-DOM-Level-3-Events-20110531/#event-type-click
 	//indicates the current click count; the attribute value must be 1 when the user begins this action and increments by 1 for each click.
-	if(event.type === "click" && !event.detail)event.detail = 1;
-	else if(event.type === "dblclick" && !event.detail)event.detail = 2;
+	if(event.type === "click" && event.detail === undefined)event.detail = 1;
+	else if(event.type === "dblclick" && event.detail === undefined)event.detail = 2;
 	
-	// добавить preventDefault/stopPropagation для IE
+	// РґРѕР±Р°РІРёС‚СЊ preventDefault/stopPropagation РґР»СЏ IE
 	event.preventDefault || (event.preventDefault = preventDefault_);
 	event.stopPropagation || (event.stopPropagation = stopPropagation_);
 
-	event.target || (event.target = event.srcElement || document);// добавить target для IE
+	event.target || (event.target = event.srcElement || document);// РґРѕР±Р°РІРёС‚СЊ target РґР»СЏ IE
 
-	// добавить relatedTarget в IE, если это нужно
+	// РґРѕР±Р°РІРёС‚СЊ relatedTarget РІ IE, РµСЃР»Рё СЌС‚Рѕ РЅСѓР¶РЅРѕ
 	if(event.relatedTarget === void 0 && event.fromElement)
 		event.relatedTarget = event.fromElement == event.target ? event.toElement : event.fromElement;
 
-	// вычислить pageX/pageY для IE
+	// РІС‹С‡РёСЃР»РёС‚СЊ pageX/pageY РґР»СЏ IE
 	if(event.pageX == null && event.clientX != null) {
 		var html = document.documentElement, body = document.body;
 		/*event.pageX = event.clientX + (html && html.scrollLeft || body && body.scrollLeft || 0) - (html.clientLeft || 0);
 		event.pageY = event.clientY + (html && html.scrollTop || body && body.scrollTop || 0) - (html.clientTop || 0);*/
-		//Новая вервия нуждающаяся в проверки
+		//РќРѕРІР°СЏ РІРµСЂРІРёСЏ РЅСѓР¶РґР°СЋС‰Р°СЏСЃСЏ РІ РїСЂРѕРІРµСЂРєРё
 		event.pageX = event.clientX + (window.pageXOffset || html.scrollLeft || body.scrollLeft || 0) - (html.clientLeft || 0);
 		event.pageY = event.clientY + (window.pageYOffset || html.scrollTop || body.scrollTop || 0) - (html.clientTop || 0);
 	}
 
-	// записать нажатую кнопку мыши в which для IE. 1 == левая; 2 == средняя; 3 == правая
+	// Р·Р°РїРёСЃР°С‚СЊ РЅР°Р¶Р°С‚СѓСЋ РєРЅРѕРїРєСѓ РјС‹С€Рё РІ which РґР»СЏ IE. 1 == Р»РµРІР°СЏ; 2 == СЃСЂРµРґРЅСЏСЏ; 3 == РїСЂР°РІР°СЏ
 	event.which || event.button && (event.which = event.button & 1 ? 1 : event.button & 2 ? 3 : event.button & 4 ? 2 : 0);
 		
-	// событие DOMAttrModified
-	//  TODO:: недоделано
-	// TODO:: Привести event во всех случаях (для всех браузеров) в одинаковый вид с newValue, prevValue, propName и т.д.
-	if(!event.attrName && event.propertyName)event.attrName = event.propertyName.split('.')[0];//IE При изменении style.width в propertyName передаст именно style.width, а не style, как нам надо
+	// СЃРѕР±С‹С‚РёРµ DOMAttrModified
+	//  TODO:: РЅРµРґРѕРґРµР»Р°РЅРѕ
+	// TODO:: РџСЂРёРІРµСЃС‚Рё event РІРѕ РІСЃРµС… СЃР»СѓС‡Р°СЏС… (РґР»СЏ РІСЃРµС… Р±СЂР°СѓР·РµСЂРѕРІ) РІ РѕРґРёРЅР°РєРѕРІС‹Р№ РІРёРґ СЃ newValue, prevValue, propName Рё С‚.Рґ.
+	if(!event.attrName && event.propertyName)event.attrName = event.propertyName.split('.')[0];//IE РџСЂРё РёР·РјРµРЅРµРЅРёРё style.width РІ propertyName РїРµСЂРµРґР°СЃС‚ РёРјРµРЅРЅРѕ style.width, Р° РЅРµ style, РєР°Рє РЅР°Рј РЅР°РґРѕ
 
 	return event
 }
 
-// вспомогательный универсальный обработчик. Вызывается в контексте элемента всегда this = element
+// РІСЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Р№ СѓРЅРёРІРµСЂСЃР°Р»СЊРЅС‹Р№ РѕР±СЂР°Р±РѕС‚С‡РёРє. Р’С‹Р·С‹РІР°РµС‚СЃСЏ РІ РєРѕРЅС‚РµРєСЃС‚Рµ СЌР»РµРјРµРЅС‚Р° РІСЃРµРіРґР° this = element
 function commonHandle(event) {
 	var thisObj = this,
 		_ = thisObj["_"],
-		errors = [],//Инициализуется массив errors для исключений
+		errors = [],//РРЅРёС†РёР°Р»РёР·СѓРµС‚СЃСЏ РјР°СЃСЃРёРІ errors РґР»СЏ РёСЃРєР»СЋС‡РµРЅРёР№
 		errorsMessages = [];
 	
 	if(!_ || !_[eventsUUID])return;
 	
 	var handlers = _[eventsUUID][event.type];
 	
-	if(!(event = event || window.event).isFixed)event = fixEvent(event);// получить объект события и проверить, подготавливали мы его для IE или нет
+	if(!(event = event || window.event).isFixed)event = fixEvent(event);// РїРѕР»СѓС‡РёС‚СЊ РѕР±СЉРµРєС‚ СЃРѕР±С‹С‚РёСЏ Рё РїСЂРѕРІРµСЂРёС‚СЊ, РїРѕРґРіРѕС‚Р°РІР»РёРІР°Р»Рё РјС‹ РµРіРѕ РґР»СЏ IE РёР»Рё РЅРµС‚
 
 	for(var g in handlers)if(_hasOwnProperty(handlers, g)) {
 		var handler = handlers[g];
 		
 		try {
-			//Передаём контекст и объект event, результат сохраним в event['result'] для передачи значения дальше по цепочке
-			if((event['result'] = _call(handler, this, event)) === false) {//Если вернели false - остановим обработку функций
+			//РџРµСЂРµРґР°С‘Рј РєРѕРЅС‚РµРєСЃС‚ Рё РѕР±СЉРµРєС‚ event, СЂРµР·СѓР»СЊС‚Р°С‚ СЃРѕС…СЂР°РЅРёРј РІ event['result'] РґР»СЏ РїРµСЂРµРґР°С‡Рё Р·РЅР°С‡РµРЅРёСЏ РґР°Р»СЊС€Рµ РїРѕ С†РµРїРѕС‡РєРµ
+			if((event['result'] = _call(handler, this, event)) === false) {//Р•СЃР»Рё РІРµСЂРЅРµР»Рё false - РѕСЃС‚Р°РЅРѕРІРёРј РѕР±СЂР°Р±РѕС‚РєСѓ С„СѓРЅРєС†РёР№
 				event.preventDefault()
 				event.stopPropagation()
 			}
 		}
 		catch(e) { 
-			errors.push(e);//Все исключения - добавляем в массив, при этом не прерывая цепочку обработчиков.
+			errors.push(e);//Р’СЃРµ РёСЃРєР»СЋС‡РµРЅРёСЏ - РґРѕР±Р°РІР»СЏРµРј РІ РјР°СЃСЃРёРІ, РїСЂРё СЌС‚РѕРј РЅРµ РїСЂРµСЂС‹РІР°СЏ С†РµРїРѕС‡РєСѓ РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ.
 			errorsMessages.push(e.message);
 		}
 		
-		if(event.stopNow)break;//Мгновенная остановка обработки событий
+		if(event.stopNow)break;//РњРіРЅРѕРІРµРЅРЅР°СЏ РѕСЃС‚Р°РЅРѕРІРєР° РѕР±СЂР°Р±РѕС‚РєРё СЃРѕР±С‹С‚РёР№
 	}
 	
-	if(errors.length == 1) {//Если была только одна ошибка - кидаем ее дальше
+	if(errors.length == 1) {//Р•СЃР»Рё Р±С‹Р»Р° С‚РѕР»СЊРєРѕ РѕРґРЅР° РѕС€РёР±РєР° - РєРёРґР°РµРј РµРµ РґР°Р»СЊС€Рµ
 		throw errors[0]
 	}
-	else if(errors.length > 1) {//Иначе делаем общий объект Error со списком ошибок в свойстве errors и кидаем его
+	else if(errors.length > 1) {//РРЅР°С‡Рµ РґРµР»Р°РµРј РѕР±С‰РёР№ РѕР±СЉРµРєС‚ Error СЃРѕ СЃРїРёСЃРєРѕРј РѕС€РёР±РѕРє РІ СЃРІРѕР№СЃС‚РІРµ errors Рё РєРёРґР°РµРј РµРіРѕ
 		var e = new Error("Multiple errors thrown : " + event.type + " : " + " : " + errorsMessages.join("|"));
 		e.errors = errors;
 		throw e;
 	}
 }
 
-/* TODO:: Code for IE8 in a.ie8.js file*/
 if(!document.addEventListener)global.addEventListener = document.addEventListener = function(_type, _handler, useCapture) {
 	if(typeof _handler != "function")return;
 	
 	var thisObj = this;
 	
-	if(_type == "DOMContentLoaded") {
-		//IE
-		document.write("<script id=\"__ie_onload\" defer=\"defer\" src=\"javascript:void(0)\"><\/script>");
+	if(_type == "DOMContentLoaded") {//IE
 		var a = document.getElementById("__ie_onload");
-		a.onreadystatechange = function(e) {
-			var n = this;
-			if(n.readyState == "complete")commonHandle.call(thisObj, {"type" : _type});
+		if(!a) {
+			document.write("<script id=\"__ie_onload\" defer=\"defer\" src=\"javascript:void(0)\"><\/script>");
+			a = document.getElementById("__ie_onload");
+			a.onreadystatechange = function(e) {
+				var n = this;
+				if(n.readyState == "complete")commonHandle.call(thisObj, {"type" : _type});
+			}
 		}
 	}
 	/* TODO:: DOMAttrModified
@@ -287,17 +289,17 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 	var _ = thisObj["_"];
 	if(!_)_ = thisObj["_"] = {};
 	
-	// исправляем небольшой глюк IE с передачей объекта window
+	// РёСЃРїСЂР°РІР»СЏРµРј РЅРµР±РѕР»СЊС€РѕР№ РіР»СЋРє IE СЃ РїРµСЂРµРґР°С‡РµР№ РѕР±СЉРµРєС‚Р° window
 	if(thisObj.setInterval && (thisObj != global && !thisObj.frameElement))thisObj = global;
 	
-	//Назначить функции-обработчику уникальный номер. По нему обработчик можно будет легко найти в списке events[type].
-	//Если мы передали в функцию свой guid - мы установили его выше.
+	//РќР°Р·РЅР°С‡РёС‚СЊ С„СѓРЅРєС†РёРё-РѕР±СЂР°Р±РѕС‚С‡РёРєСѓ СѓРЅРёРєР°Р»СЊРЅС‹Р№ РЅРѕРјРµСЂ. РџРѕ РЅРµРјСѓ РѕР±СЂР°Р±РѕС‚С‡РёРє РјРѕР¶РЅРѕ Р±СѓРґРµС‚ Р»РµРіРєРѕ РЅР°Р№С‚Рё РІ СЃРїРёСЃРєРµ events[type].
+	//Р•СЃР»Рё РјС‹ РїРµСЂРµРґР°Р»Рё РІ С„СѓРЅРєС†РёСЋ СЃРІРѕР№ guid - РјС‹ СѓСЃС‚Р°РЅРѕРІРёР»Рё РµРіРѕ РІС‹С€Рµ.
 	if(!_handler.guid)_handler.guid = ++guid;
 	
-	//Инициализовать служебную структуру events и обработчик _[handleUUID]. 
-	//Обработчик _[handleUUID] фильтрует редко возникающую ошибку, когда событие отрабатывает после unload'а страницы. 
-	//Основная же его задача - передать вызов универсальному обработчику commonHandle с правильным указанием текущего элемента this. 
-	//Как и events, _[handleUUID] достаточно инициализовать один раз для любых событий.
+	//РРЅРёС†РёР°Р»РёР·РѕРІР°С‚СЊ СЃР»СѓР¶РµР±РЅСѓСЋ СЃС‚СЂСѓРєС‚СѓСЂСѓ events Рё РѕР±СЂР°Р±РѕС‚С‡РёРє _[handleUUID]. 
+	//РћР±СЂР°Р±РѕС‚С‡РёРє _[handleUUID] С„РёР»СЊС‚СЂСѓРµС‚ СЂРµРґРєРѕ РІРѕР·РЅРёРєР°СЋС‰СѓСЋ РѕС€РёР±РєСѓ, РєРѕРіРґР° СЃРѕР±С‹С‚РёРµ РѕС‚СЂР°Р±Р°С‚С‹РІР°РµС‚ РїРѕСЃР»Рµ unload'Р° СЃС‚СЂР°РЅРёС†С‹. 
+	//РћСЃРЅРѕРІРЅР°СЏ Р¶Рµ РµРіРѕ Р·Р°РґР°С‡Р° - РїРµСЂРµРґР°С‚СЊ РІС‹Р·РѕРІ СѓРЅРёРІРµСЂСЃР°Р»СЊРЅРѕРјСѓ РѕР±СЂР°Р±РѕС‚С‡РёРєСѓ commonHandle СЃ РїСЂР°РІРёР»СЊРЅС‹Рј СѓРєР°Р·Р°РЅРёРµРј С‚РµРєСѓС‰РµРіРѕ СЌР»РµРјРµРЅС‚Р° this. 
+	//РљР°Рє Рё events, _[handleUUID] РґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РёРЅРёС†РёР°Р»РёР·РѕРІР°С‚СЊ РѕРґРёРЅ СЂР°Р· РґР»СЏ Р»СЋР±С‹С… СЃРѕР±С‹С‚РёР№.
 	if(!_[eventsUUID]) {
 		_[eventsUUID] = {};
 		_[handleUUID] = function(event) {
@@ -306,17 +308,17 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 		}
 	}
 	
-	//Если обработчиков такого типа событий не существует - инициализуем events[type] и вешаем
-	// _[handleUUID] как обработчик на elem для запуска браузером по событию type.
+	//Р•СЃР»Рё РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ С‚Р°РєРѕРіРѕ С‚РёРїР° СЃРѕР±С‹С‚РёР№ РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚ - РёРЅРёС†РёР°Р»РёР·СѓРµРј events[type] Рё РІРµС€Р°РµРј
+	// _[handleUUID] РєР°Рє РѕР±СЂР°Р±РѕС‚С‡РёРє РЅР° elem РґР»СЏ Р·Р°РїСѓСЃРєР° Р±СЂР°СѓР·РµСЂРѕРј РїРѕ СЃРѕР±С‹С‚РёСЋ type.
 	if(!_[eventsUUID][_type]) {
 		_[eventsUUID][_type] = {};
 
 		thisObj.attachEvent('on' + _type, _[handleUUID]);
 	}
 	
-	//Добавляем пользовательский обработчик в список elem[eventsUUID][type] под заданным номером. 
-	//Так как номер устанавливается один раз, и далее не меняется - это приводит к ряду интересных фич.
-	// Например, запуск add с одинаковыми аргументами добавит событие только один раз.
+	//Р”РѕР±Р°РІР»СЏРµРј РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёР№ РѕР±СЂР°Р±РѕС‚С‡РёРє РІ СЃРїРёСЃРѕРє elem[eventsUUID][type] РїРѕРґ Р·Р°РґР°РЅРЅС‹Рј РЅРѕРјРµСЂРѕРј. 
+	//РўР°Рє РєР°Рє РЅРѕРјРµСЂ СѓСЃС‚Р°РЅР°РІР»РёРІР°РµС‚СЃСЏ РѕРґРёРЅ СЂР°Р·, Рё РґР°Р»РµРµ РЅРµ РјРµРЅСЏРµС‚СЃСЏ - СЌС‚Рѕ РїСЂРёРІРѕРґРёС‚ Рє СЂСЏРґСѓ РёРЅС‚РµСЂРµСЃРЅС‹С… С„РёС‡.
+	// РќР°РїСЂРёРјРµСЂ, Р·Р°РїСѓСЃРє add СЃ РѕРґРёРЅР°РєРѕРІС‹РјРё Р°СЂРіСѓРјРµРЅС‚Р°РјРё РґРѕР±Р°РІРёС‚ СЃРѕР±С‹С‚РёРµ С‚РѕР»СЊРєРѕ РѕРґРёРЅ СЂР°Р·.
 	_[eventsUUID][_type][_handler.guid] = _handler;
 }
 
@@ -324,17 +326,17 @@ if(!document.removeEventListener)global.removeEventListener = document.removeEve
 	var thisObj = this,
 		_ = thisObj["_"];		
 	if(typeof _handler != "function" || !_handler.guid || !_)return;
-	var handlers = _[eventsUUID] && _[eventsUUID][_type];//Получить список обработчиков
+	var handlers = _[eventsUUID] && _[eventsUUID][_type];//РџРѕР»СѓС‡РёС‚СЊ СЃРїРёСЃРѕРє РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ
 	
-	delete handlers[_handler.guid];//Удалить обработчик по его номеру
+	delete handlers[_handler.guid];//РЈРґР°Р»РёС‚СЊ РѕР±СЂР°Р±РѕС‚С‡РёРє РїРѕ РµРіРѕ РЅРѕРјРµСЂСѓ
 
-	for(var any in handlers)if(_hasOwnProperty(handlers, any))return;//TODO: проверить, что тут делается. Глупость какая-то.Проверить, не пуст ли список обработчиков
-	//Если пуст, то удалить служебный обработчик и очистить служебную структуру events[type]
+	for(var any in handlers)if(_hasOwnProperty(handlers, any))return;//TODO: РїСЂРѕРІРµСЂРёС‚СЊ, С‡С‚Рѕ С‚СѓС‚ РґРµР»Р°РµС‚СЃСЏ. Р“Р»СѓРїРѕСЃС‚СЊ РєР°РєР°СЏ-С‚Рѕ.РџСЂРѕРІРµСЂРёС‚СЊ, РЅРµ РїСѓСЃС‚ Р»Рё СЃРїРёСЃРѕРє РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ
+	//Р•СЃР»Рё РїСѓСЃС‚, С‚Рѕ СѓРґР°Р»РёС‚СЊ СЃР»СѓР¶РµР±РЅС‹Р№ РѕР±СЂР°Р±РѕС‚С‡РёРє Рё РѕС‡РёСЃС‚РёС‚СЊ СЃР»СѓР¶РµР±РЅСѓСЋ СЃС‚СЂСѓРєС‚СѓСЂСѓ events[type]
 	thisObj.detachEvent("on" + _type, _[handleUUID]);
 
 	delete _[eventsUUID][_type];
 
-	//Если событий вообще не осталось - удалить events и _[handleUUID] за ненадобностью.
+	//Р•СЃР»Рё СЃРѕР±С‹С‚РёР№ РІРѕРѕР±С‰Рµ РЅРµ РѕСЃС‚Р°Р»РѕСЃСЊ - СѓРґР°Р»РёС‚СЊ events Рё _[handleUUID] Р·Р° РЅРµРЅР°РґРѕР±РЅРѕСЃС‚СЊСЋ.
 	for(var any in _[eventsUUID])if(_hasOwnProperty(_[eventsUUID], any))return;
 	
 	delete _[handleUUID];
@@ -358,13 +360,13 @@ if(!document.dispatchEvent)global.dispatchEvent = document.dispatchEvent = funct
 	}
 	catch(e) {
 		//Shim for Custome events in IE < 9
-		if(e["number"] === -2147024809) {//"Недопустимый аргумент."
+		if(e["number"] === -2147024809) {//"РќРµРґРѕРїСѓСЃС‚РёРјС‹Р№ Р°СЂРіСѓРјРµРЅС‚."
 			//event._custom_event_ = true;//FOR DEBUG
 			var node = thisObj;
-			//Всплываем событие
-			while(!event.cancelBubble && node) {//Если мы вызвали stopPropogation() - больше не всплываем событие
+			//Р’СЃРїР»С‹РІР°РµРј СЃРѕР±С‹С‚РёРµ
+			while(!event.cancelBubble && node) {//Р•СЃР»Рё РјС‹ РІС‹Р·РІР°Р»Рё stopPropogation() - Р±РѕР»СЊС€Рµ РЅРµ РІСЃРїР»С‹РІР°РµРј СЃРѕР±С‹С‚РёРµ
 				commonHandle.call(node, event);
-				//Если у события отключено всплытие - не всплываем его
+				//Р•СЃР»Рё Сѓ СЃРѕР±С‹С‚РёСЏ РѕС‚РєР»СЋС‡РµРЅРѕ РІСЃРїР»С‹С‚РёРµ - РЅРµ РІСЃРїР»С‹РІР°РµРј РµРіРѕ
 				node = event.bubbles ? (node === document ? window : node.parentNode) : null;
 			}
 			
@@ -388,7 +390,7 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 		var thisObj = this;
 	
 		thisObj.type = _type;
-		//this.cancelBubble = //TODO:: <-- testing Глупость ???
+		//this.cancelBubble = //TODO:: <-- testing Р“Р»СѓРїРѕСЃС‚СЊ ???
 		//	!(this.bubbles = _bubbles);
 		thisObj.bubbles = _bubbles;
 		thisObj.cancelable = _cancelable;//https://developer.mozilla.org/en/DOM/event.cancelable
@@ -586,11 +588,11 @@ if(!(_compareDocumentPosition_ in document)) {
 if(!global.getComputedStyle) {//IE < 9
 	/**
 	 * @link https://developer.mozilla.org/en/DOM/window.getComputedStyle
-	 * getCurrentStyle - функция возвращяет текущий стиль элемента
-	 * @param {?Node} obj HTML-Элемент
+	 * getCurrentStyle - С„СѓРЅРєС†РёСЏ РІРѕР·РІСЂР°С‰СЏРµС‚ С‚РµРєСѓС‰РёР№ СЃС‚РёР»СЊ СЌР»РµРјРµРЅС‚Р°
+	 * @param {?Node} obj HTML-Р­Р»РµРјРµРЅС‚
 	 * @param {?string} pseudoElt A string specifying the pseudo-element to match. Must be null (or not specified) for regular elements.
 	 * @this {Window}
-	 * @return {CSSStyleDeclaration} Стиль элемента
+	 * @return {CSSStyleDeclaration} РЎС‚РёР»СЊ СЌР»РµРјРµРЅС‚Р°
 	 */
 	global.getComputedStyle = function(obj, pseudoElt) {
 		return obj.currentStyle;
@@ -599,8 +601,8 @@ if(!global.getComputedStyle) {//IE < 9
 
 
 /** Example of making a document HTML5 element safe
- * Функция "включает" в IE < 9 HTML5 элементы
- * Используется, если никакая другая аналогичная функция не используется
+ * Р¤СѓРЅРєС†РёСЏ "РІРєР»СЋС‡Р°РµС‚" РІ IE < 9 HTML5 СЌР»РµРјРµРЅС‚С‹
+ * РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ, РµСЃР»Рё РЅРёРєР°РєР°СЏ РґСЂСѓРіР°СЏ Р°РЅР°Р»РѕРіРёС‡РЅР°СЏ С„СѓРЅРєС†РёСЏ РЅРµ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ
  */
 function html5_document(doc) { // pass in a document as an argument
 	// create an array of elements IE does not support
@@ -615,7 +617,7 @@ function html5_document(doc) { // pass in a document as an argument
 } // critique: array could exist outside the function for improved performance?
 
 
-//Исправляем для IE<9 создание DocumentFragment, для того, чтобы функция работала с HTML5
+//РСЃРїСЂР°РІР»СЏРµРј РґР»СЏ IE<9 СЃРѕР·РґР°РЅРёРµ DocumentFragment, РґР»СЏ С‚РѕРіРѕ, С‡С‚РѕР±С‹ С„СѓРЅРєС†РёСЏ СЂР°Р±РѕС‚Р°Р»Р° СЃ HTML5
 if(browser.msie && browser.msie < 9) {
 	var msie_CreateDocumentFragment = function() {
 		var df = 
@@ -637,24 +639,24 @@ if(browser.msie && browser.msie < 9) {
 /**
  * Issue: <HTML5_elements> become <:HTML5_elements> when element is cloneNode'd
  * Solution: use an alternate cloneNode function, the default is broken and should not be used in IE anyway (for example: it should not clone events)
- * В Internet Explorer'е функция <HTMLElement>.cloneNode "ломает" теги HTML5 при клонировании,
- *  поэтому нужно использовать альтернативный способ клонирования
+ * Р’ Internet Explorer'Рµ С„СѓРЅРєС†РёСЏ <HTMLElement>.cloneNode "Р»РѕРјР°РµС‚" С‚РµРіРё HTML5 РїСЂРё РєР»РѕРЅРёСЂРѕРІР°РЅРёРё,
+ *  РїРѕСЌС‚РѕРјСѓ РЅСѓР¶РЅРѕ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ Р°Р»СЊС‚РµСЂРЅР°С‚РёРІРЅС‹Р№ СЃРїРѕСЃРѕР± РєР»РѕРЅРёСЂРѕРІР°РЅРёСЏ
  *
- * Больше по теме: http://pastie.org/935834
+ * Р‘РѕР»СЊС€Рµ РїРѕ С‚РµРјРµ: http://pastie.org/935834
  *
- * Функция клонирует DOM-элемент
- * Альтернатива <Node>.cloneNode в IE < 9. В остальных браузерах просто вызывается <Node>.cloneNode
- * Дополнительно, функция удаляет id у вновь склонированного элемента, если delete_id != false
- * @param {Node|Element} element Элемент для клонирования
- * @param {boolean=} include_all [false] Клонировать ли все дочерние элементы? По-умолчанию, false
- * @param {boolean=} delete_id [false] Удалить аттрибут id из нового элемента? По-умолчанию, false
+ * Р¤СѓРЅРєС†РёСЏ РєР»РѕРЅРёСЂСѓРµС‚ DOM-СЌР»РµРјРµРЅС‚
+ * РђР»СЊС‚РµСЂРЅР°С‚РёРІР° <Node>.cloneNode РІ IE < 9. Р’ РѕСЃС‚Р°Р»СЊРЅС‹С… Р±СЂР°СѓР·РµСЂР°С… РїСЂРѕСЃС‚Рѕ РІС‹Р·С‹РІР°РµС‚СЃСЏ <Node>.cloneNode
+ * Р”РѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕ, С„СѓРЅРєС†РёСЏ СѓРґР°Р»СЏРµС‚ id Сѓ РІРЅРѕРІСЊ СЃРєР»РѕРЅРёСЂРѕРІР°РЅРЅРѕРіРѕ СЌР»РµРјРµРЅС‚Р°, РµСЃР»Рё delete_id != false
+ * @param {Node|Element} element Р­Р»РµРјРµРЅС‚ РґР»СЏ РєР»РѕРЅРёСЂРѕРІР°РЅРёСЏ
+ * @param {boolean=} include_all [false] РљР»РѕРЅРёСЂРѕРІР°С‚СЊ Р»Рё РІСЃРµ РґРѕС‡РµСЂРЅРёРµ СЌР»РµРјРµРЅС‚С‹? РџРѕ-СѓРјРѕР»С‡Р°РЅРёСЋ, false
+ * @param {boolean=} delete_id [false] РЈРґР°Р»РёС‚СЊ Р°С‚С‚СЂРёР±СѓС‚ id РёР· РЅРѕРІРѕРіРѕ СЌР»РµРјРµРЅС‚Р°? РџРѕ-СѓРјРѕР»С‡Р°РЅРёСЋ, false
  * @version 3
- *  chacgeLog: 3 [23.11.2011 19:00] Переделал. include_all and delete_id default now false. Передаю в nodeProto в качестве cloneNode для IE < 9
- *			   2 [06.07.2011 20:00] Добавил поддержку клонирования td и tr для IE < 9
+ *  chacgeLog: 3 [23.11.2011 19:00] РџРµСЂРµРґРµР»Р°Р». include_all and delete_id default now false. РџРµСЂРµРґР°СЋ РІ nodeProto РІ РєР°С‡РµСЃС‚РІРµ cloneNode РґР»СЏ IE < 9
+ *			   2 [06.07.2011 20:00] Р”РѕР±Р°РІРёР» РїРѕРґРґРµСЂР¶РєСѓ РєР»РѕРЅРёСЂРѕРІР°РЅРёСЏ td Рё tr РґР»СЏ IE < 9
  *			   1 [--.--.2011 --:--] Initial release
  */
-var _cloneElement = global["cloneElement"] = function(element, include_all, delete_id) {//Экспортируем cloneElement для совместимости и для вызова напрямую	
-	// Обновляем функцию _cloneElement
+var _cloneElement = global["cloneElement"] = function(element, include_all, delete_id) {//Р­РєСЃРїРѕСЂС‚РёСЂСѓРµРј cloneElement РґР»СЏ СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚Рё Рё РґР»СЏ РІС‹Р·РѕРІР° РЅР°РїСЂСЏРјСѓСЋ	
+	// РћР±РЅРѕРІР»СЏРµРј С„СѓРЅРєС†РёСЋ _cloneElement
 	if(document.createDocumentFragment !== _cloneElement.oldCreateDocumentFragment && _cloneElement.safeElement != false)
 		_cloneElement.safeElement = 
 			(!!browser.msie && browser.msie < 9)
@@ -668,15 +670,15 @@ var _cloneElement = global["cloneElement"] = function(element, include_all, dele
 	
 	var result;
 	
-	//Следующий вариант не работает с HTML5
+	//РЎР»РµРґСѓСЋС‰РёР№ РІР°СЂРёР°РЅС‚ РЅРµ СЂР°Р±РѕС‚Р°РµС‚ СЃ HTML5
 	//if(_cloneElement.safeDocumentFragment) {
-		//result = _cloneElement.safeDocumentFragment.appendChild(document.createElement("div"));//Создаём новый элемент
+		//result = _cloneElement.safeDocumentFragment.appendChild(document.createElement("div"));//РЎРѕР·РґР°С‘Рј РЅРѕРІС‹Р№ СЌР»РµРјРµРЅС‚
 		
-	if(_cloneElement.safeElement) {//Мы присваеваем _cloneElement.safeDocumentFragment только если браузер - IE < 9
-		_cloneElement.safeElement.innerHTML = "";//Очистим от предыдущих элементов
+	if(_cloneElement.safeElement) {//РњС‹ РїСЂРёСЃРІР°РµРІР°РµРј _cloneElement.safeDocumentFragment С‚РѕР»СЊРєРѕ РµСЃР»Рё Р±СЂР°СѓР·РµСЂ - IE < 9
+		_cloneElement.safeElement.innerHTML = "";//РћС‡РёСЃС‚РёРј РѕС‚ РїСЂРµРґС‹РґСѓС‰РёС… СЌР»РµРјРµРЅС‚РѕРІ
 		
-		if(include_all && /td|tr/gi.test(element.tagName)) {//Только для элементов td и tr
-			//Хак для IE < 9, для нормального копирования ячеек таблицы
+		if(include_all && /td|tr/gi.test(element.tagName)) {//РўРѕР»СЊРєРѕ РґР»СЏ СЌР»РµРјРµРЅС‚РѕРІ td Рё tr
+			//РҐР°Рє РґР»СЏ IE < 9, РґР»СЏ РЅРѕСЂРјР°Р»СЊРЅРѕРіРѕ РєРѕРїРёСЂРѕРІР°РЅРёСЏ СЏС‡РµРµРє С‚Р°Р±Р»РёС†С‹
 			if(element.tagName.toUpperCase() == "TR") {
 				_cloneElement.safeElement.innerHTML = "<table><tbody>" + element.outerHTML + "</tbody></table>";
 				result = _cloneElement.safeElement.firstChild.firstChild.firstChild;

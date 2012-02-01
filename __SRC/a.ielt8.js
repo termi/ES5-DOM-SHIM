@@ -48,7 +48,7 @@ var __notAnAttribute = {"insertAfter" : 1, "getElementsByClassName" : 1, "compar
 		val;
 	
 	//if(!tmp)throw Error("__ielt8_attributes__ is required")
-	if(!tmp)return [];
+	if(!tmp)return res;
 	
 	for(var i = 0, l = tmp.length, k = 0 ; i < l ; i++)if((val = tmp[i]).specified && !(val.name in __notAnAttribute)){
 		res[k++] = val;

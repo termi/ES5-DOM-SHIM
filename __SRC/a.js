@@ -12,11 +12,12 @@
  *        dateTime prop for IE < 8
  */
 
-// CONFIG
+//GCC DEFINES START
 /** @define {boolean} */
 var IS_DEBUG = false;
 /** @define {boolean} */
 var INCLUDE_EXTRAS = true;
+//GCC DEFINES END
 
 ;(
 /**
