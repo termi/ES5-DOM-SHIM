@@ -586,6 +586,12 @@ if(!(_compareDocumentPosition_ in document)) {
 };
 
 if(!global.getComputedStyle) {//IE < 9
+/*
+TODO::
+var filter = elem.style['filter'];
+    return filter ? (filter.indexOf('opacity=') >= 0 ?
+      (parseFloat(filter.match(/opacity=([^)]*)/)[1] ) / 100) + '' : '1') : '';
+*/
 	/**
 	 * @link https://developer.mozilla.org/en/DOM/window.getComputedStyle
 	 * getCurrentStyle - функция возвращяет текущий стиль элемента

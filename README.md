@@ -1,4 +1,4 @@
-# ES5 and DOM4 shim for all browsers with IE6 and IE7 support
+﻿# ES5 and DOM4 shim for all browsers with IE6 and IE7 support
 based on:
 
 - https://github.com/kriskowal/es5-shim
@@ -15,7 +15,7 @@ __Status__: Beta
  - Include all we need from ES5, ES6 and DOM shim in one file
  - some extra stuff (if you don't need it, use `a.noextras.js` instead of `a.js`)
 
-## Install
+## Install `(Note: if you don't need EXSTRAs use a.noexstras.js instead of a.js)`
  - For modern browsers:
   - Add main script in `head` section
   
@@ -34,7 +34,7 @@ __Status__: Beta
             <script src="a.js"></script>
 
  - For IE6 and IE7 support:			
-  1. Add `a.js`, `a.ie8.js` and `a.ielt8.js` in `head` section
+  1. Add `a.ie8.js`, `a.js` and `a.ielt8.js` in `head` section
   
             <!--[if lt IE 9]>
 			<script src="a.ie8.js"></script>
@@ -63,6 +63,7 @@ http://jsperf.com/es5-dom-shim-test
 2. Incompatibility with http://code.google.com/p/ie7-js/ [working on it]
 
 ## TODO
+0. Describe EXTRAS in README
 0. Tests
 1. fix getAttribute/setAttribute for IE6,7 (it should differentiate attributes and properties with same names)
 2. element.dataset (http://code.eligrey.com/html5/dataset/latest/html5-dataset.js)

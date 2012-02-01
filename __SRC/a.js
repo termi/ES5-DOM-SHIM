@@ -156,21 +156,36 @@ Object["inherit"] = function(Child, Parent) {
 /*  ==================================  Function prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
 //Fix Function.prototype.apply to work with generic array-like object instead of an array
-// test: function test(a,b){console.log(a,b)};test.apply(null, {0:1,1:2,length:2})
+// test: (function(a,b){console.log(a,b)}).apply(null, {0:1,1:2,length:2})
 var trueApply = false;
 try {
 	trueApply = isNaN.apply(null, {})
 }
 catch(e) { }
 if(!trueApply) {
-	var ofa = Function.prototype.apply
+	var original_Function_apply = Function.prototype.apply
 	Function.prototype.apply = function(t, args) {
-		if(!(args instanceof Object) && args.length == void 0)
-			throw TypeError("Function.prototype.apply: Arguments list has wrong type");
+		try {
+			return args != undefined ?	
+				original_Function_apply.call(this, t, args) :
+				original_Function_apply.call(this, t);
+		}
+		catch (e) {//"Function.prototype.apply: Arguments list has wrong type"
+			if(args.length == void 0)
+				throw e;
+			try {
+				if(0 in args) {
+					e = null;//Avoid delete `try` block by GCC
+				}
+			}
+			catch(r){
+				throw e;
+			}
+				
+			args = Array["from"](args);
 			
-		args = Array["from"](args);
-		
-		return ofa.call(this, t, args);
+			return original_Function_apply.call(this, t, args);
+		}
 	}
 }
 
@@ -1723,7 +1738,7 @@ if(INCLUDE_EXTRAS) {
  * @return {HTMLElement} найденный элемент
  */
 var $ = global["$"] = function(id) {
-	if(typeof id == 'string')id = document.getElementById(id);
+	if(typeof id == 'string' || typeof id == 'number')id = document.getElementById(id);
 	
 	//if(id && !id._)id._ = {};
 	
