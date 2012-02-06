@@ -89,7 +89,14 @@ if(!global["DocumentFragment"])global["DocumentFragment"] = global["Document"] |
 
 
 var _hasOwnProperty = Function.prototype.call.bind(Object.prototype.hasOwnProperty),
-	_call = function(_function) {
+	/**
+	 * Call _function
+	 * @param {Function} _function function to call
+	 * @param {...} var_args
+	 * @return {*} mixed
+	 * @version 2
+	 */
+	_call = function(_function, var_args) {
 		// If no callback function or if callback is not a callable function
 		// it will throw TypeError
         Function.prototype.call.apply(_function, arguments)
@@ -101,13 +108,111 @@ var _hasOwnProperty = Function.prototype.call.bind(Object.prototype.hasOwnProper
 
 
 
-//[BUGFIX] IE < 9 substr() with negative value not working in IE
+//[BUGFIX, ielt9] IE < 9 substr() with negative value not working in IE
 if("ab".substr(-1) !== "b") {
 	String.prototype._itlt9_substr_ = String.prototype.substr;
 	String.prototype.substr = function(start, length) {
 		return this._itlt9_substr_(start < 0 ? (start = this.length + start, start) < 0 ? 0 : start : start, length);
 	}
 }
+
+var _origStringSplit,
+	_compliantExecNpcg;
+/*
+[BUGFIX, ielt9, safari] http://blog.stevenlevithan.com/archives/cross-browser-split
+More better solution:: http://xregexp.com/
+*/
+if('te'.split(/(s)*/)[1] != void 0 ||
+   '1_1'.split(/(_)/).length != 3) {
+   _compliantExecNpcg = /()??/.exec("")[1] === undefined; // NPCG: nonparticipating capturing group
+   _origStringSplit = String.prototype.split;
+   
+	String.prototype.split = function (separator, limit) {
+		var str = this;
+		// if `separator` is not a regex, use the native `split`
+		if(!(separator instanceof RegExp)) {//if (Object.prototype.toString.call(separator) !== "[object RegExp]") {
+			return _origStringSplit.call(str, separator, limit);
+		}
+
+		var output = [],
+			lastLastIndex = 0,
+			flags = (separator.ignoreCase ? "i" : "") +
+					(separator.multiline  ? "m" : "") +
+					(separator.sticky     ? "y" : ""),
+			separator1 = RegExp(separator.source, flags + "g"), // make `global` and avoid `lastIndex` issues by working with a copy
+			separator2 = null, match, lastIndex, lastLength;
+
+		str = str + ""; // type conversion
+		if (!_compliantExecNpcg) {
+			separator2 = RegExp("^" + separator1.source + "$(?!\\s)", flags); // doesn't need /g or /y, but they don't hurt
+		}
+
+		/* behavior for `limit`: if it's...
+		- `undefined`: no limit.
+		- `NaN` or zero: return an empty array.
+		- a positive number: use `Math.floor(limit)`.
+		- a negative number: no limit.
+		- other: type-convert, then use the above rules. */
+		if (limit === undefined || +limit < 0) {
+			limit = Infinity;
+		} else {
+			limit = Math.floor(+limit);
+			if (!limit) {
+				return [];
+			}
+		}
+
+		
+		
+		while (match = separator1.exec(str)) {
+			lastIndex = match.index + match[0].length; // `separator1.lastIndex` is not reliable cross-browser
+
+			if (lastIndex > lastLastIndex) {
+				output.push(str.slice(lastLastIndex, match.index));
+
+				// fix browsers whose `exec` methods don't consistently return `undefined` for nonparticipating capturing groups
+				// __ NOT WORKING __ !!!!
+				if (!_compliantExecNpcg && match.length > 1) {
+					match[0].replace(separator2, function() {
+						for (var i = 1, a = arguments, l = a.length - 2; i < l; i++) {//for (var i = 1; i < arguments.length - 2; i++) {
+							if (a[i] === undefined) {
+								match[i] = undefined;
+							}
+						}
+					});
+				}
+
+				if (match.length > 1 && match.index < str.length) {
+					output.push.apply(output, match.slice(1));//Array.prototype.push.apply(output, match.slice(1));
+				}
+
+				lastLength = match[0].length;
+				lastLastIndex = lastIndex;
+
+				if (output.length >= limit) {
+					break;
+				}
+			}
+
+			if (separator1.lastIndex === match.index) {
+				separator1.lastIndex++; // avoid an infinite loop
+			}
+		}
+
+		if (lastLastIndex === str.length) {
+			if (lastLength || !separator1.test("")) {
+				output.push("");
+			}
+		} else {
+			output.push(str.slice(lastLastIndex));
+		}
+
+		return output.length > limit ? output.slice(0, limit) : output;
+	}
+}
+
+
+
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Exception  ==================================  */
 /*  =======================================================================================  */
@@ -406,7 +511,7 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 	}
 	function _initUIEvent(_type, _bubbles, _cancelable, _view, _detail) {
 		//https://developer.mozilla.org/en/DOM/event.initUIEvent
-		_initCustomEvent.call(this, _type, _bubbles, _detail);
+		_initCustomEvent.call(this, _type, _bubbles, _cancelable, _detail);
 		
 		this.view = _view;
 	}
@@ -524,6 +629,7 @@ if(!document.importNode)document.importNode = function(node, allChildren) {
 		break;
 	}
 	_throwDOMException("NOT_SUPPORTED_ERR");
+	return null;
 };
 
 function _recursivelyWalk(nodes, cb) {

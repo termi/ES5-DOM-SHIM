@@ -1,4 +1,5 @@
-﻿# ES5 and DOM4 shim for all browsers with IE6 and IE7 support
+﻿
+# ES5 and DOM4 shim for all browsers with IE6 and IE7 support
 based on:
 
 - https://github.com/kriskowal/es5-shim
@@ -67,7 +68,9 @@ http://jsperf.com/es5-dom-shim-test
 0. Tests
 1. fix getAttribute/setAttribute for IE6,7 (it should differentiate attributes and properties with same names)
 2. element.dataset (http://code.eligrey.com/html5/dataset/latest/html5-dataset.js)
-9. http://dvcs.w3.org/hg/url/raw-file/tip/Overview.html
+3. http://dvcs.w3.org/hg/url/raw-file/tip/Overview.html
+4. http://dvcs.w3.org/hg/url/raw-file/tip/Overview.html (https://gist.github.com/1384398 & https://gist.github.com/1235332)
+5. insertAdjacentHTML polyfill (https://gist.github.com/1276030)
 
 ## License
 

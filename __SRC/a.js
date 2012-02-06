@@ -163,30 +163,24 @@ try {
 }
 catch(e) { }
 if(!trueApply) {
-	var original_Function_apply = Function.prototype.apply
-	Function.prototype.apply = function(t, args) {
-		try {
-			return args != undefined ?	
-				original_Function_apply.call(this, t, args) :
-				original_Function_apply.call(this, t);
-		}
-		catch (e) {//"Function.prototype.apply: Arguments list has wrong type"
-			if(args.length == void 0)
-				throw e;
+	Function.prototype.apply = (function (original_Function_apply) {
+		return function(contexts, args) {
 			try {
-				if(0 in args) {
-					e = null;//Avoid delete `try` block by GCC
-				}
+				return args != undefined ?	
+					original_Function_apply.call(this, contexts, args) :
+					original_Function_apply.call(this, contexts);
 			}
-			catch(r){
-				throw e;
-			}
+			catch (e) {//"Function.prototype.apply: Arguments list has wrong type"
+				if(args.length === void 0 || //Not an iterable object
+				   typeof args === "string") //Avoid using String
+					throw e;
+					
+				args = Array["from"](args);
 				
-			args = Array["from"](args);
-			
-			return original_Function_apply.call(this, t, args);
+				return original_Function_apply.call(this, contexts, args);
+			}
 		}
-	}
+    })(Function.prototype.apply);
 }
 
 /**
@@ -198,7 +192,7 @@ if(!trueApply) {
  * @version 2
  */
 if(!Function.prototype.bind)Function.prototype.bind = function(object, var_args) {
-	var __method = this, args = Array.prototype.slice.call(arguments, 1);
+	var __method = this, args = _arraySlice.call(arguments, 1);
 	return function() {
 		return __method.apply(object, args.concat(Array["from"](arguments)));
 	}
@@ -211,12 +205,14 @@ if(!Function.prototype.bind)Function.prototype.bind = function(object, var_args)
 var /** @type {HTMLElement}
 	 * @const */
 	_testElement = document.createElement('div')
+  
+  , _arraySlice = Array.prototype.slice
 	
   , _hasOwnProperty = Function.prototype.call.bind(Object.prototype.hasOwnProperty)
   
   , /**
 	 * Call _function
-	 * @param {Function} _function
+	 * @param {Function} _function function to call
 	 * @param {...} var_args
 	 * @return {*} mixed
 	 * @version 2
@@ -224,7 +220,7 @@ var /** @type {HTMLElement}
 	_call = function(_function, var_args) {
 		// If no callback function or if callback is not a callable function
 		// it will throw TypeError
-        return Function.prototype.call.apply(_function, Array.prototype.slice.call(arguments, 1))
+        return Function.prototype.call.apply(_function, _arraySlice.call(arguments, 1))
 	}
 	
 	//Fixed `toObject` to work for strings in IE8 and Rhino. Added test spec for `forEach`.
@@ -235,8 +231,8 @@ var /** @type {HTMLElement}
 		return strObj[0] != "a" || !(0 in strObj);
 	})(Object("a"))
 	
-  , _toObject = function(obj) {
-		if (obj == null) // this matches both null and undefined
+  , _toObject = function(obj, _allowNull) {
+		if (obj == null && !_allowNull) // this matches both null and undefined
 			throw new TypeError(); // TODO message
 		
 		// If the implementation doesn't support by-index access of
@@ -253,6 +249,10 @@ var /** @type {HTMLElement}
 		ex.message = errStr +': DOM Exception ' + ex.code;
 		throw ex;
 	}
+	//Take Node.prototype or silently take a fake object
+	// IE < 8 support in a.ielt8.js and a.ielt8.htc
+  , nodeProto = global["Node"] && global["Node"].prototype || {};
+
 	
 	
 if(!global["HTMLDocument"])global["HTMLDocument"] = global["Document"];//For IE9
@@ -377,16 +377,99 @@ DOMStringCollection.prototype.toString = function(){return this.value||""}
 /*  =======================================================================================  */
 /*  =================================  Object prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-/*
-TODO:
-1. jsdoc
-2. Проверить, а нету ли такогоже бага, как у Object.keys описанном тут https://developer.mozilla.org/en/JavaScript/Reference/global_Objects/Object/keys и можно ли как в текущей версии Object.keys сделать проверку на hasDontEnumBug?
-*/
-if(!Object.getOwnPropertyNames)Object.getOwnPropertyNames = function(obj) {
- 	var ret = [], p;
-	for(p in obj)ret.push(p);
-	return ret;
+// ES5 15.2.3.3
+// http://es5.github.com/#x15.2.3.3
+
+function doesGetOwnPropertyDescriptorWork(object) {
+    try {
+        object.sentinel = 0;
+        return Object.getOwnPropertyDescriptor(
+            object,
+            "sentinel"
+        ).value === 0;
+    } catch (exception) {
+        // returns falsy
+    }
 }
+
+// check whether getOwnPropertyDescriptor works if it's given. Otherwise,
+// shim partially.
+if (Object.defineProperty) {
+    var getOwnPropertyDescriptorWorksOnObject = 
+        doesGetOwnPropertyDescriptorWork({});
+    var getOwnPropertyDescriptorWorksOnDom =
+        doesGetOwnPropertyDescriptorWork(_testElement);
+    if (!getOwnPropertyDescriptorWorksOnDom || 
+        !getOwnPropertyDescriptorWorksOnObject
+    ) {
+        var _getOwnPropertyDescriptorFallback = Object.getOwnPropertyDescriptor;
+    }
+}
+
+if (!Object.getOwnPropertyDescriptor || _getOwnPropertyDescriptorFallback) {
+    var ERR_NON_OBJECT = "Object.getOwnPropertyDescriptor called on a non-object: ";
+
+    Object.getOwnPropertyDescriptor = function _getOwnPropertyDescriptor(object, property) {
+        if ((typeof object != "object" && typeof object != "function") || object === null) {
+            throw new TypeError(ERR_NON_OBJECT + object);
+        }
+
+        // make a valiant attempt to use the real _getOwnPropertyDescriptor
+        // for I8's DOM elements.
+        if (_getOwnPropertyDescriptorFallback) {
+            try {
+                return _getOwnPropertyDescriptorFallback.call(Object, object, property);
+            } catch (exception) {
+                // try the shim if the real one doesn't work
+            }
+        }
+
+        // If object does not owns property return undefined immediately.
+        if (!_hasOwnProperty(object, property)) {
+            return;
+        }
+
+        // If object has a property then it's for sure both `enumerable` and
+        // `configurable`.
+        var descriptor =  { enumerable: true, configurable: true };
+
+        // If JS engine supports accessor properties then property may be a
+        // getter or setter.
+        if (object.__defineGetter__) {
+            // Unfortunately `__lookupGetter__` will return a getter even
+            // if object has own non getter property along with a same named
+            // inherited getter. To avoid misbehavior we temporary remove
+            // `__proto__` so that `__lookupGetter__` will return getter only
+            // if it's owned by an object.
+            var _prototype = object.__proto__;
+            object.__proto__ = prototypeOfObject;
+
+            var getter = lookupGetter(object, property);
+            var setter = lookupSetter(object, property);
+
+            // Once we have getter and setter we can put values back.
+            object.__proto__ = _prototype;
+
+            if (getter || setter) {
+                if (getter) {
+                    descriptor.get = getter;
+                }
+                if (setter) {
+                    descriptor.set = setter;
+                }
+                // If it was accessor property we're done and return here
+                // in order to avoid adding `value` to the descriptor.
+                return descriptor;
+            }
+        }
+
+        // If we got this far we know that object has an own property that is
+        // not an accessor so we set it as a value and return descriptor.
+        descriptor.value = object[property];
+        return descriptor;
+    };
+}
+
 
 /**
  * ES5 15.2.3.14
@@ -433,6 +516,11 @@ Object.keys = Object.keys || (function () {
 })();
 
 
+/*
+TODO:
+1. jsdoc
+*/
+if(!Object.getOwnPropertyNames)Object.getOwnPropertyNames = Object.keys;
 
 /**
  * @param {Object} object
@@ -543,7 +631,7 @@ function doesDefinePropertyWork(object) {
 if (Object.defineProperty) {
     var definePropertyWorksOnObject = doesDefinePropertyWork({});
     var definePropertyWorksOnDom = typeof document == "undefined" ||
-        doesDefinePropertyWork(document.createElement("div"));
+        doesDefinePropertyWork(_testElement);
     if (!definePropertyWorksOnObject || !definePropertyWorksOnDom) {
         var definePropertyFallback = Object.defineProperty,
 			definePropertiesFallback = Object.defineProperties;
@@ -670,7 +758,7 @@ var _arrayFrom =
 Array["from"] || (Array["from"] = function(iterable) {
 	if(Array.isArray(iterable))return iterable;
 
-	var object = _toObject(iterable),
+	var object = _toObject(iterable, true),
 		result = [];
 		
 	for(var key = 0, length = object.length >>> 0; key < length; key++) {
@@ -689,7 +777,7 @@ Array["from"] || (Array["from"] = function(iterable) {
  * @return {Array}
  */
 Array["of"] = Array["of"] || function(args) {
-	return Array.prototype.slice.call(arguments);
+	return _arraySlice.call(arguments);
 }
 
 /**
@@ -711,14 +799,26 @@ if(!Array.prototype["unique"])Array.prototype["unique"] = (function(a) {
   }
 );
 
+/* [ielt9, bug] IE < 9 bug: [1,2].splice(0).join("") == "" but should be "12" */
+if([1,2].splice(0).length != 2) {
+	var _origArraySplice = Array.prototype.splice;
+	/**
+	 * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/splice
+	 * 
+	 * Changes the content of an array, adding new elements while removing old elements.
+	 * @param {number} index Index at which to start changing the array. If negative, will begin that many elements from the end.
+	 * @param {number=} howMany An integer indicating the number of old array elements to remove. If howMany is 0, no elements are removed. In this case, you should specify at least one new element. If no howMany parameter is specified (second syntax above, which is a SpiderMonkey extension), all elements after index are removed.
+	 * @param {...=} elementsToAdd The elements to add to the array. If you don't specify any elements, splice simply removes elements from the array.
+	 * @return {Array} single value
+	 */
+	Array.prototype.splice = function(index, howMany) {
+		return _origArraySplice.call(this, index, howMany === void 0 ? (this.length - index) : howMany, _arraySlice.call(arguments, 2))
+	}
+}
 /*  ================================ ES5 ==================================  */
 // Based on https://github.com/kriskowal/es5-shim/blob/master/es5-shim.js
 
 
-function _testLength(l) {//for Array.prototype.reduce and Array.prototype.reduceRight
-	if((l === 0 || l === null) && (arguments.length <= 1))// == on purpose to test 0 and false.// no value to return if no initial value, empty array
-		throw new TypeError("Array length is 0 and no second argument");
-}
 /**
  * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/Reduce
  * 
@@ -737,7 +837,8 @@ if(!Array.prototype.reduce)Array.prototype.reduce = function(accumulator, initia
 	var thisArray = _toObject(this),
 		l = thisArray.length, i = 0;
 	
-	_testLength(l);
+	if((l === 0 || l === null) && (arguments.length <= 1))// == on purpose to test 0 and false.// no value to return if no initial value, empty array
+		throw new TypeError("Array length is 0 and no second argument");
 	  
 	initialValue || (initialValue = (i++, thisArray[0]));
 	
@@ -766,40 +867,23 @@ The first time the function is called, the previousValue and currentValue can be
  * @param {*} initialValue Object to use as the first argument to the first call of the callback.
  */
 if(!Array.prototype.reduceRight)Array.prototype.reduceRight = function(accumulator, initialValue)  {
-	return _arrayFrom(this).reverse().reduce(accumulator, initialValue);
+	return _arrayFrom(this).
+				slice(0).//Create new Array
+					reverse().reduce(accumulator, initialValue);
 };
 
-
-
-/*
-From https://developer.mozilla.org/en/JavaScript/Reference/global_Objects/Array/filter
-*/
-if(!Array.prototype.filter)Array.prototype.filter = function(callbackfn, thisp) {
-	// ES5 : "If IsCallable(callbackfn) is false, throw a TypeError exception." in "_call" function
-	
-	var thisArray = _toObject(this),
-		len = this.length >>> 0;
-
-	var res = [];
-	for (var i = 0; i < len; i++)
-		if (i in thisArray) {  
-			var val = thisArray[i];// in case callbackfn mutates this  
-			if(_call(callbackfn, thisp, val, i, thisArray))res.push(val);
-		}
-
-	return res;
-}
 
 /* ES5 15.4.4.18
  * http://es5.github.com/#x15.4.4.18
  * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/array/forEach
  */
-var _forEach = Array.prototype.forEach || (Array.prototype.forEach = function(iterator, context) {
+Array.prototype.forEach || (Array.prototype.forEach = function(iterator, context) {
 	var thisArray = _toObject(this);
 	for(var i in thisArray)
 		if(_hasOwnProperty(thisArray, i))
 			_call(iterator, context, thisArray[i], parseInt(i, 10), thisArray);
 })
+var _forEach = Function.prototype.call.bind(Array.prototype.forEach);
 
 /* ES5 15.4.4.14
  * http://es5.github.com/#x15.4.4.14
@@ -816,9 +900,9 @@ if(!Array.prototype.indexOf)Array.prototype.indexOf = function(obj, n) {
  * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/lastIndexOf
  */
 if(!Array.prototype.lastIndexOf)Array.prototype.lastIndexOf = function(obj, i) {
-	var thisArray = _arrayFrom(this);
-	
-	return thisArray.slice(0).reverse().indexOf(obj, i)
+	return _arrayFrom(this).
+				slice(0).//Create new Array
+					reverse().indexOf(obj, i)
 }
 
 /**
@@ -826,16 +910,16 @@ if(!Array.prototype.lastIndexOf)Array.prototype.lastIndexOf = function(obj, i) {
  * ES5 15.4.4.16
  * http://es5.github.com/#x15.4.4.16
  * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/every
- * @this {Object}
- * @param {Function} callback критерий соответствия. По-умочанию - что элемент существует
+ * @param {Function} callback критерий соответствия.
  * @param {Object=} opt_thisobj Контент в рамках которого мы будем вызывать функцию
+ * @this {Object}
  * @return {boolean}
  */
-if(!Array.prototype.every)Array.prototype.every = function(callback, opt_thisobj, _isAll) {
-	if(_isAll === void 0)_isAll = true;//Default value = true
-	var result = _isAll;
-	_forEach.call(this, function(value, index) {
-		if(result == _isAll)result = !!_call(callback, opt_thisobj, value, index, this);
+if(!Array.prototype.every)Array.prototype.every = function(callback, opt_thisobj, _option_isAll) {
+	if(_option_isAll === void 0)_option_isAll = true;//Default value = true
+	var result = _option_isAll;
+	_forEach(this, function(value, index) {
+		if(result == _option_isAll)result = !!_call(callback, opt_thisobj, value, index, this);
 	});
 	return result;
 }
@@ -845,13 +929,32 @@ if(!Array.prototype.every)Array.prototype.every = function(callback, opt_thisobj
  * ES5 15.4.4.17
  * http://es5.github.com/#x15.4.4.17
  * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/some
- * @this {Object}
- * @param {Function} callback критерий соответствия. По-умочанию - что элемент существует
+ * @param {Function} callback критерий соответствия.
  * @param {Object=} opt_thisobj Контент в рамках которого мы будем вызывать функцию
+ * @this {Object}
  * @return {boolean}
  */
 if(!Array.prototype.some)Array.prototype.some = function(callback, opt_thisobj) {
 	return Array.prototype.every.call(this, callback, opt_thisobj, false);
+}
+
+/*
+From https://developer.mozilla.org/en/JavaScript/Reference/global_Objects/Array/filter
+*/
+if(!Array.prototype.filter)Array.prototype.filter = function(callback, thisArg) {
+	// ES5 : "If IsCallable(callback) is false, throw a TypeError exception." in "_call" function
+	
+	var thisArray = _toObject(this),
+		len = this.length >>> 0,
+		result = [];
+		
+	for (var i = 0; i < len; i++)
+		if (i in thisArray) {  
+			var val = thisArray[i];// in case callback mutates this  
+			if(_call(callback, thisArg, val, i, thisArray))result.push(val);
+		}
+
+	return result;
 }
 
 /**
@@ -864,9 +967,10 @@ if(!Array.prototype.some)Array.prototype.some = function(callback, opt_thisobj) 
  * @return {Array}
  */
 if (!Array.prototype.map)Array.prototype.map = function(callback, thisArg) {
-	var result;
+	var thisArray = _toObject(this),
+		result;
 	
-	_forEach.call(this, function(v, k, obj) {
+	_forEach(this, function(v, k, obj) {
 		var mappedValue = _call(callback, thisArg, v, k, obj);
 		result[k] = v;
 	})
@@ -902,19 +1006,25 @@ if(!String.prototype.repeat)String.prototype.repeat = function(count) {
 }
 
 /**
+ [bugfix]
+ * ES5 15.5.4.20
+ * http://es5.github.com/#x15.5.4.20
  * Removes whitespace from both ends of the string.
  * The trim method returns the string stripped of whitespace from both ends. trim does not affect the value of the string itself.
  * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/String/Trim
  */
-if(!String.prototype.trim)String.prototype.trim = function() {
-	return this.replace(/^\s+|\s+$/g, '');
-	
-	//Prev version::
-	//var	str = this.replace(/^\s\s*/, ''),
-	//	ws = /\s/,
-	//	i = str.length;
-	//while(ws.test(str.charAt(--i))){};
-	//return str.slice(0, i + 1);
+var whitespace = "\x09\x0A\x0B\x0C\x0D\x20\xA0\u1680\u180E\u2000\u2001\u2002\u2003" +
+    "\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u202F\u205F\u3000\u2028" +
+    "\u2029\uFEFF";
+if (!String.prototype.trim || whitespace.trim()) {
+    // http://blog.stevenlevithan.com/archives/faster-trim-javascript
+    // http://perfectionkills.com/whitespace-deviations/
+    whitespace = "[" + whitespace + "]";
+    var trimBeginRegexp = new RegExp("^" + whitespace + whitespace + "*"),
+        trimEndRegexp = new RegExp(whitespace + whitespace + "*$");
+    String.prototype.trim = function trim() {
+        return String(this).replace(trimBeginRegexp, "").replace(trimEndRegexp, "");
+    };
 }
 
 //from https://github.com/paulmillr/es6-shim/blob/master/es6-shim.js
@@ -957,7 +1067,6 @@ if(document.addEventListener) {//fix [add|remove]EventListener for all browsers 
 		dummy = function () {
 			_rightBehavior = true
 		};
-	var el_proto = global["Node"].prototype
 	
 	try {
 		_testElement.addEventListener("click", dummy);
@@ -969,29 +1078,30 @@ if(document.addEventListener) {//fix [add|remove]EventListener for all browsers 
 	
 	} finally {
 		if(!_rightBehavior) {//fixEventListenerAll
-			[global["document"],
-			 global["HTMLDocument"] && global["HTMLDocument"].prototype,
-			 global["Window"] && global["Window"].prototype,
-			 el_proto
-			].forEach(function (elementToFix) {
-				if(elementToFix) {
-					var old_addEventListener = elementToFix.addEventListener,
-						old_removeEventListener = elementToFix.removeEventListener;
-						
-					elementToFix.addEventListener = function (type, listener, optional) {
-						optional = optional || false;
-						return old_addEventListener.call(this, type, listener, optional);
+			_forEach(
+				[global["document"],
+				 global["HTMLDocument"] && global["HTMLDocument"].prototype,
+				 global["Window"] && global["Window"].prototype,
+				 nodeProto], 
+				function (elementToFix) {
+					if(elementToFix) {
+						var old_addEventListener = elementToFix.addEventListener,
+							old_removeEventListener = elementToFix.removeEventListener;
+							
+						elementToFix.addEventListener = function (type, listener, optional) {
+							optional = optional || false;
+							return old_addEventListener.call(this, type, listener, optional);
+						}
+						//elementToFix.addEventListener.shim = true;
+						elementToFix.removeEventListener = function (type, listener, optional) {
+							optional = optional || false;
+							return old_removeEventListener.call(this, type, listener, optional);
+						}
+						//elementToFix.removeEventListener.shim = true;
 					}
-					//elementToFix.addEventListener.shim = true;
-					elementToFix.removeEventListener = function (type, listener, optional) {
-						optional = optional || false;
-						return old_removeEventListener.call(this, type, listener, optional);
-					}
-					//elementToFix.removeEventListener.shim = true;
 				}
-			});
+			);
 		}
-		document.removeEventListener("click", dummy);
 	}
 }
 else {
@@ -1066,16 +1176,12 @@ try {
 /*  Some of from https://github.com/Raynos/DOM-shim/  */
 
 // IE < 8 support in a.ielt8.js and a.ielt8.htc
-var nodeProto = global["Node"].prototype;
-
 //Add JS 1.8 Element property classList				   
 if(!("classList" in _testElement)) {
 	Object.defineProperty(nodeProto, "classList", {
 		"get" : function() {
 			var thisObj = this,
-				cont = (browser.msie && browser.msie < 8 && (
-					thisObj._ || (thisObj._ = {}))//Положим _cachedClassList в контейнер "_" для IE < 8
-				) || thisObj,
+				cont = thisObj._ || (thisObj._ = {}),//Положим _cachedClassList в контейнер "_"
 				_cachedClassList = "__ccl_00lh__";
 			
 			if(!cont[_cachedClassList])cont[_cachedClassList] = new global["Utils"]["Dom"]["DOMStringCollection"](thisObj.getAttribute("class"), function() {
@@ -1084,10 +1190,12 @@ if(!("classList" in _testElement)) {
 			})
 			
 			return cont[_cachedClassList];
-		}});
+		}
+	});
 }
 
 // Fix "children" property in IE < 9
+// TODO: in `a.ie8.js` file
 if(!("children" in _testElement) || browser.msie && browser.msie < 9)
 	Object.defineProperty(nodeProto, "children", {"get" : function() {
 		var arr = [],
@@ -1102,6 +1210,7 @@ if(!("children" in _testElement) || browser.msie && browser.msie < 9)
 	}});
 
 // Traversal for IE < 9 and other
+// TODO: in `a.ie8.js` file
 if(_testElement.childElementCount == undefined)Object.defineProperties(nodeProto, {
 	"firstElementChild" : {
 		"get" : function() {
@@ -1182,8 +1291,10 @@ if(!("insertAfter" in _testElement)) {
 } //if(INCLUDE_EXTRAS)
 
 // Emuleted HTMLTimeElement
+// TODO:: need more work
+/*
 if(!(global["HTMLTimeElement"] && global["HTMLTimeElement"].prototype))
-Object.defineProperty((global["HTMLUnknownElement"] && global["HTMLUnknownElement"].prototype) || nodeProto/*TODO::or not using "Node" -> using "Element"*/, 
+Object.defineProperty((global["HTMLUnknownElement"] && global["HTMLUnknownElement"].prototype) || nodeProto, 
 	"dateTime", {
 	"get" : function() {
 		var thisObj = this,
@@ -1203,7 +1314,7 @@ Object.defineProperty((global["HTMLUnknownElement"] && global["HTMLUnknownElemen
 		return null;
 	}
 });
-
+*/
 // IE9 thinks the argument is not optional
 // FF thinks the argument is not optional
 // Opera agress that its not optional
@@ -1359,6 +1470,48 @@ if(!("control" in document.createElement("label")))
 				) || null;
 		}
 	});
+
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  HTMLLabelElement.prototype  ==================================  */
+/*  ======================================================================================  */
+
+/*  ======================================================================================  */
+/*  ================================  HTMLSelectElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+/* 
+ * Reverse Ordered Lists in HTML5
+ * a polyfill for the ordered-list reversed attribute
+ * http://www.whatwg.org/specs/web-apps/current-work/multipage/grouping-content.html#the-ol-element
+ * http://www.whatwg.org/specs/web-apps/current-work/multipage/grouping-content.html#dom-li-value
+ * http://www.impressivewebs.com/reverse-ordered-lists-html5/
+ * TODO:: shim api
+ * Based on https://gist.github.com/1671548
+ */
+/*if(!('reversed' in document.createElement('ol')))
+	global.addEventListener('DOMContentLoaded', function() {
+		_forEach(document.getElementsByTagName('ol'), function(list) {
+			if(!list.hasAttribute('reversed'))return;
+			
+			var children = list.children,
+				count = list.getAttribute('start');
+
+			//check to see if a start attribute is provided
+			if(count !== null) {
+				count = Number(count);
+
+				if(isNaN(count))count = null;
+			}
+
+			//no, this isn't duplication - start will be set to null
+			// in the previous if statement if an invalid start attribute
+			// is provided
+			if(count === null)
+				count = children.length;
+
+			_forEach(children, function(child) {
+				child.value = count--;
+			});
+		});
+	}, false); */
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  HTMLLabelElement.prototype  ==================================  */
 /*  ======================================================================================  */
@@ -1570,7 +1723,7 @@ var $A = global["$A"] = function(iterable, start, end, forse) {
 		_length = _end - _start;
 				
 		try {//Попробуем применить Array.prototype.slice на наш объект
- 			results = Array.prototype.slice.apply(iterable, args);//An idea from https://github.com/Quby/Fn.js/blob/master/fn.js::_.toArray
+ 			results = _arraySlice.apply(iterable, args);//An idea from https://github.com/Quby/Fn.js/blob/master/fn.js::_.toArray
 			//Match result length of elements with initial length of elements
 			if(results.length === _length)return results;//Проверка !!!
 		}
@@ -1721,6 +1874,7 @@ catch(e) {
 }
 
 //Events
+// TODO:: in `a.ie8.js` file
 if(!_testElement.addEventListener) {
 	nodeProto.addEventListener = global.addEventListener;
 	nodeProto.removeEventListener = global.removeEventListener;
@@ -1732,8 +1886,8 @@ if(!_testElement.addEventListener) {
 if(INCLUDE_EXTRAS) {
 /**
  * document.getElementById alias
- * Получение элемента по ID и добавление в него объекта-контейнера '_'. '_' можно использовать для хранения переменных,
- *  связанных с данным элементом, чтобы не захламлять пространство имён объекта
+ * <del>Получение элемента по ID и добавление в него объекта-контейнера '_'. '_' можно использовать для хранения переменных,
+ *  связанных с данным элементом, чтобы не захламлять пространство имён объекта</del>
  * @param {!string|HTMLElement} id
  * @return {HTMLElement} найденный элемент
  */
