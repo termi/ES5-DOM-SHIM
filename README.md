@@ -16,6 +16,11 @@ __Status__: Beta
  - Include all we need from ES5, ES6 and DOM shim in one file
  - some extra stuff (if you don't need it, use `a.noextras.js` instead of `a.js`)
 
+## Caution !!!
+
+ - This lib is not about performance in IE < 9
+ - That's all cautions
+ 
 ## Install `(Note: if you don't need EXSTRAs use a.noexstras.js instead of a.js)`
  - For modern browsers:
   - Add main script in `head` section
@@ -47,6 +52,10 @@ __Status__: Beta
 			
   2. Put `a.ielt8.htc` and `a.ie6.ielt8.htc` to the root of your site
  
+## EXSTRAs
+
+ - TODO::
+ 
 ## Same-domain limitation
 
 IE requires that the .htc behavior file must be in the same domain as the HTML page which uses it. If you try to load the behavior from a different domain, you will get an "Access Denied" error.
@@ -68,9 +77,8 @@ http://jsperf.com/es5-dom-shim-test
 0. Tests
 1. fix getAttribute/setAttribute for IE6,7 (it should differentiate attributes and properties with same names)
 2. element.dataset (http://code.eligrey.com/html5/dataset/latest/html5-dataset.js)
-3. http://dvcs.w3.org/hg/url/raw-file/tip/Overview.html
 4. http://dvcs.w3.org/hg/url/raw-file/tip/Overview.html (https://gist.github.com/1384398 & https://gist.github.com/1235332)
-5. insertAdjacentHTML polyfill (https://gist.github.com/1276030)
+5. insertAdjacentText and insertAdjacentElement
 
 ## License
 

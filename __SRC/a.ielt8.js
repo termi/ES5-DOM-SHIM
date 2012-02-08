@@ -58,13 +58,6 @@ var __notAnAttribute = {"insertAfter" : 1, "getElementsByClassName" : 1, "compar
 	return res;
 }
 
-/*
-hasAttribute shim
-*/
-nodeProp.hasAttribute = function(name) {
-	return __getAtt.call(this)[name];
-}
-
 /**
  * Функция возвращяет массив элементов выбранных по CSS3-селектору. 
  * Также добавляет во все наёденные элементы объекты-контейнеры '_'. '_' можно использовать для хранения переменных,
@@ -480,6 +473,7 @@ document.createElement = function() {
 	
 	//FIX IE lt 8 Element.prototype
 	Object.append(el, nodeProto);
+	//TODO:: add behavior
 	
 	return el;
 }

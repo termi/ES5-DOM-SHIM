@@ -99,7 +99,7 @@ var _hasOwnProperty = Function.prototype.call.bind(Object.prototype.hasOwnProper
 	_call = function(_function, var_args) {
 		// If no callback function or if callback is not a callable function
 		// it will throw TypeError
-        Function.prototype.call.apply(_function, arguments)
+        Function.prototype.call.apply(_function, Array.prototype.slice.call(arguments, 1))
 	},
 	/** @type {Node}
 	 * @const */
@@ -711,6 +711,75 @@ var filter = elem.style['filter'];
 	}
 }
 
+/* getAttribute, setAttribute, hasAttribute fix fix in IE*/
+var randomValue = _testElement.sentinel = Math.round(Math.random() * 1e9);
+if(_testElement.getAttribute("sentinel") === randomValue + "" || nodeProto["ielt8"]) {
+	var //_ielt9_getAttribute = nodeProto.getAttribute,
+		//_ielt9_hasAttribute = nodeProto.hasAttribute,//No need
+		_ielt9_setAttribute = nodeProto.setAttribute,
+		_ielt9_removeAttribute = nodeProto.removeAttribute;
+	
+	nodeProto.getAttribute = function(name) {
+		var thisObj = this,
+			result = (result = thisObj.attributes && thisObj.attributes[name]) && result.value,
+			_ = thisObj["_"];
+			 
+		if(result == null && _ && _["shimed_attributes"])
+			result = _["shimed_attributes"][name];
+		
+		return result == null ? null : result;
+	}
+	
+	nodeProto.setAttribute = function(name, value, _forceSaveAttribute) {
+		//TODO:: if(value == void 0)throw  WRONG_ARGUMENTS_ERR 
+		
+		var thisObj = this,
+			needTriggered = !(name in thisObj.attributes) && name in thisObj || _forceSaveAttribute;
+		
+		if(needTriggered) {//Property defined as Object.definedProperty
+			var _ = thisObj["_"] || (thisObj["_"] = {});
+			
+			(_["shimed_attributes"] || (_["shimed_attributes"] = {}))
+				[name] = value + "";
+		}
+		else {
+			return _ielt9_setAttribute.call(thisObj, name, value)
+		}
+		
+		//if(needTriggered)thisObj[name] = thisObj[name];//Error:Недостаточно места в стеке
+		
+		return value;
+	}
+	nodeProto.setAttribute["ielt9"] = true;
+	
+	nodeProto.removeAttribute = function(name) {
+		var thisObj = this,
+			inAttributes = name in thisObj.attributes,
+			result = false;
+		
+		if(!inAttributes && name in thisObj) {//Property defined as Object.definedProperty
+			var _ = thisObj["_"];
+			
+			if(_ && _["shimed_attributes"]) {
+				result = !!_["shimed_attributes"][name];
+				delete _["shimed_attributes"][name];
+			}
+		}
+		else {
+			result = _ielt9_removeAttribute.call(thisObj, name, value) || result
+		}
+		
+		return result
+	}
+
+	nodeProto.hasAttribute = function(name) {
+		return this.getAttribute(name) !== null;
+	}
+}
+
+
+var html5_elements = 'abbr article aside audio canvas command datalist details figure figcaption footer header hgroup keygen mark meter nav output progress section source summary time video',
+	html5_elements_array = html5_elements.split(' ');
 
 /** Example of making a document HTML5 element safe
  * Функция "включает" в IE < 9 HTML5 элементы
@@ -718,8 +787,7 @@ var filter = elem.style['filter'];
  */
 function html5_document(doc) { // pass in a document as an argument
 	// create an array of elements IE does not support
-	var html5_elements_array = 'abbr article aside audio canvas command datalist details figure figcaption footer header hgroup keygen mark meter nav output progress section source summary time video'.split(' '),
-		a = -1;
+	var a = -1;
 
 	while (++a < html5_elements_array.length) { // loop through array
 		if(doc.createElement)doc.createElement(html5_elements_array[a]); // pass html5 element into createElement method on document
@@ -733,7 +801,7 @@ function html5_document(doc) { // pass in a document as an argument
 if(browser.msie && browser.msie < 9) {
 	var msie_CreateDocumentFragment = function() {
 		var df = 
-			msie_CreateDocumentFragment.orig.call(this);
+				msie_CreateDocumentFragment.orig();
 		
 		if(global["DocumentFragment"] === global["Document"]) {
 			//if DocumentFragment is a fake DocumentFragment -> append each instance with Document methods
@@ -777,16 +845,15 @@ var _cloneElement = global["cloneElement"] = function(element, include_all, dele
 			:
 			false;
 	
-	include_all === void 0 ? include_all = false : 0;
-	delete_id === void 0 ? delete_id = false : 0;
-	
 	var result;
 	
 	//Следующий вариант не работает с HTML5
 	//if(_cloneElement.safeDocumentFragment) {
 		//result = _cloneElement.safeDocumentFragment.appendChild(document.createElement("div"));//Создаём новый элемент
 		
-	if(_cloneElement.safeElement) {//Мы присваеваем _cloneElement.safeDocumentFragment только если браузер - IE < 9
+	if(_cloneElement.safeElement &&//IE < 9?
+	   ~(" " + html5_elements + " ").indexOf(" " + element.tagname + " ")//HTML5 element?
+	   ) {//Мы присваеваем _cloneElement.safeDocumentFragment только если браузер - IE < 9
 		_cloneElement.safeElement.innerHTML = "";//Очистим от предыдущих элементов
 		
 		if(include_all && /td|tr/gi.test(element.tagName)) {//Только для элементов td и tr
@@ -810,12 +877,13 @@ var _cloneElement = global["cloneElement"] = function(element, include_all, dele
 			if(nodeProto["ielt8"])Object["append"](el, nodeProto);
 		}
 	}
-	else result = element.cloneNode(include_all);
+	else result = _cloneElement.nativeCloneNode.call(element, include_all);
 	
 	if(delete_id && result.id)result.id = "";
 	
 	return result;
 }
+_cloneElement.nativeCloneNode = nodeProto["cloneNode"] || document.documentElement.cloneNode
 
 if(browser.msie && browser.msie < 9) {
 	//nodeProto["_cloneNode_"] = _testElement.cloneNode;//Original function
