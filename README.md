@@ -7,6 +7,7 @@ based on:
 - https://github.com/Raynos/DOM-shim
 
 __Status__: Beta
+__Demo__: http://h123.ru/ES5-DOM-SHIM/simple/index.html
 
 ## Goal
 
