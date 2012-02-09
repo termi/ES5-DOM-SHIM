@@ -49,7 +49,7 @@ if(!Function.prototype.bind)Function.prototype.bind = function(object, var_args)
 
 /** @type {Object}
  * @const */
-var browser = {
+var browser = global["browser"] = {
 /** @type {string}
  * @const */
 	agent : navigator.userAgent.toLowerCase()
@@ -277,6 +277,7 @@ var guid = 0,// текущий номер обработчика
 	//Т.к. мы кладём всё в один контейнер "_", нужно убедится, что названия свойств не будут пересикаться с другими названиями из другой части библиотеки a.js (a.ielt8.htc и a.ie6.htc)
 	handleUUID = "_h_9e2",// Некий уникальный идентификатор
 	eventsUUID = "_e_8vj";// Некий уникальный идентификатор
+	//ielt9CallbakcUUID = "_prl224";// Некий уникальный идентификатор
 	
 function fixEvent(event){
 	// один объект события может передаваться по цепочке разным обработчикам
@@ -398,7 +399,6 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 	if(thisObj.setInterval && (thisObj != global && !thisObj.frameElement))thisObj = global;
 	
 	//Назначить функции-обработчику уникальный номер. По нему обработчик можно будет легко найти в списке events[type].
-	//Если мы передали в функцию свой guid - мы установили его выше.
 	if(!_handler.guid)_handler.guid = ++guid;
 	
 	//Инициализовать служебную структуру events и обработчик _[handleUUID]. 
@@ -466,8 +466,8 @@ if(!document.dispatchEvent)global.dispatchEvent = document.dispatchEvent = funct
 	catch(e) {
 		//Shim for Custome events in IE < 9
 		if(e["number"] === -2147024809) {//"Недопустимый аргумент."
-			//event._custom_event_ = true;//FOR DEBUG
-			var node = thisObj;
+			if(DEBUG)event._custom_event_ = true;//FOR DEBUG
+			var node = event.target = thisObj;
 			//Всплываем событие
 			while(!event.cancelBubble && node) {//Если мы вызвали stopPropogation() - больше не всплываем событие
 				commonHandle.call(node, event);
@@ -648,12 +648,17 @@ function _recursivelyWalk(nodes, cb) {
     }
 };
 
+function isCssClass(element, value) {
+	if(!element.className)return false;
+	return !!~(" " + element.className + " ").indexOf(" " + value + " ");
+}
+
 var attr = "getElementsByClassName";
 if(!(attr in _testElement))document[attr] = nodeProto[attr] = function(clas) {
 	var ar = [];
 	
 	clas && _recursivelyWalk(this.childNodes, function (el, index) {
-		if (el.nodeType == 1 && el.classList.contains(clas)) {
+		if (el.nodeType == 1 && isCssClass(el, clas)) {
 			ar.push(el);
 		}
 	});

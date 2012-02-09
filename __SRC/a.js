@@ -35,11 +35,11 @@ var /** @const */funcType = "function";
 
 /** @type {Object}
  * @const */
-var browser = global["browser"] || (global["browser"] = {
+var browser = global["browser"] = {
 /** @type {string}
  * @const */
 	agent : navigator.userAgent.toLowerCase()
-});
+};
 
 if(INCLUDE_EXTRAS) {
 
@@ -593,7 +593,7 @@ if (!Object.defineProperty || definePropertyFallback) {
             try {
                 return definePropertyFallback.call(Object, object, property, descriptor);
             } catch (exception) {
-				if (exception.number === -0x7FF5EC54) {// IE 8 doesn't support enumerable:true
+				if (exception["number"] === -0x7FF5EC54) {// IE 8 doesn't support enumerable:true
 					descriptor.enumerable = false;
 					try {
 						return definePropertyFallback.call(Object, object, property, descriptor);
@@ -662,6 +662,8 @@ if (!Object.defineProperty || definePropertyFallback) {
     };
 }
 
+if(nodeProto["ie"] && browser.msie < 8)nodeProto["ielt8"] = Object.defineProperty["ielt8"] = true;
+
 // ES5 15.2.3.7
 // http://es5.github.com/#x15.2.3.7
 if (!Object.defineProperties || definePropertiesFallback) {
@@ -689,10 +691,10 @@ if (!Object.defineProperties || definePropertiesFallback) {
 
 function doesGetOwnPropertyDescriptorWork(object) {
     try {
-        object.sentinel = 0;
+        object["sentinel2"] = 0;
         return Object.getOwnPropertyDescriptor(
             object,
-            "sentinel"
+            "sentinel2"
         ).value === 0;
     } catch (exception) {
         // returns falsy
@@ -1320,10 +1322,10 @@ function _recursivelyWalk(nodes, cb) {
 };
 
 /*https://gist.github.com/1276030 by https://gist.github.com/eligrey*/
-if(!("insertAdjacentHTML" in document.createElementNS("http://www.w3.org/1999/xhtml", "_"))) {
+if(!("insertAdjacentHTML" in _testElement)) {
 	HTMLElement.prototype.insertAdjacentHTML = function(position, html) {
 		var	ref = this,
-			container = ref.ownerDocument.createElementNS("http://www.w3.org/1999/xhtml", "_"),
+			container = ref.ownerDocument.createElement("_"),
 			ref_parent = ref.parentNode,
 			node,
 			first_child,
@@ -1355,6 +1357,8 @@ if(!("insertAdjacentHTML" in document.createElementNS("http://www.w3.org/1999/xh
 				}
 				break;
 		}
+		
+		container = null;
 	};
 }
 
@@ -1429,7 +1433,7 @@ function isDOMAttrModifiedSupported() {
 	
 	try {
 		_testElement.addEventListener('DOMAttrModified', callback, false);
-		p.setAttribute('id', 'target');
+		_testElement.setAttribute('id', 'target');
 	}
 	catch(e) {
 		
@@ -1929,7 +1933,7 @@ global["bubbleEventListener"] = function bubbleEventListener(attribute, namedFun
 				else {
 					f = namedFunctions[elemAttrValue];
 					if(f)result = f.apply(context || stopElement, params);
-					else if(DEBUG)Log.log("bubbleEventListener::нету функции с названием " + elemAttrValue);
+					else if(DEBUG)console.log("bubbleEventListener::нету функции с названием " + elemAttrValue);
 				}
 				
 				if(!(flags & 0x1))break;

@@ -20,7 +20,7 @@ var /** @const*/
 	__STYLE_ID                      = "ielt8_style_prev_for_behaviour";
 //CONFIG END
 
-var nodeProp = global.Node.prototype,//Note: for IE < 8 `Node` and `Node.prototype` is just an JS objects created in a.ie8.js
+var nodeProto = global.Node.prototype,//Note: for IE < 8 `Node` and `Node.prototype` is just an JS objects created in a.ie8.js
 	browser = global.browser,
 	noDocumentReadyState;
 	
@@ -29,9 +29,9 @@ if(!document.readyState) {
 	document.readyState = "uninitialized";
 }
 	
-if(nodeProp["ie"] && browser.msie < 8) {//IE < 8 polifill
+if(nodeProto["ie"] && browser.msie < 8) {//IE < 8 polifill
 
-nodeProp["ielt8"] = Object.defineProperty["ielt8"] = true;
+
 
 //global["__ielt8__wontfix"] = [];//TODO:: use it to extend 'OBJECT' tag with compareDocumentPosition, getElementsByClassName and etc functions
 
@@ -466,17 +466,17 @@ if(!document.querySelector)document.querySelector = global["_ielt8_querySelector
 
 /*  ======================================================================================  */
 /*  ================================  Document  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
-
+/*
 var originCreateElement = document.createElement;
 document.createElement = function() {
-	var el = origin.apply(document, arguments);
+	var el = originCreateElement.apply(document, arguments);
 	
 	//FIX IE lt 8 Element.prototype
 	Object.append(el, nodeProto);
 	//TODO:: add behavior
 	
 	return el;
-}
+}*/
 
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Document  ==================================  */

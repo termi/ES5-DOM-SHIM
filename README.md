@@ -40,15 +40,15 @@ __Status__: Beta
             <script src="a.js"></script>
 
  - For IE6 and IE7 support:			
-  1. Add `a.ie8.js`, `a.js` and `a.ielt8.js` in `head` section
+  1. Add `a.ie8.js` and `a.ielt8.js`, `a.js` in `head` section
   
             <!--[if lt IE 9]>
 			<script src="a.ie8.js"></script>
 			<![endif]-->
-			<script src="a.js"></script>
 			<!--[if lt IE 8]>
 			<script src="a.ielt8.js"></script>
 			<![endif]-->
+			<script src="a.js"></script>
 			
   2. Put `a.ielt8.htc` and `a.ie6.ielt8.htc` to the root of your site
  
