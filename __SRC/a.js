@@ -83,7 +83,7 @@ browser.ipad = browser["ipad"];
 
 if(browser.msie)for(var i = 6 ; i < 11 ; i++)//IE from 6 to 10
 	if(new RegExp('msie ' + i).test(browser.agent)) {
-		browser.msie = i;
+		browser.msie = browser["msie"] = i;
 		
 		break;
 	}
@@ -124,13 +124,8 @@ if(!Function.prototype.bind)Function.prototype.bind = function(object, var_args)
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Function prototype  ==================================  */
 /*  =======================================================================================  */
 
-	
-
-var /** @type {Element}
-	 * @const */
-	_testElement = document.createElement('div')
-  
-  , _arraySlice = Array.prototype.slice
+var 
+    _arraySlice = Array.prototype.slice
   
   , _applyFunction = Function.prototype.apply
 	
@@ -139,15 +134,23 @@ var /** @type {Element}
   , /**
 	 * Call _function
 	 * @param {Function} _function function to call
+	 * @param {*} context
 	 * @param {...} var_args
 	 * @return {*} mixed
 	 * @version 2
 	 */
-	_call = function(_function, var_args) {
+	_call = function(_function, context, var_args) {
 		// If no callback function or if callback is not a callable function
 		// it will throw TypeError
-        return Function.prototype.call.apply(_function, _arraySlice.call(arguments, 1))
+        return _applyFunction.call(_function, context, _arraySlice.call(arguments, 2))
 	}
+	
+  , /** @type {Element}
+	 * @const */
+	_testElement = 
+		document.createElement["orig"] ? 
+			_call(document.createElement["orig"], document, 'div') : //[ielt8]
+			document.createElement('div')
 	
 	//Fixed `toObject` to work for strings in IE8 and Rhino. Added test spec for `forEach`.
 	//https://github.com/kriskowal/es5-shim/pull/94
@@ -182,7 +185,6 @@ var /** @type {Element}
 	//Take Node.prototype or silently take a fake object
 	// IE < 8 support in a.ielt8.js and a.ielt8.htc
   , nodeProto = global["Node"] && global["Node"].prototype || {};
-
 	
 	
 if(!global["HTMLDocument"])global["HTMLDocument"] = global["Document"];//For IE9
@@ -204,8 +206,9 @@ if(!trueApply) {
 				_applyFunction.call(this, contexts, args) :
 				_applyFunction.call(this, contexts);
 		}
-		catch (e) {//"Function.prototype.apply: Arguments list has wrong type"
-			if(args.length === void 0 || //Not an iterable object
+		catch (e) {
+			if(e["number"] != -2146823260 ||//"Function.prototype.apply: Arguments list has wrong type"
+				args.length === void 0 || //Not an iterable object
 			   typeof args === "string") //Avoid using String
 				throw e;
 				
@@ -215,6 +218,7 @@ if(!trueApply) {
 		}
 	}
 }
+
 
 /*  =======================================================================================  */
 /*  ======================================  Classes  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
@@ -1409,6 +1413,8 @@ Object.defineProperty((global["HTMLUnknownElement"] && global["HTMLUnknownElemen
 // IE9 thinks the argument is not optional
 // FF thinks the argument is not optional
 // Opera agress that its not optional
+// IE < 9 has javascript implimentation
+if(document.importNode["shim"])
 try {
 	document.importNode(_testElement);
 } catch (e) {
@@ -1445,8 +1451,6 @@ function isDOMAttrModifiedSupported() {
 	
 	return flag;
 }
-
-if(DEBUG)console.log("DOMAttrModified not supported")
 
 if(!isDOMAttrModifiedSupported()
    && _testElement.dispatchEvent //[temporary]TODO:: remove this when "DOMAttrModified" event whould be imulated in IE < 9

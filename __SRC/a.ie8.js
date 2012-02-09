@@ -11,7 +11,7 @@
  * required:
  *  - Object.append
  */
-
+ 
 //GCC DEFINES START
 /** @define {boolean} */
 var IS_DEBUG = false;
@@ -63,7 +63,7 @@ while(len-- > 0)browser[browser.names[len]] = true;
 browser.msie = browser["msie"] = browser["msie"] && !browser.opera;
 if(browser.msie)for(var i = 6 ; i < 11 ; i++)//IE from 6 to 10
 	if(new RegExp('msie ' + i).test(browser.agent)) {
-		browser.msie = i;
+		browser.msie = browser["msie"] = i;
 		
 		break;
 	}
@@ -88,7 +88,9 @@ if(!global["DocumentFragment"])global["DocumentFragment"] = global["Document"] |
 
 
 
-var _hasOwnProperty = Function.prototype.call.bind(Object.prototype.hasOwnProperty),
+var _arraySlice = Array.prototype.slice,
+	
+	_hasOwnProperty = Function.prototype.call.bind(Object.prototype.hasOwnProperty),
 	/**
 	 * Call _function
 	 * @param {Function} _function function to call
@@ -96,10 +98,13 @@ var _hasOwnProperty = Function.prototype.call.bind(Object.prototype.hasOwnProper
 	 * @return {*} mixed
 	 * @version 2
 	 */
-	_call = function(_function, var_args) {
+  
+    _applyFunction = Function.prototype.apply,
+  
+	_call = function(_function, context, var_args) {
 		// If no callback function or if callback is not a callable function
 		// it will throw TypeError
-        Function.prototype.call.apply(_function, Array.prototype.slice.call(arguments, 1))
+       return _applyFunction.call(_function, context, _arraySlice.call(arguments, 2))
 	},
 	/** @type {Node}
 	 * @const */
@@ -332,7 +337,6 @@ function commonHandle(event) {
 	if(!_ || !_[eventsUUID])return;
 	
 	var handlers = _[eventsUUID][event.type];
-	
 	if(!(event = event || window.event).isFixed)event = fixEvent(event);// получить объект события и проверить, подготавливали мы его для IE или нет
 
 	for(var g in handlers)if(_hasOwnProperty(handlers, g)) {
@@ -363,6 +367,8 @@ function commonHandle(event) {
 	}
 }
 
+
+
 if(!document.addEventListener)global.addEventListener = document.addEventListener = function(_type, _handler, useCapture) {
 	if(typeof _handler != "function")return;
 	
@@ -375,7 +381,11 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 			a = document.getElementById("__ie_onload");
 			a.onreadystatechange = function(e) {
 				var n = this;
-				if(n.readyState == "complete")commonHandle.call(thisObj, {"type" : _type});
+				if(n.readyState == "complete") {
+					if(n.alreadyDone)return;
+					n.alreadyDone = true;
+					commonHandle.call(thisObj, {"type" : _type});
+				}
 			}
 		}
 	}
@@ -598,39 +608,42 @@ if(!document.ELEMENT_NODE) {
 /*
 http://www.alistapart.com/articles/crossbrowserscripting
 */
-if(!document.importNode)document.importNode = function(node, allChildren) {
-	/* find the node type to import */
-	switch (node.nodeType) {
-		case 1://document.ELEMENT_NODE:
-			var newNode = document.createElement(node.nodeName),//create a new element
-				attrs = node.attributes,
-				attr,
-				_childNodes;
-				
-			/* does the node have any attributes to add? */
-			if (attrs && attrs.length > 0)
-				/* add all of the attributes */
-				for (var i = 0, il = attrs.length ; i < il ;) {
-					attr = node.attributes[i++];
-					newNode.setAttribute(attr.nodeName, node.getAttribute(attr.nodeName));
-				}
-			/* are we going after children too, and does the node have any? */
-			if (allChildren && (_childNodes = node.childNodes) && _childNodes.length > 0)
-				/* recursively get all of the child nodes */
-				for (var i = 0, il = _childNodes.length; i < il;)
-					newNode.appendChild(document.importNode(_childNodes[i++], allChildren));
-			return newNode;
-		break;
-		
-		case 3://document.TEXT_NODE:
-		case 4://document.CDATA_SECTION_NODE:
-		case 8://document.COMMENT_NODE:
-			return document.createTextNode(node.nodeValue);
-		break;
+if(!document.importNode) {
+	document.importNode = function(node, allChildren) {
+		/* find the node type to import */
+		switch (node.nodeType) {
+			case 1://document.ELEMENT_NODE:
+				var newNode = document.createElement(node.nodeName),//create a new element
+					attrs = node.attributes,
+					attr,
+					_childNodes;
+					
+				/* does the node have any attributes to add? */
+				if (attrs && attrs.length > 0)
+					/* add all of the attributes */
+					for (var i = 0, il = attrs.length ; i < il ;) {
+						attr = node.attributes[i++];
+						newNode.setAttribute(attr.nodeName, node.getAttribute(attr.nodeName));
+					}
+				/* are we going after children too, and does the node have any? */
+				if (allChildren && (_childNodes = node.childNodes) && _childNodes.length > 0)
+					/* recursively get all of the child nodes */
+					for (var i = 0, il = _childNodes.length; i < il;)
+						newNode.appendChild(document.importNode(_childNodes[i++], allChildren));
+				return newNode;
+			break;
+			
+			case 3://document.TEXT_NODE:
+			case 4://document.CDATA_SECTION_NODE:
+			case 8://document.COMMENT_NODE:
+				return document.createTextNode(node.nodeValue);
+			break;
+		}
+		_throwDOMException("NOT_SUPPORTED_ERR");
+		return null;
 	}
-	_throwDOMException("NOT_SUPPORTED_ERR");
-	return null;
-};
+	document.importNode["shim"] = true;
+}
 
 function _recursivelyWalk(nodes, cb) {
     for (var i = 0, len = nodes.length; i < len; i++) {

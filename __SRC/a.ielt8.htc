@@ -34,8 +34,8 @@ var Element_proto=window.Node.prototype,
 	getDPF=function(){return 0x04},
 	getDPC=function(){return 0x08},
 	getDPCB=function(){return 0x10},
-	getControl=np.getcontrol,
-	getLabels=np.getlabels;
+	getControl=Element_proto.getcontrol,
+	getLabels=Element_proto.getlabels;
 	
 if(this != window) {//Strange IE bug where this === window
 	if(!this.compareDocumentPosition)this.compareDocumentPosition=Element_proto.compareDocumentPosition;

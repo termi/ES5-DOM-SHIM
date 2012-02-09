@@ -13,16 +13,26 @@
 
 //CONFIG START
 var /** @const*/
-	__URL_TO_ELEMENT_BEHAVIOR__     = '/a.ielt8.htc',
+	__URL_TO_ELEMENT_BEHAVIOR__     = 'a.ielt8.htc',
 	/** @const*/
-	__URL_TO_IE6_ELEMENT_BEHAVIOR__ = '/a.ie6.ielt8.htc',
+	__URL_TO_IE6_ELEMENT_BEHAVIOR__ = 'a.ie6.ielt8.htc',
 	/** @const*/
-	__STYLE_ID                      = "ielt8_style_prev_for_behaviour";
+	__STYLE_ID                      = "ielt8_style_prev_for_behaviour",
+	/** @const List of supportng tag names */
+	__SUPPORTED__TAG_NAMES__ = "html,body,div,span,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,abbr,address,cite,code,del,dfn,em,img,ins,kbd,q,samp,small,strong,sub,sup,var,b,i,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td,article,aside,canvas,details,figcaption,figure,footer,header,hgroup,menu,nav,section,summary,time,mark,audio,video,textarea,input,select";
 //CONFIG END
 
 var nodeProto = global.Node.prototype,//Note: for IE < 8 `Node` and `Node.prototype` is just an JS objects created in a.ie8.js
 	browser = global.browser,
-	noDocumentReadyState;
+	noDocumentReadyState,
+	supportedTagNames = __SUPPORTED__TAG_NAMES__.split(","),
+	notSupportedTagNames = ["script", "style", "object", 
+		"x-i", "x-s"//From https://github.com/termi/Element.details/
+	],
+	ielt8BehaviorRule = "{behavior: url(\"" + __URL_TO_ELEMENT_BEHAVIOR__ + "\")}",
+	ielt7BehaviorRule = "{behavior: url(\"" + __URL_TO_ELEMENT_BEHAVIOR__ + "\") url(\"" + __URL_TO_IE6_ELEMENT_BEHAVIOR__ + "\")}",
+	ielt9BehaviorRule = browser.msie < 7 ? ielt7BehaviorRule : ielt8BehaviorRule,
+	_call = Date.call;
 	
 if(!document.readyState) {
 	noDocumentReadyState = true;
@@ -466,17 +476,33 @@ if(!document.querySelector)document.querySelector = global["_ielt8_querySelector
 
 /*  ======================================================================================  */
 /*  ================================  Document  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
-/*
+
 var originCreateElement = document.createElement;
-document.createElement = function() {
-	var el = originCreateElement.apply(document, arguments);
+document.createElement = function(tagName) {
+	var el = _call.call(originCreateElement, document, tagName);
+	
 	
 	//FIX IE lt 8 Element.prototype
-	Object.append(el, nodeProto);
+	//Object.append(el, nodeProto);
 	//TODO:: add behavior
 	
+	tagName = tagName.toLowerCase();
+	if(!~__SUPPORTED__TAG_NAMES__.indexOf("," + tagName + ",") && !~supportedTagNames.indexOf(tagName) && !~notSupportedTagNames.indexOf(tagName)) {
+		//style NOT WORK with `behavior`!!!! ARRRRRRRHHHHhhhhhh....
+		/*var style = originCreateElement.call(document, "style");
+		style.type = 'text/css';
+		style.styleSheet.cssText = tagName + "{behavior: url(\"" + __URL_TO_ELEMENT_BEHAVIOR__ + "\")}";
+		document.head.appendChild(style);*/
+		
+		//ugly, but work
+		document.write("<style>" + tagName + ielt9BehaviorRule + "</style>");
+		
+		supportedTagNames.push(tagName);
+	}
+	
 	return el;
-}*/
+}
+document.createElement.orig = originCreateElement;
 
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Document  ==================================  */
@@ -508,17 +534,24 @@ global.attachEvent('onload', function() {//Native method
 
 
 
-var prevStyle=document.getElementById(__STYLE_ID),add="";
+var prevStyle = document.getElementById(__STYLE_ID),
+	add = "";
+
 if(prevStyle){
-add=prevStyle.getAttribute("data-url")||"";
-prevStyle.id="";
+	add = prevStyle.getAttribute("data-url") || "";
+	prevStyle.id = "";
 }
 
-if(browser.msie < 7)add+=(" url(\"" + __URL_TO_IE6_ELEMENT_BEHAVIOR__ + "\") ")
+if(add) {
+	ielt9BehaviorRule.replace(" url(", " url(" + add + ") url(");
+}
 
-add+=" url(\""+__URL_TO_ELEMENT_BEHAVIOR__+"\") ";
-
-document.write("<style id='"+__STYLE_ID+"' data-url='"+add+"'>html,body,div,span,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,abbr,address,cite,code,del,dfn,em,img,ins,kbd,q,samp,small,strong,sub,sup,var,b,i,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td,article,aside,canvas,details,figcaption,figure,footer,header,hgroup,menu,nav,section,summary,time,mark,audio,video,textarea,input,select{behavior: "+add+"}</style>");
+document.write(
+	"<style id='" + __STYLE_ID + 
+	"' data-url='" + ielt9BehaviorRule.replace("{behavior:", "").replace(")}", ")") + 
+	"'>" + __SUPPORTED__TAG_NAMES__ + ielt9BehaviorRule + 
+	"</style>"
+	);
 /*
 [BUG]there is no 'object' tag in this style, because IE < 8 won't apply behavior to 'object' element
 */
