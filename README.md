@@ -6,8 +6,8 @@ based on:
 - https://github.com/paulmillr/es6-shim
 - https://github.com/Raynos/DOM-shim
 
- - __Status__: Beta   
- - [__Demo__](http://h123.ru/ES5-DOM-SHIM/simple/index.html) Try it in IE7 (or in IE6 ¬_¬)! And take a look at the source
+__Status__: Beta   
+[__Demo__](http://h123.ru/ES5-DOM-SHIM/simple/index.html) Try it in IE7 (or in IE6 ¬_¬)! And take a look at the source
 
 ## Goal
 
@@ -70,7 +70,7 @@ Russian instruction in extra/SameDomainLimitation.SOLVE_RUS.odt
 http://jsperf.com/es5-dom-shim-test
 
 ## Known issues:
-0. Less of test cases
+0. Lack of test cases
 1. Same-domain limitation (can be solve only on server)
 2. Incompatibility with http://code.google.com/p/ie7-js/ [working on it]
 
