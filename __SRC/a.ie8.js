@@ -55,12 +55,10 @@ var browser = global["browser"] = {
 	agent : navigator.userAgent.toLowerCase()
 };
 browser.names = browser.agent.match(/(msie)/gi);
-/** @type {number} */
-var len = browser.names.length;
-while(len-- > 0)browser[browser.names[len]] = true;
+if(browser.names.length)browser[browser.names[0]] = true;
 /** @type {boolean}
  * @const */
-browser.msie = browser["msie"] = browser["msie"] && !browser.opera;
+browser.msie = browser["msie"];
 if(browser.msie)for(var i = 6 ; i < 11 ; i++)//IE from 6 to 10
 	if(new RegExp('msie ' + i).test(browser.agent)) {
 		browser.msie = browser["msie"] = i;
@@ -79,7 +77,16 @@ var _throwDOMException = function(errStr) {
 //Emulating HEAD for ie < 9
 document.head || (document.head = document.getElementsByTagName('head')[0]);
 
-if(!global["Element"])((global["Element"] = {}).prototype = {})["ie"] = true;//fake prototype for IE < 8
+if(DEBUG) {
+	//test DOMElement is an ActiveXObject
+	if(!(document.createElement("div") instanceof ActiveXObject))
+		console.error("DOMElement is not an ActiveXObject. Probably you in IE > 8 'compatible mode'. <element> instanceof [Node|Element|HTMLElement] wouldn't work");
+}
+
+if(!global["Element"])((global["Element"] =
+//Reprisent ActiveXObject as Node, Element and HTMLElement so `<element> instanceof Node` is working (!!!But no in IE9 with in "compatible mode")
+	ActiveXObject
+).prototype)["ie"] = true;//fake prototype for IE < 8
 if(!global["HTMLElement"])global["HTMLElement"] = global["Element"];//IE8
 if(!global["Node"])global["Node"] = global["Element"];//IE8
 
@@ -258,7 +265,28 @@ if(!_DOMException) {
 
 //fix [add|remove]EventListener & dispatchEvent for IE < 9
 
-//	TODO:: использовать наработки https://github.com/arexkun/Vine
+// TODO:: http://www.w3.org/TR/DOM-Level-2-Events/events.html#Events-EventListener
+// TODO:: http://www.w3.org/TR/DOM-Level-3-Events/#events-EventException
+/*
+var ObjectHandler = {
+  handleEvent: function handleEvent(e) {
+    var
+      events = this.events,
+      type = e.type
+    ;
+    if (events.hasOwnProperty(type)) {
+      events[type].call(this, e);
+    }
+  },
+  // it could be called removeEvent too, as you wish
+  remitEvent: function cancelEvent(e) {
+    e.currentTarget.removeEventListener(
+      e.type, this, e.eventPhase === e.CAPTURING_PHASE
+    );
+  }
+};
+*/
+//	использовать наработки https://github.com/arexkun/Vine
 //		   использовать наработки https://github.com/kbjr/Events.js
 /*
 dispatchEvent
@@ -275,6 +303,8 @@ EventException
 UNSPECIFIED_EVENT_TYPE_ERR: Raised if the Event's type was not specified by initializing the event before dispatchEvent was called. Specification of the Event's type as null or an empty string will also trigger this exception
 */
 
+
+
 var preventDefault_ = function(){this.returnValue = false};
 var stopPropagation_ = function(){this.cancelBubble = true};
 
@@ -284,11 +314,13 @@ var guid = 0,// текущий номер обработчика
 	eventsUUID = "_e_8vj";// Некий уникальный идентификатор
 	//ielt9CallbakcUUID = "_prl224";// Некий уникальный идентификатор
 	
-function fixEvent(event){
+function fixEvent(event) {
+	var thisObj;
+	
 	// один объект события может передаваться по цепочке разным обработчикам
 	// при этом кроссбраузерная обработка будет вызвана только 1 раз
-	// Снизу, в функции commonHandle,, мы должны проверять на !event.isFixed
-	event.isFixed = true;// пометить событие как обработанное
+	// Снизу, в функции commonHandle,, мы должны проверять на !event["__isFixed"]
+	event["__isFixed"] = true;// пометить событие как обработанное
 
 	//http://javascript.gakaa.com/event-detail.aspx
 	//http://www.w3.org/TR/2011/WD-DOM-Level-3-Events-20110531/#event-type-click
@@ -319,6 +351,13 @@ function fixEvent(event){
 	// записать нажатую кнопку мыши в which для IE. 1 == левая; 2 == средняя; 3 == правая
 	event.which || event.button && (event.which = event.button & 1 ? 1 : event.button & 2 ? 3 : event.button & 4 ? 2 : 0);
 		
+	if(!event.timeStamp)event.timeStamp = +new Date()
+	
+	if(!event.eventPhase)event.eventPhase = (event.target == thisObj) ? 2 : 3; // "AT_TARGET" = 2, "BUBBLING_PHASE" = 3
+	
+	if(!event.currentTarget)event.currentTarget = thisObj;
+		
+		
 	// событие DOMAttrModified
 	//  TODO:: недоделано
 	// TODO:: Привести event во всех случаях (для всех браузеров) в одинаковый вид с newValue, prevValue, propName и т.д.
@@ -337,14 +376,23 @@ function commonHandle(event) {
 	if(!_ || !_[eventsUUID])return;
 	
 	var handlers = _[eventsUUID][event.type];
-	if(!(event = event || window.event).isFixed)event = fixEvent(event);// получить объект события и проверить, подготавливали мы его для IE или нет
+	// получить объект события и проверить, подготавливали мы его для IE или нет
+	if(!(event = event || window.event)["__isFixed"])event = fixEvent.call(thisObj, event);
 
 	for(var g in handlers)if(_hasOwnProperty(handlers, g)) {
 		var handler = handlers[g];
 		
 		try {
 			//Передаём контекст и объект event, результат сохраним в event['result'] для передачи значения дальше по цепочке
-			if((event['result'] = _call(handler, this, event)) === false) {//Если вернели false - остановим обработку функций
+			if(
+				(
+					event['result'] = (
+						(typeof _handler != "function") && handler.handleEvent) ? 
+							handler.handleEvent(event) : //Registering an EventListener with a function object that also has a handleEvent property -> Call EventListener as a function
+							_call(handler, this, event)
+				)
+				=== false
+			  ) {//Если вернели false - остановим обработку функций
 				event.preventDefault()
 				event.stopPropagation()
 			}
@@ -352,6 +400,7 @@ function commonHandle(event) {
 		catch(e) { 
 			errors.push(e);//Все исключения - добавляем в массив, при этом не прерывая цепочку обработчиков.
 			errorsMessages.push(e.message);
+			if(console)console.error(e);
 		}
 		
 		if(event.stopNow)break;//Мгновенная остановка обработки событий
@@ -370,7 +419,8 @@ function commonHandle(event) {
 
 
 if(!document.addEventListener)global.addEventListener = document.addEventListener = function(_type, _handler, useCapture) {
-	if(typeof _handler != "function")return;
+	//TODO:: useCapture == true
+	if(typeof _handler != "function" && !(typeof _handler == "object" && _handler.handleEvent))return;
 	
 	var thisObj = this;
 	
@@ -480,7 +530,8 @@ if(!document.dispatchEvent)global.dispatchEvent = document.dispatchEvent = funct
 			var node = event.target = thisObj;
 			//Всплываем событие
 			while(!event.cancelBubble && node) {//Если мы вызвали stopPropogation() - больше не всплываем событие
-				commonHandle.call(node, event);
+				if("_" in node)//Признак того, что на элемент могли навесить событие
+					commonHandle.call(node, event);
 				//Если у события отключено всплытие - не всплываем его
 				node = event.bubbles ? (node === document ? window : node.parentNode) : null;
 			}
@@ -580,7 +631,10 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 		return eventObject;
 	}
 }
-
+if(Event && Event.prototype) {
+	Event.prototype.stopPropagation = function () {this.cancelBubble = true;};
+    Event.prototype.preventDefault = function () {this.returnValue = false;};
+}
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Events  ======================================  */
 /*  ======================================================================================  */
@@ -739,9 +793,11 @@ if(_testElement.getAttribute("sentinel") === randomValue + "" || nodeProto["ielt
 	
 	nodeProto.getAttribute = function(name) {
 		var thisObj = this,
-			result = (result = thisObj.attributes && thisObj.attributes[name]) && result.value,
+			result,
 			_ = thisObj["_"];
-			 
+		
+		result = (result = thisObj.attributes && thisObj.attributes[name]) && result.value;
+		
 		if(result == null && _ && _["shimed_attributes"])
 			result = _["shimed_attributes"][name];
 		
@@ -870,7 +926,7 @@ var _cloneElement = global["cloneElement"] = function(element, include_all, dele
 		//result = _cloneElement.safeDocumentFragment.appendChild(document.createElement("div"));//Создаём новый элемент
 		
 	if(_cloneElement.safeElement &&//IE < 9?
-	   ~(" " + html5_elements + " ").indexOf(" " + element.tagname + " ")//HTML5 element?
+	   ~(" " + html5_elements + " ").indexOf(" " + element.tagName + " ")//HTML5 element?
 	   ) {//Мы присваеваем _cloneElement.safeDocumentFragment только если браузер - IE < 9
 		_cloneElement.safeElement.innerHTML = "";//Очистим от предыдущих элементов
 		

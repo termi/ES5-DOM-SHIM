@@ -7,7 +7,7 @@
 // ==/ClosureCompiler==
 /**
  * module
- * @version 4
+ * @version 4.2
  * TODO:: eng comments
  *        dateTime prop for IE < 8
  */
@@ -35,68 +35,75 @@ var /** @const */funcType = "function";
 
 /** @type {Object}
  * @const */
-var browser = global["browser"] = {
+var browser = {
 /** @type {string}
  * @const */
 	agent : navigator.userAgent.toLowerCase()
 };
 
 if(INCLUDE_EXTRAS) {
+	global["browser"] = browser;//Export
 
-//Определение браузера и поддерживаемых возможностей
-//Если что-то еще понадобится, можно посмотреть тут https://github.com/mrdoob/system.js
+	//Определение браузера и поддерживаемых возможностей
+	//Если что-то еще понадобится, можно посмотреть тут https://github.com/mrdoob/system.js
 
-/** @type {Array}
- * @const */
-browser.names = browser.agent.match(/(mozilla|compatible|chrome|webkit|safari|opera|msie|iphone|ipod|ipad)/gi);
-/** @type {number} */
-var len = browser.names.length;
-while(len-- > 0)browser[browser.names[len]] = true;
-//Alians'es
-/** @type {boolean}
- * @const */
-browser.webkit = browser["webkit"];
-/** @type {boolean}
- * @const */
-browser.mozilla = browser["mozilla"] = browser["mozilla"] && !browser["compatible"] && !browser.webkit;
-/** @type {boolean}
- * @const */
-browser.chrome = browser["chrome"];
-/** @type {boolean}
- * @const */
-browser.safari = browser["safari"] = browser["safari"] && !browser.chrome;
-/* * @ type {boolean}
- * @ const */
-//browser.opera = browser["opera"];//No need in this version of GCC
-/** @type {boolean}
- * @const */
-browser.msie = browser["msie"] = browser["msie"] && !browser.opera;
-/** @type {boolean}
- * @const */
-browser.iphone = browser["iphone"];
-/** @type {boolean}
- * @const */
-browser.ipod = browser["ipod"];
-/** @type {boolean}
- * @const */
-browser.ipad = browser["ipad"];
+	/** @type {Array}
+	 * @const */
+	browser.names = browser.agent.match(/(mozilla|compatible|chrome|webkit|safari|opera|msie|iphone|ipod|ipad)/gi);
+	/** @type {number} */
+	var len = browser.names.length;
+	while(len-- > 0)browser[browser.names[len]] = true;
+	//Alians'es
+	/** @type {boolean}
+	 * @const */
+	browser.webkit = browser["webkit"];
+	/** @type {boolean}
+	 * @const */
+	browser.mozilla = browser["mozilla"] = browser["mozilla"] && !browser["compatible"] && !browser.webkit;
+	/** @type {boolean}
+	 * @const */
+	browser.chrome = browser["chrome"];
+	/** @type {boolean}
+	 * @const */
+	browser.safari = browser["safari"] = browser["safari"] && !browser.chrome;
+	/* * @ type {boolean}
+	 * @ const */
+	//browser.opera = browser["opera"];//No need in this version of GCC
+	/** @type {boolean}
+	 * @const */
+	browser.msie = browser["msie"] = browser["msie"] && !browser.opera;
+	/** @type {boolean}
+	 * @const */
+	browser.iphone = browser["iphone"];
+	/** @type {boolean}
+	 * @const */
+	browser.ipod = browser["ipod"];
+	/** @type {boolean}
+	 * @const */
+	browser.ipad = browser["ipad"];
+}
+else {
+	browser.names = browser.agent.match(/(msie)/gi);
+	if(browser.names.length)browser[browser.names[0]] = true;
+	
+	browser.msie = browser["msie"]
+	
+	if(browser.msie)for(var i = 6 ; i < 11 ; i++)//IE from 6 to 10
+		if(new RegExp('msie ' + i).test(browser.agent)) {
+			browser.msie = browser["msie"] = i;
+			
+			break;
+		}
+	browser["msie"] = browser.msie;
 
-if(browser.msie)for(var i = 6 ; i < 11 ; i++)//IE from 6 to 10
-	if(new RegExp('msie ' + i).test(browser.agent)) {
-		browser.msie = browser["msie"] = i;
-		
-		break;
-	}
-browser["msie"] = browser.msie;
-
-/** @type {string}
- * @const */
-browser["cssPrefix"] = 
-	browser.mozilla ? "Moz" :
-	browser.webkit || browser.safari ? "Webkit" ://and iPad, iPhone, iPod
-	browser.opera ? "O" :
-	browser.msie ? "ms" : 
-	"";
+	/** @type {string}
+	 * @const */
+	browser["cssPrefix"] = 
+		browser.mozilla ? "Moz" :
+		browser.webkit || browser.safari ? "Webkit" ://and iPad, iPhone, iPod
+		browser.opera ? "O" :
+		browser.msie ? "ms" : 
+		"";
 	
 }//if(INCLUDE_EXTRAS)
 
@@ -118,7 +125,7 @@ browser["cssPrefix"] =
 if(!Function.prototype.bind)Function.prototype.bind = function(object, var_args) {
 	var __method = this, args = _arraySlice.call(arguments, 1);
 	return function() {
-		return __method.apply(object, args.concat(Array["from"](arguments)));
+		return __method.apply(object, args.concat(_arraySlice.call(arguments)));
 	}
 }
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Function prototype  ==================================  */
@@ -145,7 +152,7 @@ var
         return _applyFunction.call(_function, context, _arraySlice.call(arguments, 2))
 	}
 	
-  , /** @type {Element}
+  , /** @type {Element|*}
 	 * @const */
 	_testElement = 
 		document.createElement["orig"] ? 
@@ -161,7 +168,7 @@ var
 	})(Object("a"))
 	
 	/**
-	 * @param {!Object} obj
+	 * @param {Object} obj
 	 * @param {boolean=} _allowNull
 	 */
   , _toObject = function(obj, _allowNull) {
@@ -184,7 +191,12 @@ var
 	}
 	//Take Node.prototype or silently take a fake object
 	// IE < 8 support in a.ielt8.js and a.ielt8.htc
-  , nodeProto = global["Node"] && global["Node"].prototype || {};
+  , nodeProto = global["Node"] && global["Node"].prototype || {}
+  
+  , functionReturnFalse = function() { return false }
+  , functionReturnFirstParam = function(param) { return param }
+  , prototypeOfObject = Object.prototype
+;
 	
 	
 if(!global["HTMLDocument"])global["HTMLDocument"] = global["Document"];//For IE9
@@ -209,12 +221,11 @@ if(!trueApply) {
 		catch (e) {
 			if(e["number"] != -2146823260 ||//"Function.prototype.apply: Arguments list has wrong type"
 				args.length === void 0 || //Not an iterable object
-			   typeof args === "string") //Avoid using String
+			   typeof args === "string"//Avoid using String
+			  ) 
 				throw e;
-				
-			args = Array["from"](args);
 			
-			return _applyFunction.call(this, contexts, args);
+			return _applyFunction.call(this, contexts, Array["from"](args));
 		}
 	}
 }
@@ -294,17 +305,15 @@ Object["inherit"] = function(Child, Parent) {
 /*  =======================================================================================  */
 /*  =================================  Utils.Dom  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-if(!global["Utils"])global["Utils"] = {};
-if(!global["Utils"]["Dom"])global["Utils"]["Dom"] = {};
-
 /**
  * Utils.Dom.DOMStringCollection
  * DOMSettableTokenList like object
  * http://www.w3.org/TR/html5/common-dom-interfaces.html#domsettabletokenlist-0
  * @param {string} string initial string
  * @param {Function} onchange callback for onchange event
+ * @constructor
  */
-var DOMStringCollection = global["Utils"]["Dom"]["DOMStringCollection"] = function(string, onchange) {
+var DOMStringCollection = function(string, onchange) {
 	/**
 	 * Event fired when any change apply to the object
 	 */
@@ -397,6 +406,11 @@ for(var key in methods)DOMStringCollection.prototype[key] = methods[key];
 //[ie8 BUG]Метод toString не показывается в цикле for
 DOMStringCollection.prototype.toString = function(){return this.value||""}
 
+if(INCLUDE_EXTRAS) {//Export DOMStringCollection
+	if(!global["Utils"])global["Utils"] = {};
+	if(!global["Utils"]["Dom"])global["Utils"]["Dom"] = {};
+	global["Utils"]["Dom"]["DOMStringCollection"] = DOMStringCollection;
+}
 
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Utils.Dom  ==================================  */
@@ -465,26 +479,57 @@ if(!Object.getOwnPropertyNames)Object.getOwnPropertyNames = Object.keys;
  * @return {Object} the same object
 // ES5 15.2.3.8
 // http://es5.github.com/#x15.2.3.8
+// this is misleading and breaks feature-detection, but
+// allows "securable" code to "gracefully" degrade to working
+// but insecure code.
  */
-if(!Object.seal)Object.seal = function(object) {
-	// this is misleading and breaks feature-detection, but
-	// allows "securable" code to "gracefully" degrade to working
-	// but insecure code.
-	return object;
-};
+if(!Object.seal)Object.seal = functionReturnFirstParam;
 
 /**
  * @param {!Object} object
  * @return {Object} the same object
 // ES5 15.2.3.9
 // http://es5.github.com/#x15.2.3.9
+// this is misleading and breaks feature-detection, but
+// allows "securable" code to "gracefully" degrade to working
+// but insecure code.
  */
-if(!Object.freeze)Object.freeze = function(object) {
-	// this is misleading and breaks feature-detection, but
-	// allows "securable" code to "gracefully" degrade to working
-	// but insecure code.
-	return object;
-};
+if(!Object.freeze)Object.freeze = functionReturnFirstParam;
+
+// ES5 15.2.3.10
+// http://es5.github.com/#x15.2.3.10
+// this is misleading and breaks feature-detection, but
+// allows "securable" code to "gracefully" degrade to working
+// but insecure code.
+if (!Object.preventExtensions)Object.preventExtensions = functionReturnFirstParam
+
+// ES5 15.2.3.11
+// http://es5.github.com/#x15.2.3.11
+if (!Object.isSealed)Object.isSealed = functionReturnFalse;
+
+// ES5 15.2.3.12
+// http://es5.github.com/#x15.2.3.12
+if (!Object.isFrozen)Object.isFrozen = functionReturnFalse;
+
+// ES5 15.2.3.13
+// http://es5.github.com/#x15.2.3.13
+if (!Object.isExtensible) {
+    Object.isExtensible = function(object) {
+        // 1. If Type(O) is not Object throw a TypeError exception.
+        if (Object(object) === object) {
+            throw new TypeError(); // TODO message
+        }
+        // 2. Return the Boolean value of the [[Extensible]] internal property of O.
+        var name = '';
+        while (_hasOwnProperty(object, name)) {
+            name += '?';
+        }
+        object[name] = true;
+        var returnValue = _hasOwnProperty(object, name);
+        delete object[name];
+        return returnValue;
+    };
+}
 
 /**
  * @param {!Object} object
@@ -499,7 +544,7 @@ if(!Object.getPrototypeOf)Object.getPrototypeOf = function getPrototypeOf(object
 	return object.__proto__ || (
 		object.constructor ?
 		object.constructor.prototype :
-		Object.prototype
+		prototypeOfObject
 	);
 };
 
@@ -587,7 +632,7 @@ if (!Object.defineProperty || definePropertyFallback) {
         if ((typeof descriptor != "object" && typeof descriptor != "function") || descriptor === null)
             throw new TypeError(ERR_NON_OBJECT_DESCRIPTOR + descriptor);
 
-		//[IE < 9]Save original attribute value using special `setAttribute` function
+		//[ielt9]IE < 9Save original attribute value using special `setAttribute` function
 		if(object.setAttribute && object.setAttribute["ielt9"] && object.hasAttribute(property))
 			object.setAttribute(property, object.getAttribute(property), true/*_forceSaveAttribute*/);
 			
@@ -597,11 +642,11 @@ if (!Object.defineProperty || definePropertyFallback) {
             try {
                 return definePropertyFallback.call(Object, object, property, descriptor);
             } catch (exception) {
-				if (exception["number"] === -0x7FF5EC54) {// IE 8 doesn't support enumerable:true
+				if (exception["number"] === -0x7FF5EC54) {//[ielt9 ie8] IE 8 doesn't support enumerable:true
 					descriptor.enumerable = false;
 					try {
 						return definePropertyFallback.call(Object, object, property, descriptor);
-					} catch (exception) {
+					} catch (exception2) {
 					
 					}
 				}
@@ -633,7 +678,7 @@ if (!Object.defineProperty || definePropertyFallback) {
                 // a property to make sure that we don't hit an inherited
                 // accessor.
                 var prototype = object.__proto__;
-                object.__proto__ = Object.prototype;
+                object.__proto__ = prototypeOfObject;
                 // Deleting a property anyway since getter / setter may be
                 // defined on object itself.
                 delete object[property];
@@ -645,7 +690,7 @@ if (!Object.defineProperty || definePropertyFallback) {
             }
         } else {
             if (!object.__defineGetter__) {
-                if(Object.defineProperty["ielt8"]) {//Set `Object.defineProperty["ielt8"] = true` in a.ielt8.js
+                if(Object.defineProperty["ielt8"]) {//[ielt9 ie8]
 					if(descriptor["get"] !== void 0)
 						object["get" + property] = descriptor["get"];
 					if(descriptor["set"] !== void 0)
@@ -666,6 +711,7 @@ if (!Object.defineProperty || definePropertyFallback) {
     };
 }
 
+//[ielt8] Set `Object.defineProperty["ielt8"] = true` for IE < 8
 if(nodeProto["ie"] && browser.msie < 8)nodeProto["ielt8"] = Object.defineProperty["ielt8"] = true;
 
 // ES5 15.2.3.7
@@ -723,9 +769,8 @@ if (!Object.getOwnPropertyDescriptor || _getOwnPropertyDescriptorFallback) {
     var ERR_NON_OBJECT = "Object.getOwnPropertyDescriptor called on a non-object: ";
 
 	/**
-	 * @param {Object} object The object in which to look for the property.
-	 * @param {string} property The name of the property whose description is to be retrieved
-	 * @this {Object}
+	 * @param {!Object} object The object in which to look for the property.
+	 * @param {!string} property The name of the property whose description is to be retrieved
 	 * @return {Object|undefined}
 	 */
     Object.getOwnPropertyDescriptor = function _getOwnPropertyDescriptor(object, property) {
@@ -750,7 +795,9 @@ if (!Object.getOwnPropertyDescriptor || _getOwnPropertyDescriptorFallback) {
 
         // If object has a property then it's for sure both `enumerable` and
         // `configurable`.
-        var descriptor =  { enumerable: true, configurable: true };
+        var descriptor =  { enumerable: true, configurable: true },
+			getter,
+			setter;
 
         // If JS engine supports accessor properties then property may be a
         // getter or setter.
@@ -763,24 +810,28 @@ if (!Object.getOwnPropertyDescriptor || _getOwnPropertyDescriptorFallback) {
             var _prototype = object.__proto__;
             object.__proto__ = prototypeOfObject;
 
-            var getter = object.__lookupGetter__(property);
-            var setter = object.__lookupGetter__(property);
+            getter = object.__lookupGetter__(property);
+            setter = object.__lookupSetter__(property);
 
             // Once we have getter and setter we can put values back.
             object.__proto__ = _prototype;
-
-            if (getter || setter) {
-                if (getter) {
-                    descriptor.get = getter;
-                }
-                if (setter) {
-                    descriptor.set = setter;
-                }
-                // If it was accessor property we're done and return here
-                // in order to avoid adding `value` to the descriptor.
-                return descriptor;
-            }
         }
+		else if(Object.defineProperty["ielt8"]) {//[ielt9 ie8]
+			getter = object["get" + property];
+			setter = object["set" + property];
+		}
+
+		if (getter || setter) {
+			if (getter) {
+				descriptor.get = getter;
+			}
+			if (setter) {
+				descriptor.set = setter;
+			}
+			// If it was accessor property we're done and return here
+			// in order to avoid adding `value` to the descriptor.
+			return descriptor;
+		}
 
         // If we got this far we know that object has an own property that is
         // not an accessor so we set it as a value and return descriptor.
@@ -804,7 +855,7 @@ var _arrayFrom =
  * toArray function
  * RUS: Преведение к массиву
  * 
- * @param {Object} iterable object
+ * @param {Object|Array} iterable object
  * @return {Array}
  */
 Array["from"] || (Array["from"] = function(iterable) {
@@ -832,28 +883,35 @@ Array["of"] = Array["of"] || function(args) {
 	return _arraySlice.call(arguments);
 }
 
-/**
- * Non-standart method
- * https://gist.github.com/1044540
- * Create a new Array with the all unique items
- * @return {Array}
- */
-if(!Array.prototype["unique"])Array.prototype["unique"] = (function(a) {
-  return function() {     // with a function that
-    return this.filter(a) // filters by the cached function
-  }
-})(
-  function(a,b,c) {       // which
-    return c.indexOf(     // finds out whether the array contains
-      a,                  // the item
-      b + 1               // after the current index
-    ) < 0                 // and returns false if it does.
-  }
-);
+if(INCLUDE_EXTRAS) {
+	/**
+	 * Non-standart method
+	 * https://gist.github.com/1044540
+	 * Create a new Array with the all unique items
+	 * @return {Array}
+	 */
+	if(!Array.prototype["unique"])Array.prototype["unique"] = (function(a) {
+	  return function() {     // with a function that
+		return this.filter(a) // filters by the cached function
+	  }
+	})(
+	  function(a,b,c) {       // which
+		return c.indexOf(     // finds out whether the array contains
+		  a,                  // the item
+		  b + 1               // after the current index
+		) < 0                 // and returns false if it does.
+	  }
+	);
+}//if(INCLUDE_EXTRAS)
 
 /* [ielt9, bug] IE < 9 bug: [1,2].splice(0).join("") == "" but should be "12" */
 if([1,2].splice(0).length != 2) {
 	var _origArraySplice = Array.prototype.splice;
+	/**
+	 * @param {number} index
+	 * @param {number=} howMany
+	 * @param {...} elementsToAdd
+	 */
 	Array.prototype.splice = function(index, howMany, elementsToAdd) {
 		return _origArraySplice.call(this, index, howMany === void 0 ? (this.length - index) : howMany, _arraySlice.call(arguments, 2))
 	}
@@ -1102,7 +1160,10 @@ if(!String.prototype["toArray"])String.prototype["toArray"] = function() {
 /*  ======================================================================================  */
 /*  ======================================  Events  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-if(document.addEventListener) {//fix [add|remove]EventListener for all browsers that support it
+//fix [add|remove]EventListener for all browsers that support it
+if(document.addEventListener && 
+	_testElement.addEventListener//[ielt9] IE < 9 has no `addEventListener` in _testElement
+  ) {
 	// FF fails when you "forgot" the optional parameter for addEventListener and removeEventListener
 	// Agr!!! FF 3.6 Unable to override addEventListener https://bugzilla.mozilla.org/show_bug.cgi?id=428229
 	// Opera didn't do anything without optional parameter
@@ -1148,8 +1209,8 @@ if(document.addEventListener) {//fix [add|remove]EventListener for all browsers 
 		}
 	}
 }
-else {
-	//[add|remove]EventListener not supported
+else if(DEBUG && !document.addEventListener) {
+	console.error("[add|remove]EventListener not supported")
 }
 
 // new Event(...) and new CustomEvent(...) from github.com/Raynos/DOM-shim/ with my fixing
@@ -1238,8 +1299,8 @@ if(!("classList" in _testElement)) {
 				cont = thisObj._ || (thisObj._ = {}),//Положим _cachedClassList в контейнер "_"
 				_cachedClassList = "__ccl_00lh__";
 			
-			if(!cont[_cachedClassList])cont[_cachedClassList] = new global["Utils"]["Dom"]["DOMStringCollection"](thisObj.getAttribute("class"), function() {
-				thisObj.setAttribute("class", this.value);//this instanceof Utils.Dom.DOMStringCollection
+			if(!cont[_cachedClassList])cont[_cachedClassList] = new DOMStringCollection(thisObj.getAttribute("class"), function() {
+				thisObj.setAttribute("class", this.value);//this instanceof DOMStringCollection
 				if(thisObj.className != this.value)thisObj.className = this.value;
 			})
 			
@@ -1368,20 +1429,20 @@ if(!("insertAdjacentHTML" in _testElement)) {
 
 if(INCLUDE_EXTRAS) {
 
-if(!("insertAfter" in _testElement)) {
-	/**
-	 * NON STANDART METHOD
-	 * Вставляет DOM-элемент вслед за определённым DOM-элементом
-	 * @this {Node} Куда вставляем
-	 * @param {Node} elementToInsert Что вставляем
-	 * @param {Node} afterElement После чего вставляем
-	 * @return {Node} Переданый elementToInsert
-	 */
-	nodeProto["insertAfter"] = function(elementToInsert, afterElement) {
-		//function(F,B){D=this;if(D._insertAfter){D._insertAfter(F,B)}else{(D.lastChild==B)?D.appendChild(F):D.insertBefore(F,B.nextSibling)}}
-		return this.insertBefore(elementToInsert, afterElement.nextSibling);
+	if(!("insertAfter" in _testElement)) {
+		/**
+		 * NON STANDART METHOD
+		 * Вставляет DOM-элемент вслед за определённым DOM-элементом
+		 * @this {Node} Куда вставляем
+		 * @param {Node} elementToInsert Что вставляем
+		 * @param {Node} afterElement После чего вставляем
+		 * @return {Node} Переданый elementToInsert
+		 */
+		nodeProto["insertAfter"] = function(elementToInsert, afterElement) {
+			//function(F,B){D=this;if(D._insertAfter){D._insertAfter(F,B)}else{(D.lastChild==B)?D.appendChild(F):D.insertBefore(F,B.nextSibling)}}
+			return this.insertBefore(elementToInsert, afterElement.nextSibling);
+		};
 	};
-};
 
 } //if(INCLUDE_EXTRAS)
 
@@ -1413,8 +1474,8 @@ Object.defineProperty((global["HTMLUnknownElement"] && global["HTMLUnknownElemen
 // IE9 thinks the argument is not optional
 // FF thinks the argument is not optional
 // Opera agress that its not optional
-// IE < 9 has javascript implimentation
-if(document.importNode["shim"])
+// IE < 9 has javascript implimentation marked as `shim`
+if(!document.importNode["shim"])
 try {
 	document.importNode(_testElement);
 } catch (e) {
@@ -1453,7 +1514,7 @@ function isDOMAttrModifiedSupported() {
 }
 
 if(!isDOMAttrModifiedSupported()
-   && _testElement.dispatchEvent //[temporary]TODO:: remove this when "DOMAttrModified" event whould be imulated in IE < 9
+   && _testElement.dispatchEvent //[temporary ielt9]TODO:: remove this when "DOMAttrModified" event whould be imulated in IE < 9
    ) {
 	/**
 	 * @param {Function} oldHandle
@@ -1461,13 +1522,9 @@ if(!isDOMAttrModifiedSupported()
 	 */
 	var new_set_remove_Attribute = function(oldHandle, attrChange) {
 		return function(name, val) {
-			/**
-			 * @type {MutationEvent}
-			 */
+			/** @type {Event} */
 			var e = document.createEvent("MutationEvents"); 
-			/**
-			 * @type {String}
-			 */
+			/** @type {string} */
 			var prev = this.getAttribute(name);
 			oldHandle.apply(this, arguments);
 			e.initMutationEvent("DOMAttrModified", true, true, null, prev, 
@@ -1501,7 +1558,7 @@ if(!isDOMAttrModifiedSupported()
 /*  ================================  HTMLTextAreaElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 /*  ================================  HTMLSelectElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-var labelableElements = "INPUT BUTTON KEYGEN METER OUTPUT PROGRESS TEXTAREA SELECT";
+var labelableElements = "INPUT0BUTTON0KEYGEN0METER0OUTPUT0PROGRESS0TEXTAREA0SELECT".split("0");
 /*
 Implement HTML*Element.labels
 https://developer.mozilla.org/en/DOM/HTMLInputElement
@@ -1511,7 +1568,7 @@ if(!("labels" in document.createElement("input")))
 	Object.defineProperty(nodeProto, "labels", {
 		enumerable: true,
 		"get" : function() {
-			if(labelableElements["contains"](this.nodeName.toUpperCase()))
+			if(!~labelableElements.indexOf(this.nodeName.toUpperCase()))
 				return void 0;
 			
 			var node = this,
@@ -1559,7 +1616,7 @@ if(!("control" in document.createElement("label")))
 			
 			return _recursivelyWalk(this.childNodes,
 					function(el) {
-						if(labelableElements["contains"](el.nodeName.toUpperCase()))
+						if(~labelableElements.indexOf(el.nodeName.toUpperCase()))
 							return el
 					}
 				) || null;
@@ -1667,7 +1724,10 @@ var SendRequest = global["SendRequest"] = function(path, args, onDone, onError, 
     }
     if(!SendRequest.XHRs)SendRequest.XHRs = [];
 	//Каждые 5 минут поднимаем флаг, что XHR устарел
-	setTimeout(function() {SendRequest.outOfDate = true}, 3e5);
+	if(!SendRequest.timeOutTimer)
+		SendRequest.timeOutTimer = setTimeout(function() {
+			SendRequest.timeOutTimer = !(SendRequest.outOfDate = true);
+		}, 3e5);
 	
 	var method = options["post"] ? "POST" : "GET",
 		//Создаём отдельный XHR в случае, если глобальный XHR занят или, если в опциях указан temporary
@@ -1957,6 +2017,30 @@ global["bubbleEventListener"] = function bubbleEventListener(attribute, namedFun
 /*  ======================================================================================  */
 /*  ========================================  DOM  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
+var Event_prototype = Event.prototype;
+
+if(!Event_prototype["AT_TARGET"]) {//Opera < 12
+	Event_prototype["AT_TARGET"] = 2;
+	Event_prototype["BUBBLING_PHASE"] = 3;
+	Event_prototype["CAPTURING_PHASE"] = 1;/*,
+		"BLUR": 8192,
+		"CHANGE": 32768,
+		"CLICK": 64,
+		"DBLCLICK": 128,
+		"DRAGDROP": 2048,
+		"FOCUS": 4096,
+		"KEYDOWN": 256,
+		"KEYPRESS": 1024,
+		"KEYUP": 512,
+		"MOUSEDOWN": 1,
+		"MOUSEDRAG": 32,
+		"MOUSEMOVE": 16,
+		"MOUSEOUT": 8,
+		"MOUSEOVER": 4,
+		"MOUSEUP": 2,
+		"SELECT": 16384*/
+}
+
 // window.getComputedStyle fix
 //FF say that pseudoElt param is required
 try {
@@ -1988,7 +2072,7 @@ if(INCLUDE_EXTRAS) {
  * @return {HTMLElement} найденный элемент
  */
 var $ = function(id) {
-	if(typeof id == 'string' || typeof id == 'number')id = document.getElementById(id);
+	if(typeof id == 'string' || typeof id == 'number')id = document.getElementById(String(id));
 	
 	//if(id && !id._)id._ = {};
 	
@@ -2138,19 +2222,11 @@ if(INCLUDE_EXTRAS) {
 (function (console) {
 
 var i,
-	fnProto = Function.prototype,
-	fnApply = fnProto.apply,
-	bind    = function (context, fn) {
-		return function () {
-				return fnApply.call( fn, context, arguments );
-			};
-	},
 	methods = ['assert','count','debug','dir','dirxml','error','group','groupCollapsed','groupEnd','info','log','markTimeline','profile','profileEnd','table','time','timeEnd','trace','warn'],
-	emptyFn = function(){},
 	empty   = {},
 	timeCounters;
 
-for (i = methods.length; i--;) empty[methods[i]] = emptyFn;
+for (i = methods.length; i--;) empty[methods[i]] = functionReturnFirstParam;
 
 if (console && !DEBUG) {
 
@@ -2181,16 +2257,16 @@ if (console && !DEBUG) {
 
 	for (i = methods.length; i--;) {
 		console[methods[i]] = methods[i] in console ?
-			bind(console, console[methods[i]]) : emptyFn;
+			console[methods[i]].bind(console) : functionReturnFirstParam;
 	}
 	console.disable = function () { global.console = empty;   };
 	  empty.enable  = function () { global.console = console; };
 
-	empty.disable = console.enable = emptyFn;
+	empty.disable = console.enable = functionReturnFirstParam;
 
 } else {
 	console = global.console = empty;
-	console.disable = console.enable = emptyFn;
+	console.disable = console.enable = functionReturnFirstParam;
 }
 
 })( typeof console === 'undefined' ? null : console );

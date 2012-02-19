@@ -77,7 +77,6 @@ http://jsperf.com/es5-dom-shim-test
 ## TODO
 0. Describe EXTRAS in README
 0. Tests
-1. fix getAttribute/setAttribute for IE6,7 (it should differentiate attributes and properties with same names)
 2. element.dataset (http://code.eligrey.com/html5/dataset/latest/html5-dataset.js)
 4. http://dvcs.w3.org/hg/url/raw-file/tip/Overview.html (https://gist.github.com/1384398 & https://gist.github.com/1235332)
 5. insertAdjacentText and insertAdjacentElement
