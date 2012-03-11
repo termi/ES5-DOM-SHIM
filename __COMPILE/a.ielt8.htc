@@ -8,6 +8,7 @@
 <PUBLIC:PROPERTY NAME="nextElementSibling" GET="h" />
 <PUBLIC:PROPERTY NAME="previousElementSibling" GET="i" />
 <PUBLIC:PROPERTY NAME="childElementCount" GET="k" />
+<PUBLIC:PROPERTY NAME="reversed" GET="w" />
 <PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_DISCONNECTED" GET="l" />
 <PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_PRECEDING" GET="m" />
 <PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_FOLLOWING" GET="n" />
@@ -32,9 +33,12 @@ n=function(){return 4},
 o=function(){return 8},
 p=function(){return 16},
 q=np.getcontrol,
-l=np.getlabels;
+l=np.getlabels,
+w=np.getreversed;
 if(this!=window){
 if(!this.hasAttribute)this.hasAttribute=np.hasAttribute;
+if(np.getAttribute!==this.getAttribute)this.getAttribute=np.getAttribute;
+if(np.setAttribute!==this.setAttribute)this.setAttribute=np.setAttribute;
 if(!this.compareDocumentPosition)this.compareDocumentPosition=np.compareDocumentPosition;
 if(!this.getElementsByClassName)this.getElementsByClassName=np.getElementsByClassName;
 if(!this.insertAfter)this.insertAfter=np.insertAfter;

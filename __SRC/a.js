@@ -7,7 +7,7 @@
 // ==/ClosureCompiler==
 /**
  * module
- * @version 4.2
+ * @version 4.3
  * TODO:: eng comments
  *        dateTime prop for IE < 8
  */
@@ -17,7 +17,33 @@
 var IS_DEBUG = false;
 /** @define {boolean} */
 var INCLUDE_EXTRAS = true;
+/** @define {boolean} */
+var INCLUDE_EXTEND_POLYFILLS = false;
 //GCC DEFINES END
+
+/*
+INCLUDE_EXTRAS:
+ 1. Exporting "browser" object to global
+ 2. Exporting Utils.Dom.DOMStringCollection
+ 3. Array.prototype.unique
+ 4. Element.prototype.insertAfter
+ 5. global.SendRequest -> ajax
+ 6. global.forEach(<Object | Array>, iterator, context). if `iterator` return __false__ forEach stop working
+ 7. global.randomString
+ 8. $A(iterable, start, end, forse) - alias for Array.from with Array|Object|String|number support eg: $A({a:1, b:2}) == [1,2]
+ 9. $K(iterable, forse) - alias for Object.keys with Arguments|Array|Object|String|number support eg: $A({a:1, b:2}) == ['a','b']
+ 10. bubbleEventListener TODO:: describe in eng. If you known russian you can read JSDoc
+ 11. $ alias for document.getElementById
+ 12. $$ alias for document.querySelectorAll (with ">[any selector]" support)
+ 13. $$0 -> $$[0]
+ 14. Fix console From https://github.com/theshock/console-cap/blob/master/console.js
+*/
+
+/*
+INCLUDE_EXTEND_POLYFILLS:
+ 1. 'reversed' for <ol> with DOM API
+ 2. matchMedia() polyfill from https://github.com/paulirish/matchMedia.js
+*/
 
 ;(
 /**
@@ -156,8 +182,8 @@ var
 	 * @const */
 	_testElement = 
 		document.createElement["orig"] ? 
-			_call(document.createElement["orig"], document, 'div') : //[ielt8]
-			document.createElement('div')
+			_call(document.createElement["orig"], document, '_') : //[ielt8]
+			document.createElement('_')
 	
 	//Fixed `toObject` to work for strings in IE8 and Rhino. Added test spec for `forEach`.
 	//https://github.com/kriskowal/es5-shim/pull/94
@@ -1160,59 +1186,6 @@ if(!String.prototype["toArray"])String.prototype["toArray"] = function() {
 /*  ======================================================================================  */
 /*  ======================================  Events  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-//fix [add|remove]EventListener for all browsers that support it
-if(document.addEventListener && 
-	_testElement.addEventListener//[ielt9] IE < 9 has no `addEventListener` in _testElement
-  ) {
-	// FF fails when you "forgot" the optional parameter for addEventListener and removeEventListener
-	// Agr!!! FF 3.6 Unable to override addEventListener https://bugzilla.mozilla.org/show_bug.cgi?id=428229
-	// Opera didn't do anything without optional parameter
-	var _rightBehavior = false,
-		dummy = function () {
-			_rightBehavior = true
-		};
-	
-	try {
-		_testElement.addEventListener("click", dummy);
-		if(_testElement.click)
-			_testElement.click();//testing
-		else //If !_testElement.click -> modern browsers
-			_rightBehavior = true;
-	} catch (e) {
-	
-	} finally {
-		if(!_rightBehavior) {//fixEventListenerAll
-			_forEach(
-				[global["document"],
-				 global["HTMLDocument"] && global["HTMLDocument"].prototype,
-				 global["Window"] && global["Window"].prototype,
-				 nodeProto], 
-				function (elementToFix) {
-					if(elementToFix) {
-						var old_addEventListener = elementToFix.addEventListener,
-							old_removeEventListener = elementToFix.removeEventListener;
-							
-						if(old_addEventListener)elementToFix.addEventListener = function (type, listener, optional) {
-							optional = optional || false;
-							return old_addEventListener.call(this, type, listener, optional);
-						}
-						//elementToFix.addEventListener.shim = true;
-						if(old_removeEventListener)elementToFix.removeEventListener = function (type, listener, optional) {
-							optional = optional || false;
-							return old_removeEventListener.call(this, type, listener, optional);
-						}
-						//elementToFix.removeEventListener.shim = true;
-					}
-					elementToFix = null;
-				}
-			);
-		}
-	}
-}
-else if(DEBUG && !document.addEventListener) {
-	console.error("[add|remove]EventListener not supported")
-}
-
 // new Event(...) and new CustomEvent(...) from github.com/Raynos/DOM-shim/ with my fixing
 // Chrome throws error if using Error
 // IE9 says Event is an object and not a function -.- 
@@ -1274,12 +1247,64 @@ var _CustomEvent = function (type, dict) {// CustomEvent constructor
 
 var customEventProto;
 try {
-	customEventProto = (global["CustomEvent"] || Event).prototype;//global использую, чтобы ошибка раньше времени не возникла и был шанс получить Event.prototype
+	customEventProto = (global["CustomEvent"] || Event).prototype;//use global to prevent Exception if the is not CustomEvent || CustomEvent.prototype
 	var c = new CustomEvent("magic");
 } catch (e) {
 	global["CustomEvent"] = _CustomEvent
 		
-	if(customEventProto)_CustomEvent.prototype = customEventProto;//В IE < 8 не удастся получить CustomEvent.prototype
+	if(customEventProto)_CustomEvent.prototype = customEventProto;//The is no CustomEvent.prototype in IE < 8
+}
+
+
+//fix [add|remove]EventListener for all browsers that support it
+if(document.addEventListener && 
+	_testElement.addEventListener//[ielt9] IE < 9 has no `addEventListener` in _testElement
+  ) {
+	// FF fails when you "forgot" the optional parameter for addEventListener and removeEventListener
+	// Agr!!! FF 3.6 Unable to override addEventListener https://bugzilla.mozilla.org/show_bug.cgi?id=428229
+	// Opera didn't do anything without optional parameter
+	var _rightBehavior = false,
+		dummy = function () {
+			_rightBehavior = true
+		};
+	
+	try {
+		_testElement.addEventListener("click", dummy);
+		if(_testElement.click)// NO: Opera 10.10
+			_testElement.click();//testing
+		else
+			_testElement.dispatchEvent(new _Event("click"));
+	} catch (e) {
+	
+	} finally {
+		if(!_rightBehavior) {//fixEventListenerAll
+			_forEach(
+				[global["HTMLDocument"] && global["HTMLDocument"].prototype || global["document"],
+				 global["Window"] && global["Window"].prototype || global,
+				 nodeProto], 
+				function (elementToFix) {
+					if(elementToFix) {
+						var old_addEventListener = elementToFix.addEventListener,
+							old_removeEventListener = elementToFix.removeEventListener;
+							
+						if(old_addEventListener)elementToFix.addEventListener = function (type, listener, optional) {
+							optional = optional || false;
+							return old_addEventListener.call(this, type, listener, optional);
+						}
+						//elementToFix.addEventListener.shim = true;
+						if(old_removeEventListener)elementToFix.removeEventListener = function (type, listener, optional) {
+							optional = optional || false;
+							return old_removeEventListener.call(this, type, listener, optional);
+						}
+						//elementToFix.removeEventListener.shim = true;
+					}
+				}
+			);
+		}
+	}
+}
+else if(DEBUG && !document.addEventListener) {
+	console.error("[add|remove]EventListener not supported")
 }
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Events  ======================================  */
@@ -1297,7 +1322,7 @@ if(!("classList" in _testElement)) {
 		"get" : function() {
 			var thisObj = this,
 				cont = thisObj._ || (thisObj._ = {}),//Положим _cachedClassList в контейнер "_"
-				_cachedClassList = "__ccl_00lh__";
+				_cachedClassList = "_ccl_";
 			
 			if(!cont[_cachedClassList])cont[_cachedClassList] = new DOMStringCollection(thisObj.getAttribute("class"), function() {
 				thisObj.setAttribute("class", this.value);//this instanceof DOMStringCollection
@@ -1632,27 +1657,43 @@ if(!("control" in document.createElement("label")))
 /* 
  * Reverse Ordered Lists in HTML5
  * a polyfill for the ordered-list reversed attribute
+ * Based on https://gist.github.com/1671548
+ *
  * http://www.whatwg.org/specs/web-apps/current-work/multipage/grouping-content.html#the-ol-element
  * http://www.whatwg.org/specs/web-apps/current-work/multipage/grouping-content.html#dom-li-value
  * http://www.impressivewebs.com/reverse-ordered-lists-html5/
- * TODO:: shim api
- * Based on https://gist.github.com/1671548
+ * http://html5doctor.com/ol-element-attributes/
+ * TODO:: 
+ *  1. shim api
+ *  2. Equivalent list-style-type:
+		type="1"	decimal (default style)
+		type="a"	lower-alpha
+		type="A"	upper-alpha
+		type="i"	lower-roman
+		type="I"	upper-roman
  */
-/*if(!('reversed' in document.createElement('ol')))
-	global.addEventListener('DOMContentLoaded', function() {
-		_forEach(document.getElementsByTagName('ol'), function(list) {
-			if(!list.hasAttribute('reversed'))return;
+if(INCLUDE_EXTEND_POLYFILLS && !('reversed' in document.createElement("ol"))) {
+	function removeAttributeChildValue(child) {
+		child.removeAttribute("value");
+	}
+	function reversedShim(list) {
+		var reversed = list.getAttribute('reversed'),
+			_ = list["_"];
+		if(reversed !== null && !(_ || _["reversed"]))return;
+		
+		if(!_)_ = list["_"] = {"reversed" : true};//Values container
+		
+		var children = list.children,
+			count = list.getAttribute('start');
 			
-			var children = list.children,
-				count = list.getAttribute('start');
+		//check to see if a start attribute is provided
+		if(count !== null) {
+			count = Number(count);
 
-			//check to see if a start attribute is provided
-			if(count !== null) {
-				count = Number(count);
+			if(isNaN(count))count = null;
+		}
 
-				if(isNaN(count))count = null;
-			}
-
+		if(reversed) {
 			//no, this isn't duplication - start will be set to null
 			// in the previous if statement if an invalid start attribute
 			// is provided
@@ -1660,11 +1701,45 @@ if(!("control" in document.createElement("label")))
 				count = children.length;
 
 			_forEach(children, function(child) {
-				child.value = count--;
+				child["value"] = count--;
 			});
-		});
-	}, false); */
-
+		}
+		else {
+			_["reversed"] = false;
+			if(children[0])children[0]["value"] = count || 0;
+			_forEach(children, removeAttributeChildValue);
+		}
+	}
+	
+	Object.defineProperty(global["HTMLOListElement"] && global["HTMLOListElement"].prototype || nodeProto, "reversed", {
+		get : function () {
+			var thisObj = this;
+			
+			if(thisObj.tagName.toUpperCase() !== "OL")return void 0;
+			
+			return thisObj.getAttribute('reversed') !== null;
+		},
+		/** @param {boolean} value */
+		set : function (value) {
+			var thisObj = this;
+			
+			if(thisObj.tagName.toUpperCase() !== "OL")return void 0;
+			
+			thisObj[(
+				value ? "remove" : 
+				reversedShim(thisObj), //Run shim
+					"set"
+					) + "Attribute"]('reversed', "");
+			
+			return value;
+		}
+	})
+	
+	//Auto init
+	global.addEventListener('DOMContentLoaded', function() {
+		_forEach(document.getElementsByTagName("ol"), reversedShim);
+	}, false);
+}
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  HTMLLabelElement.prototype  ==================================  */
 /*  ======================================================================================  */
 
@@ -1710,6 +1785,22 @@ function xhr(m,u,c,x) {
 }
   TODO:: Посмотреть реализацию тут http://code.google.com/p/microajax/
          и тут https://github.com/ded/Reqwest
+		 
+    xhr.get({
+      url : 'views/ajaxLoad.html',
+      handleAs : 'text',
+      timeout: 30000,
+      load : function(data) {
+        pane.innerHTML = data;
+        dijit.byId("ajaxContainer").resize();
+        prog.stop();
+      },
+      error: function(err) {
+        pane.innerHTML = err;
+        prog.stop();
+      }
+    });
+  };  
  */
 var SendRequest = global["SendRequest"] = function(path, args, onDone, onError, options) {
 	options = options || {};//Default value
@@ -1764,10 +1855,12 @@ var SendRequest = global["SendRequest"] = function(path, args, onDone, onError, 
         
         try {
 			if (options["post"]) {//Если это POST-запрос
+				//Устанавливаем заголовоки
 				//Отсылаем специальный заголовок, чтобы сервер знал, что это AJAX
 				http1.setRequestHeader("X-Requested-With", "HTTPRequest");
-				//Устанавливаем заголовок
 				http1.setRequestHeader("Content-Type","application/x-www-form-urlencoded; charset=utf-8");
+				//req.setRequestHeader('Connection', 'close');
+				
 				//Посылаем запрос
 				http1.send(args);
 			}
@@ -2218,12 +2311,18 @@ if(INCLUDE_EXTRAS) {
 // Делаем консоль более "дружелюбной" 
 // http://habrahabr.ru/blogs/javascript/116852/
 // https://github.com/theshock/console-cap/blob/master/console.js
-// 22.11.2011 Обновил до актуальной версии на github, но с ИЗМЕНЕНИЯМИ !!!!
+// 21.02.2012 Update with CHANGES!!!
 (function (console) {
 
 var i,
 	methods = ['assert','count','debug','dir','dirxml','error','group','groupCollapsed','groupEnd','info','log','markTimeline','profile','profileEnd','table','time','timeEnd','trace','warn'],
 	empty   = {},
+	fnApply = Function.prototype.apply,
+	_bind    = function (context, fn) {
+		return function () {
+				return fnApply.call( fn, context, arguments );
+			};
+	},
 	timeCounters;
 
 for (i = methods.length; i--;) empty[methods[i]] = functionReturnFirstParam;
@@ -2257,7 +2356,7 @@ if (console && !DEBUG) {
 
 	for (i = methods.length; i--;) {
 		console[methods[i]] = methods[i] in console ?
-			console[methods[i]].bind(console) : functionReturnFirstParam;
+			_bind(console, console[methods[i]]) : functionReturnFirstParam;
 	}
 	console.disable = function () { global.console = empty;   };
 	  empty.enable  = function () { global.console = console; };

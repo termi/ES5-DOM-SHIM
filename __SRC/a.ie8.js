@@ -90,8 +90,11 @@ if(!global["Element"])((global["Element"] =
 if(!global["HTMLElement"])global["HTMLElement"] = global["Element"];//IE8
 if(!global["Node"])global["Node"] = global["Element"];//IE8
 
+var _temoObj;
 //Not sure if it wrong. TODO:: tests for this
-if(!global["DocumentFragment"])global["DocumentFragment"] = global["Document"] || global["HTMLDocument"];//For IE8
+if(!global["DocumentFragment"])global["DocumentFragment"] = 
+	global["Document"] || global["HTMLDocument"] ||//For IE8
+	(_temoObj = {}, _temoObj.prototype = {}, _temoObj);
 
 
 
@@ -315,7 +318,7 @@ var guid = 0,// текущий номер обработчика
 	//ielt9CallbakcUUID = "_prl224";// Некий уникальный идентификатор
 	
 function fixEvent(event) {
-	var thisObj;
+	var thisObj = this;
 	
 	// один объект события может передаваться по цепочке разным обработчикам
 	// при этом кроссбраузерная обработка будет вызвана только 1 раз
@@ -422,9 +425,18 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 	//TODO:: useCapture == true
 	if(typeof _handler != "function" && !(typeof _handler == "object" && _handler.handleEvent))return;
 	
-	var thisObj = this;
+	var /** @type {Node} */
+		thisObj = this,
+		/** @type {Object} */
+		_ = thisObj["_"],
+		/** @type {Function} */
+		_callback,
+		/** @type {boolean} */
+		_useInteractive = false;
+		
+	if(!_)_ = thisObj["_"] = {};
 	
-	if(_type == "DOMContentLoaded") {//IE
+	if(_type === "DOMContentLoaded") {//IE
 		var a = document.getElementById("__ie_onload");
 		if(!a) {
 			document.write("<script id=\"__ie_onload\" defer=\"defer\" src=\"javascript:void(0)\"><\/script>");
@@ -444,6 +456,31 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 	
 	}
 	*/
+	else if(_type === "load" && thisObj.tagName.toUpperCase() === "SCRIPT") {//[script:onload]
+		//FROM https://github.com/jrburke/requirejs/blob/master/require.js
+		//Probably IE. IE (at least 6-8) do not fire
+		//script onload right after executing the script, so
+		//we cannot tie the anonymous define call to a name.
+		//However, IE reports the script as being in "interactive"
+		//readyState at the time of the define call.
+		_useInteractive = true;
+		
+		//Need to use old school onreadystate here since
+		//when the event fires and the node is not attached
+		//to the DOM, the evt.srcElement is null, so use
+		//a closure to remember the node.
+		thisObj.onreadystatechange = function (evt) {
+			evt = evt || window.event;
+			//Script loaded but not executed.
+			//Clear loaded handler, set the real one that
+			//waits for script execution.
+			if (thisObj.readyState === 'loaded') {
+				thisObj.onreadystatechange = null;
+				thisObj.attachEvent("onreadystatechange", _callback);
+			}
+		};
+		_type = "readystatechange";
+	}
 	
 	/*
 	TODO::
@@ -451,9 +488,6 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 	If multiple identical EventListeners are registered on the same EventTarget with the same parameters the duplicate instances are discarded. They do not cause the EventListener to be called twice and since they are discarded they do not need to be removed with the removeEventListener method.
 	*/
 	
-	
-	var _ = thisObj["_"];
-	if(!_)_ = thisObj["_"] = {};
 	
 	// исправляем небольшой глюк IE с передачей объекта window
 	if(thisObj.setInterval && (thisObj != global && !thisObj.frameElement))thisObj = global;
@@ -465,9 +499,9 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 	//Обработчик _[handleUUID] фильтрует редко возникающую ошибку, когда событие отрабатывает после unload'а страницы. 
 	//Основная же его задача - передать вызов универсальному обработчику commonHandle с правильным указанием текущего элемента this. 
 	//Как и events, _[handleUUID] достаточно инициализовать один раз для любых событий.
-	if(!_[eventsUUID]) {
+	if(!(_callback = _[eventsUUID])) {
 		_[eventsUUID] = {};
-		_[handleUUID] = function(event) {
+		_callback = _[handleUUID] = function(event) {
 			if(event !== void 0)
 				return commonHandle.call(thisObj, event);
 		}
@@ -477,8 +511,9 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 	// _[handleUUID] как обработчик на elem для запуска браузером по событию type.
 	if(!_[eventsUUID][_type]) {
 		_[eventsUUID][_type] = {};
-
-		thisObj.attachEvent('on' + _type, _[handleUUID]);
+		
+		if(!_useInteractive)//[script:onload]
+			thisObj.attachEvent('on' + _type, _callback);
 	}
 	
 	//Добавляем пользовательский обработчик в список elem[eventsUUID][type] под заданным номером. 
@@ -631,7 +666,7 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 		return eventObject;
 	}
 }
-if(Event && Event.prototype) {
+if(global.Event && Event.prototype) {
 	Event.prototype.stopPropagation = function () {this.cancelBubble = true;};
     Event.prototype.preventDefault = function () {this.returnValue = false;};
 }
@@ -785,7 +820,7 @@ var filter = elem.style['filter'];
 
 /* getAttribute, setAttribute, hasAttribute fix fix in IE*/
 var randomValue = _testElement.sentinel = Math.round(Math.random() * 1e9);
-if(_testElement.getAttribute("sentinel") === randomValue + "" || nodeProto["ielt8"]) {
+if(_testElement.getAttribute("sentinel") == randomValue + "" || nodeProto["ielt8"]) {
 	var //_ielt9_getAttribute = nodeProto.getAttribute,
 		//_ielt9_hasAttribute = nodeProto.hasAttribute,//No need
 		_ielt9_setAttribute = nodeProto.setAttribute,
@@ -948,7 +983,7 @@ var _cloneElement = global["cloneElement"] = function(element, include_all, dele
 			result = _cloneElement.safeElement.firstChild; // return HTML5-safe element's first child, which is an outerHTML clone of the input element
 			
 			//FIX IE lt 8 Element.prototype
-			if(nodeProto["ielt8"])Object["append"](el, nodeProto);
+			//if(nodeProto["ielt8"])Object["append"](el, nodeProto);
 		}
 	}
 	else result = _cloneElement.nativeCloneNode.call(element, include_all);

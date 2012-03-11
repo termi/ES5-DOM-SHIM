@@ -26,13 +26,20 @@ var nodeProto = global.Node.prototype,//Note: for IE < 8 `Node` and `Node.protot
 	browser = global.browser,
 	noDocumentReadyState,
 	supportedTagNames = __SUPPORTED__TAG_NAMES__.split(","),
-	notSupportedTagNames = ["script", "style", "object", 
-		"x-i", "x-s"//From https://github.com/termi/Element.details/
+	notSupportedTagNames = [
+		"script", "style",
+		"object",//IE < 8 BUG?
+		"_"//use it for feature detecting
 	],
-	ielt8BehaviorRule = "{behavior: url(\"" + __URL_TO_ELEMENT_BEHAVIOR__ + "\")}",
-	ielt7BehaviorRule = "{behavior: url(\"" + __URL_TO_ELEMENT_BEHAVIOR__ + "\") url(\"" + __URL_TO_IE6_ELEMENT_BEHAVIOR__ + "\")}",
-	ielt9BehaviorRule = browser.msie < 7 ? ielt7BehaviorRule : ielt8BehaviorRule,
+	ieltbehaviorRules = [__URL_TO_ELEMENT_BEHAVIOR__],
+	ielt9BehaviorRule = "{behavior:",
 	_call = Date.call;
+
+if(browser.msie < 7)ieltbehaviorRules.push(__URL_TO_IE6_ELEMENT_BEHAVIOR__);
+	
+for(var jj = 0 ; jj < ieltbehaviorRules.length ; ++jj)
+	ielt9BehaviorRule += (" url(\"" + ieltbehaviorRules[jj] + "\")");
+ielt9BehaviorRule += "}";
 	
 if(!document.readyState) {
 	noDocumentReadyState = true;
@@ -41,7 +48,7 @@ if(!document.readyState) {
 	
 if(nodeProto["ie"] && browser.msie < 8) {//IE < 8 polifill
 
-
+nodeProto["ielt8"] = true;
 
 //global["__ielt8__wontfix"] = [];//TODO:: use it to extend 'OBJECT' tag with compareDocumentPosition, getElementsByClassName and etc functions
 
@@ -495,10 +502,13 @@ document.createElement = function(tagName) {
 		document.head.appendChild(style);*/
 		
 		//ugly, but work
-		document.write("<style>" + tagName + ielt9BehaviorRule + "</style>");
+		if(document.readyState != "interactive" && document.readyState != "complete")
+			document.write("<style>" + tagName + ielt9BehaviorRule + "</style>");
 		
 		supportedTagNames.push(tagName);
 	}
+	for(var jj = 0 ; jj < ieltbehaviorRules.length ; ++jj)
+		el.addBehavior(ieltbehaviorRules[jj]);
 	
 	return el;
 }
@@ -516,12 +526,16 @@ if(!global.XMLHttpRequest)global.XMLHttpRequest = ActiveXObject.bind(global, "Mi
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Network  ======================================  */
 /*  =======================================================================================  */
 
-global.addEventListener('DOMContentLoaded', function() {//Emulated method
-	if(noDocumentReadyState)document.readyState = "interactive";
-}, false);
-global.attachEvent('onload', function() {//Native method
-	if(noDocumentReadyState)document.readyState = "complete";
-});
+if(noDocumentReadyState) {
+	global.addEventListener('DOMContentLoaded', function DOMContentLoaded() {//Emulated method
+		document.readyState = "interactive";
+		global.removeEventListener('DOMContentLoaded', DOMContentLoaded, false);
+	}, false);
+	global.attachEvent('onload', function onload() {//Native method
+		document.readyState = "complete";
+		global.detachEvent('onload', onload);
+	});
+}
 
 
 

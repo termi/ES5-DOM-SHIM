@@ -8,6 +8,7 @@
 <PUBLIC:PROPERTY NAME="nextElementSibling" GET="getNextElementSibling" />
 <PUBLIC:PROPERTY NAME="previousElementSibling" GET="getPreviousElementSibling" />
 <PUBLIC:PROPERTY NAME="childElementCount" GET="getChildElementCount" />
+<PUBLIC:PROPERTY NAME="reversed" GET="getReversed" />
 
 <PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_DISCONNECTED" GET="getDPD" />
 <PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_PRECEDING" GET="getDPP" />
@@ -35,11 +36,12 @@ var Element_proto=window.Node.prototype,
 	getDPC=function(){return 0x08},
 	getDPCB=function(){return 0x10},
 	getControl=Element_proto.getcontrol,
-	getLabels=Element_proto.getlabels;
+	getLabels=Element_proto.getlabels,
+	getReversed=Element_proto.getreversed;
 	
 if(this != window) {//Strange IE bug where this === window
 	if(!this.compareDocumentPosition)this.compareDocumentPosition=Element_proto.compareDocumentPosition;
-	if(!this.compareDocumentPosition)window.__ielt8__wontfix.push(this);//'OBJECT' tag
+	//if(!this.compareDocumentPosition)window.__ielt8__wontfix.push(this);//'OBJECT' tag
 	if(!this.getElementsByClassName)this.getElementsByClassName=Element_proto.getElementsByClassName;
 	if(!this.insertAfter)this.insertAfter=Element_proto.insertAfter;
 	/*@requared: window.addEventListener, window.removeEventListener, window.dispatchEvent */
@@ -48,6 +50,8 @@ if(this != window) {//Strange IE bug where this === window
 	if(!this.dispatchEvent)this.dispatchEvent=window.dispatchEvent;
 	if(this.cloneNode!==Element_proto.cloneNode)this.cloneNode=Element_proto.cloneNode;
 	if(!this.hasAttribute)this.hasAttribute!==Element_proto.hasAttribute;
+	if(this.getAttribute!==Element_proto.getAttribute)this.getAttribute = Element_proto.getAttribute;
+	if(this.setAttribute!==Element_proto.setAttribute)this.setAttribute = Element_proto.setAttribute;
 
 	if(!this.querySelectorAll)this.querySelectorAll=window._ielt8_querySelectorAll;
 	if(!this.querySelector)this.querySelector=window._ielt8_querySelector;
