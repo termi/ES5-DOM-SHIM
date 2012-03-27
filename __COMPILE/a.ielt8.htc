@@ -16,6 +16,7 @@
 <PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_CONTAINED_BY" GET="p" />
 <PUBLIC:PROPERTY NAME="control" GET="q" />
 <PUBLIC:PROPERTY NAME="labels" GET="l" />
+<PUBLIC:PROPERTY NAME="textContent" GET="z" PUT="x" />
 <SCRIPT>
 var np=window.Node.prototype,
 a=np.getclassList,
@@ -34,7 +35,9 @@ o=function(){return 8},
 p=function(){return 16},
 q=np.getcontrol,
 l=np.getlabels,
-w=np.getreversed;
+w=np.getreversed,
+z=np.gettextContent,
+x=np.settextContent;
 if(this!=window){
 if(!this.hasAttribute)this.hasAttribute=np.hasAttribute;
 if(np.getAttribute!==this.getAttribute)this.getAttribute=np.getAttribute;

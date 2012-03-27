@@ -19,6 +19,8 @@
 <PUBLIC:PROPERTY NAME="control" GET="getControl" />
 <PUBLIC:PROPERTY NAME="labels" GET="getLabels" />
 
+<PUBLIC:PROPERTY NAME="textContent" GET="getTextContent" PUT="setTextContent" />
+
 <SCRIPT>
 /*@requared window.Node.prototype = { ielt8 : true }*/
 var Element_proto=window.Node.prototype,
@@ -37,7 +39,9 @@ var Element_proto=window.Node.prototype,
 	getDPCB=function(){return 0x10},
 	getControl=Element_proto.getcontrol,
 	getLabels=Element_proto.getlabels,
-	getReversed=Element_proto.getreversed;
+	getReversed=Element_proto.getreversed,
+	getTextContent=Element_proto.gettextContent,
+	setTextContent=Element_proto.settextContent;
 	
 if(this != window) {//Strange IE bug where this === window
 	if(!this.compareDocumentPosition)this.compareDocumentPosition=Element_proto.compareDocumentPosition;

@@ -7,7 +7,7 @@
 // ==/ClosureCompiler==
 /**
  * ES5 and DOM shim for IE < 9
- * @version 1.2
+ * @version 1.3
  * required:
  *  - Object.append
  */
@@ -71,7 +71,22 @@ var _throwDOMException = function(errStr) {
 		ex.code = DOMException[errStr];
 		ex.message = errStr +': DOM Exception ' + ex.code;
 		throw ex;
-	}
+	},
+	_recursivelyWalk = function (nodes, cb) {
+		for (var i = 0, len = nodes.length; i < len; i++) {
+			var node = nodes[i],
+				ret = cb(node);
+			if (ret) {
+				return ret;
+			}
+			if (node.childNodes && node.childNodes.length > 0) {
+				ret = _recursivelyWalk(node.childNodes, cb);
+				if (ret) {
+					return ret;
+				}
+			}
+		}
+	};
 	
 
 //Emulating HEAD for ie < 9
@@ -146,6 +161,10 @@ if('te'.split(/(s)*/)[1] != void 0 ||
 		var str = this;
 		// if `separator` is not a regex, use the native `split`
 		if(!(separator instanceof RegExp)) {//if (Object.prototype.toString.call(separator) !== "[object RegExp]") {
+			//http://es5.github.com/#x15.5.4.14
+			//If separator is undefined, then the result array contains just one String, which is the this value (converted to a String). If limit is not undefined, then the output array is truncated so that it contains no more than limit elements.
+			if(separator === void 0 && limit === 0)return [];
+			
 			return _origStringSplit.call(str, separator, limit);
 		}
 
@@ -666,9 +685,9 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 		return eventObject;
 	}
 }
-if(global.Event && Event.prototype) {
-	Event.prototype.stopPropagation = function () {this.cancelBubble = true;};
-    Event.prototype.preventDefault = function () {this.returnValue = false;};
+if(global.Event && global.Event.prototype) {
+	Event.prototype.stopPropagation = stopPropagation_;
+    Event.prototype.preventDefault = preventDefault_;
 }
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Events  ======================================  */
@@ -692,6 +711,27 @@ if(!document.ELEMENT_NODE) {
 	document.DOCUMENT_TYPE_NODE = 10;
 	document.DOCUMENT_FRAGMENT_NODE = 11;
 	document.NOTATION_NODE = 12;
+}
+
+//https://developer.mozilla.org/En/DOM/Node.textContent
+if(DEBUG && !("textContent" in _testElement)) {
+	if(!('innerText' in this) &&
+	   (!('data' in this) || !this.appendData))
+		throw Error("IE is too old");
+}
+if(!("textContent" in _testElement)) {
+	Object.defineProperty(nodeProto, "textContent", {
+		"get" : function() {
+			if('innerText' in this)return this.innerText;
+			if('data' in this && this.appendData)return this.data;
+		},
+		"set" : function(val) {
+			if('innerText' in this)this.innerText = val;
+			else if('data' in this && this.replaceData)this.replaceData(0, this.length, value);
+			
+			return val;
+		}
+	});
 }
 
 /*
@@ -734,37 +774,30 @@ if(!document.importNode) {
 	document.importNode["shim"] = true;
 }
 
-function _recursivelyWalk(nodes, cb) {
-    for (var i = 0, len = nodes.length; i < len; i++) {
-        var node = nodes[i],
-			ret = cb(node);
-        if (ret) {
-            return ret;
-        }
-        if (node.childNodes && node.childNodes.length > 0) {
-            ret = _recursivelyWalk(node.childNodes, cb);
-            if (ret) {
-                return ret;
-            }
-        }
-    }
-};
-
-function isCssClass(element, value) {
-	if(!element.className)return false;
-	return !!~(" " + element.className + " ").indexOf(" " + value + " ");
+function isCssClass(element, classes) {
+	if(!element.className || !classes.length || classes.length === 1 && !classes[0])return false;
+	var elementClass = " " + element.className + " ",
+		match = true,
+		k = -1;
+	while(match && ++k < classes.length) {
+		match = !!~(elementClass).indexOf(" " + classes[k] + " ");
+	};
+	return match;
 }
 
 var attr = "getElementsByClassName";
 if(!(attr in _testElement))document[attr] = nodeProto[attr] = function(clas) {
 	var ar = [];
-	
-	clas && _recursivelyWalk(this.childNodes, function (el, index) {
-		if (el.nodeType == 1 && isCssClass(el, clas)) {
-			ar.push(el);
-		}
-	});
-	
+	if(arguments.length) {
+		clas = (clas + "").trim().split(" ");
+		
+		clas.length && _recursivelyWalk(this.childNodes, function (el, index) {
+			if(el.nodeType == 1 && isCssClass(el, clas)) {
+				ar.push(el);
+			}
+		});
+	}
+	else throw new Error('WRONG_ARGUMENTS_ERR');
 	return ar;
 };
 
@@ -819,12 +852,12 @@ var filter = elem.style['filter'];
 }
 
 /* getAttribute, setAttribute, hasAttribute fix fix in IE*/
-var randomValue = _testElement.sentinel = Math.round(Math.random() * 1e9);
+var randomValue = _testElement["sentinel"] = Math.round(Math.random() * 1e9);
 if(_testElement.getAttribute("sentinel") == randomValue + "" || nodeProto["ielt8"]) {
-	var //_ielt9_getAttribute = nodeProto.getAttribute,
-		//_ielt9_hasAttribute = nodeProto.hasAttribute,//No need
-		_ielt9_setAttribute = nodeProto.setAttribute,
-		_ielt9_removeAttribute = nodeProto.removeAttribute;
+	var //_ielt9_getAttribute = _testElement.getAttribute,
+		//_ielt9_hasAttribute = _testElement.hasAttribute,//No need
+		_ielt9_setAttribute = _testElement.setAttribute,
+		_ielt9_removeAttribute = _testElement.removeAttribute;
 	
 	nodeProto.getAttribute = function(name) {
 		var thisObj = this,

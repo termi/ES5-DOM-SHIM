@@ -17,13 +17,19 @@
 }
 
 </style>
+<!--[if lt IE 9]>
+<script src="/__SRC/a.ie8.js"></script>
+<![endif]-->
+<!--[if lt IE 8]>
+<script src="/__SRC/a.ielt8.js"></script>
+<![endif]-->
+<script src="/__SRC/a.js"></script>
 <script>
 document.createElement("j");
 document.createElement("c");
 document.createElement("h");
 document.createElement("f");
 </script>
-<script src="../../__SRC/a.js"></script>
 
 </head>
 <body>
@@ -105,6 +111,7 @@ function main() {
 	
 	var j = document.getElementsByClassName("test")[0];
 	j.addEventListener("someEvent", console.log.bind(null, "j someEvent bubble"), false);
+	j = document.querySelector(".test");
 	j.addEventListener("someEvent", console.log.bind(null, "j someEvent capture"), true);
 	
 	$("test2").addEventListener("someEvent", console.log.bind(null, "test2 someEvent capture"), true);

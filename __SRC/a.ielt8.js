@@ -13,9 +13,9 @@
 
 //CONFIG START
 var /** @const*/
-	__URL_TO_ELEMENT_BEHAVIOR__     = 'a.ielt8.htc',
+	__URL_TO_ELEMENT_BEHAVIOR__     = '/a.ielt8.htc',
 	/** @const*/
-	__URL_TO_IE6_ELEMENT_BEHAVIOR__ = 'a.ie6.ielt8.htc',
+	__URL_TO_IE6_ELEMENT_BEHAVIOR__ = '/a.ie6.ielt8.htc',
 	/** @const*/
 	__STYLE_ID                      = "ielt8_style_prev_for_behaviour",
 	/** @const List of supportng tag names */
@@ -55,24 +55,31 @@ nodeProto["ielt8"] = true;
 // Node.attributes path for IE < 8
 // No Node.attributes patch for document.head :(
 // [BUG]: '`attribute` shim dosn't work on `OBJECT` element
-var __notAnAttribute = {"insertAfter" : 1, "getElementsByClassName" : 1, "compareDocumentPosition" : 1, "_" : 1, "hasAttribute" : 1, "getAttribute" : 1, "setAttribute" : 1, "addEventListener" : 1, "removeEventListener" : 1, "dispatchEvent" : 1, "cloneNode" : 1, "quersySelectorAll" : 1, "quersySelector" : 1},
+var __notAnAttribute = {"insertAfter" : 1, "getElementsByClassName" : 1, "compareDocumentPosition" : 1, "_" : 1, "hasAttribute" : 1, "getAttribute" : 1, "setAttribute" : 1, "addEventListener" : 1, "removeEventListener" : 1, "dispatchEvent" : 1, "cloneNode" : 1, "querySelectorAll" : 1, "querySelector" : 1},
 	__getAtt = global["_ielt8_getAttributes"] = function() {
 	/*
 	[BUG]strange behavior on 'object' element: IE < 8 won't create '_' container
 	*/
-	var tmp = this._ && this._["__ielt8_attributes__"],//__ielt8_attributes__ seted in .htc file
-		res = {length : 0},
+	var _ = this["_"],
+		__ielt8_attributes__ = _ && _["__ielt8_attributes__"],//__ielt8_attributes__ seted in .htc file
+		last__ielt8_attributes__length = _ && _["last__ielt8_attributes__length"],
+		result = 
+			__ielt8_attributes__ && last__ielt8_attributes__length === __ielt8_attributes__.length && _["__true_ielt8_attributes__"] || 
+			{"length" : 0},
 		val;
 	
-	//if(!tmp)throw Error("__ielt8_attributes__ is required")
-	if(!tmp)return res;
+	//if(!__ielt8_attributes__)throw Error("__ielt8_attributes__ is required")
+	if(!__ielt8_attributes__ || result.length)return result;
 	
-	for(var i = 0, l = tmp.length, k = 0 ; i < l ; i++)if((val = tmp[i]).specified && !(val.name in __notAnAttribute)){
-		res[k++] = val;
-		res[tmp[i].name] = val;
-		res.length++;
-	}
-	return res;
+	for(var i = 0, l = __ielt8_attributes__.length, k = 0 ; i < l ; i++)
+		if((val = __ielt8_attributes__[i]).specified && !(val.name in __notAnAttribute)){
+			result[k++] = val;
+			result[__ielt8_attributes__[i].name] = val;
+			result.length++;
+		}
+	_["last__ielt8_attributes__length"] = __ielt8_attributes__.length;
+	_["__true_ielt8_attributes__"] = result;
+	return result;
 }
 
 /**
@@ -149,7 +156,7 @@ function queryOneSelector(selector, root) {
 			}
 			else if(isClasses) {				
 				while(_curClass = classes[++ir])
-					result.concat(root.getElementsByClassName(_curClass));
+					result = result.concat(root.getElementsByClassName(_curClass));
 				
 				isClasses = false;
 			}
@@ -502,7 +509,7 @@ document.createElement = function(tagName) {
 		document.head.appendChild(style);*/
 		
 		//ugly, but work
-		if(document.readyState != "interactive" && document.readyState != "complete")
+		if(/*document.readyState != "interactive" && */document.readyState != "complete")
 			document.write("<style>" + tagName + ielt9BehaviorRule + "</style>");
 		
 		supportedTagNames.push(tagName);

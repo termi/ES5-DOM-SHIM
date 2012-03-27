@@ -7,7 +7,7 @@
 // ==/ClosureCompiler==
 /**
  * module
- * @version 4.3
+ * @version 4.4
  * TODO:: eng comments
  *        dateTime prop for IE < 8
  */
@@ -77,7 +77,7 @@ if(INCLUDE_EXTRAS) {
 	 * @const */
 	browser.names = browser.agent.match(/(mozilla|compatible|chrome|webkit|safari|opera|msie|iphone|ipod|ipad)/gi);
 	/** @type {number} */
-	var len = browser.names.length;
+	var len = browser.names && browser.names.length || 0;
 	while(len-- > 0)browser[browser.names[len]] = true;
 	//Alians'es
 	/** @type {boolean}
@@ -222,6 +222,21 @@ var
   , functionReturnFalse = function() { return false }
   , functionReturnFirstParam = function(param) { return param }
   , prototypeOfObject = Object.prototype
+  , _recursivelyWalk = function (nodes, cb) {
+		for (var i = 0, len = nodes.length; i < len; i++) {
+			var node = nodes[i],
+				ret = cb(node);
+			if (ret) {
+				return ret;
+			}
+			if (node.childNodes && node.childNodes.length > 0) {
+				ret = _recursivelyWalk(node.childNodes, cb);
+				if (ret) {
+					return ret;
+				}
+			}
+		}
+	  };
 ;
 	
 	
@@ -305,22 +320,6 @@ Object["extend"] = createExtendFunction(true);
 Object["inherit"] = function(Child, Parent) {
 	(Child.prototype = Object.create(Child["superclass"] = Parent.prototype)).constructor = Child;
 }
-
-/*
-	Quick way to define prototypes; much less verbose than standard 
-	foobar.prototype.someFunc = function() lists. See ApplicationCache
-	defined below for example use.
-
-	@param f Function object/constructor to add to.
-	@param addMe Object literal that contains the properties/methods to
-		add to f's prototype.
-	TODO:: jsdoc's и описать
-*/
-/*global["append"] = function(f, addMe) {
-	for (var i in addMe) {
-		f.prototype[i] = addMe[i];
-	}
-}*/
 
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Classes  ======================================  */
@@ -1039,6 +1038,7 @@ if(!Array.prototype.lastIndexOf)Array.prototype.lastIndexOf = function(obj, i) {
  * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/every
  * @param {Function} callback критерий соответствия.
  * @param {Object=} opt_thisobj Контент в рамках которого мы будем вызывать функцию
+ * @param {boolean} _option_isAll [DO NOT USE IT] system param
  * @this {Object}
  * @return {boolean}
  */
@@ -1099,7 +1099,7 @@ if (!Array.prototype.map)Array.prototype.map = function(callback, thisArg) {
 	
 	_forEach(this, function(v, k, obj) {
 		var mappedValue = _call(callback, thisArg, v, k, obj);
-		result[k] = v;
+		result[k] = mappedValue;
 	})
 	
     return result;
@@ -1152,6 +1152,21 @@ if (!String.prototype.trim || whitespace.trim()) {
     String.prototype.trim = function trim() {
         return String(this).replace(trimBeginRegexp, "").replace(trimEndRegexp, "");
     };
+}
+
+/**
+ [bugfix]
+ * ES5 15.5.4.14
+ * http://es5.github.com/#x15.5.4.14
+ * If separator is undefined, then the result array contains just one String, which is the this value (converted to a String). If limit is not undefined, then the output array is truncated so that it contains no more than limit elements.
+ * "a".split(undefined, 0) -> []
+ */
+if("a".split(void 0, 0).length) {
+	var oldSplit = String.prototype.split;
+	String.prototype.split = function(separator, limit) {
+		if(separator === void 0 && limit === 0)return [];
+		return _call(oldSplit, this, arguments);
+	}
 }
 
 //from https://github.com/paulmillr/es6-shim/blob/master/es6-shim.js
@@ -1321,7 +1336,7 @@ if(!("classList" in _testElement)) {
 	Object.defineProperty(nodeProto, "classList", {
 		"get" : function() {
 			var thisObj = this,
-				cont = thisObj._ || (thisObj._ = {}),//Положим _cachedClassList в контейнер "_"
+				cont = thisObj["_"] || (thisObj["_"] = {}),//Положим _cachedClassList в контейнер "_"
 				_cachedClassList = "_ccl_";
 			
 			if(!cont[_cachedClassList])cont[_cachedClassList] = new DOMStringCollection(thisObj.getAttribute("class"), function() {
@@ -1333,6 +1348,13 @@ if(!("classList" in _testElement)) {
 		}
 	});
 }
+
+//https://developer.mozilla.org/En/DOM/Node.contains
+//[FF lt 9]
+if(!("contains" in _testElement))
+	nodeProto.contains = function (arg) {
+		return !!(this.compareDocumentPosition(arg) & 16)
+	}
 
 // Fix "children" property in IE < 9
 // TODO: in `a.ie8.js` file
@@ -1351,7 +1373,7 @@ if(!("children" in _testElement) || browser.msie && browser.msie < 9)
 
 // Traversal for IE < 9 and other
 // TODO: in `a.ie8.js` file
-if(_testElement.childElementCount == undefined)Object.defineProperties(nodeProto, {
+if(_testElement.childElementCount == void 0)Object.defineProperties(nodeProto, {
 	"firstElementChild" : {
 		"get" : function() {
 		    var node = this;
@@ -1394,22 +1416,6 @@ if(_testElement.childElementCount == undefined)Object.defineProperties(nodeProto
 	}
 }
 )
-
-function _recursivelyWalk(nodes, cb) {
-    for (var i = 0, len = nodes.length; i < len; i++) {
-        var node = nodes[i],
-			ret = cb(node);
-        if (ret) {
-            return ret;
-        }
-        if (node.childNodes && node.childNodes.length > 0) {
-            ret = _recursivelyWalk(node.childNodes, cb);
-            if (ret) {
-                return ret;
-            }
-        }
-    }
-};
 
 /*https://gist.github.com/1276030 by https://gist.github.com/eligrey*/
 if(!("insertAdjacentHTML" in _testElement)) {
@@ -1500,6 +1506,7 @@ Object.defineProperty((global["HTMLUnknownElement"] && global["HTMLUnknownElemen
 // FF thinks the argument is not optional
 // Opera agress that its not optional
 // IE < 9 has javascript implimentation marked as `shim`
+// FROM https://github.com/Raynos/DOM-shim/blob/master/src/all/bugs.js
 if(!document.importNode["shim"])
 try {
 	document.importNode(_testElement);
@@ -1512,6 +1519,33 @@ try {
 		}
 		return importNode.call(this, node, bool);
 	}
+}
+
+// Firefox fails on .cloneNode thinking argument is not optional
+// Opera agress that its not optional.
+// FROM https://github.com/Raynos/DOM-shim/blob/master/src/all/bugs.js
+try {
+	_testElement.cloneNode();
+} catch (e) {
+	[
+		Node.prototype,
+		//Comment.prototype,
+		Element.prototype,
+		//ProcessingInstruction.prototype,
+		Document.prototype,
+		//DocumentType.prototype,
+		DocumentFragment.prototype
+	].forEach(fixNodeOnProto);
+}
+function fixNodeOnProto(proto) {
+	var cloneNode = proto.cloneNode;
+	delete proto.cloneNode;
+	proto.cloneNode = function _cloneNode(bool) {
+		if (bool === undefined) {
+			bool = true;
+		}  
+		return cloneNode.call(this, bool);
+	};    
 }
 
 
@@ -1672,11 +1706,14 @@ if(!("control" in document.createElement("label")))
 		type="i"	lower-roman
 		type="I"	upper-roman
  */
+//In strict mode code, functions can only be declared at top level or immediately within another function
+var removeAttributeChildValue,
+	reversedShim;
 if(INCLUDE_EXTEND_POLYFILLS && !('reversed' in document.createElement("ol"))) {
-	function removeAttributeChildValue(child) {
+	removeAttributeChildValue = function(child) {
 		child.removeAttribute("value");
 	}
-	function reversedShim(list) {
+	reversedShim = function(list) {
 		var reversed = list.getAttribute('reversed'),
 			_ = list["_"];
 		if(reversed !== null && !(_ || _["reversed"]))return;
