@@ -1,0 +1,9 @@
+<PUBLIC:COMPONENT lightWeight="true">
+<PUBLIC:PROPERTY NAME="attributes" GET="getattributes" />
+<SCRIPT>
+/*@requared window.Node.prototype = { ielt8 : true }*/
+var 
+	Node_proto = window.Node.prototype,
+	getattributes = Node_proto._ielt8_getAttributes;
+</SCRIPT>
+</PUBLIC:COMPONENT>

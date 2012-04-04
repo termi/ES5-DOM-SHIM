@@ -1,58 +1,67 @@
 <PUBLIC:COMPONENT lightWeight="true">
 <PUBLIC:PROPERTY NAME="classList" GET="a" />
-<PUBLIC:PROPERTY NAME="attributes" GET="b" />
+<!--PUBLIC:PROPERTY NAME="attributes" GET="b" /-->
 <PUBLIC:PROPERTY NAME="children" GET="c" />
-<PUBLIC:PROPERTY NAME="dataset" GET="e" />
 <PUBLIC:PROPERTY NAME="firstElementChild" GET="f" />
 <PUBLIC:PROPERTY NAME="lastElementChild" GET="g" />
 <PUBLIC:PROPERTY NAME="nextElementSibling" GET="h" />
 <PUBLIC:PROPERTY NAME="previousElementSibling" GET="i" />
 <PUBLIC:PROPERTY NAME="childElementCount" GET="k" />
 <PUBLIC:PROPERTY NAME="reversed" GET="w" />
-<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_DISCONNECTED" GET="l" />
-<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_PRECEDING" GET="m" />
-<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_FOLLOWING" GET="n" />
-<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_CONTAINS" GET="o" />
-<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_CONTAINED_BY" GET="p" />
 <PUBLIC:PROPERTY NAME="control" GET="q" />
 <PUBLIC:PROPERTY NAME="labels" GET="l" />
 <PUBLIC:PROPERTY NAME="textContent" GET="z" PUT="x" />
+
+<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_DISCONNECTED" GET="_g1" />
+<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_PRECEDING" GET="_g2" />
+<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_FOLLOWING" GET="_g4" />
+<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_CONTAINS" GET="_g8" />
+<PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_CONTAINED_BY" GET="_g16" />
+<PUBLIC:PROPERTY NAME="ELEMENT_NODE" GET="_g1" />
+<PUBLIC:PROPERTY NAME="ATTRIBUTE_NODE" GET="_g2" />
+<PUBLIC:PROPERTY NAME="TEXT_NODE" GET="_g3" />
+<PUBLIC:PROPERTY NAME="CDATA_SECTION_NODE" GET="_g4" />
+<PUBLIC:PROPERTY NAME="ENTITY_REFERENCE_NODE" GET="_g5" />
+<PUBLIC:PROPERTY NAME="ENTITY_NODE" GET="_g6" />
+<PUBLIC:PROPERTY NAME="PROCESSING_INSTRUCTION_NODE" GET="_g7" />
+<PUBLIC:PROPERTY NAME="COMMENT_NODE" GET="_g8" />
+<PUBLIC:PROPERTY NAME="DOCUMENT_NODE" GET="_g9" />
+<PUBLIC:PROPERTY NAME="DOCUMENT_TYPE_NODE" GET="_g10" />
+<PUBLIC:PROPERTY NAME="DOCUMENT_FRAGMENT_NODE" GET="_g11" />
+<PUBLIC:PROPERTY NAME="NOTATION_NODE" GET="_g12" />
 <SCRIPT>
-var np=window.Node.prototype,
-a=np.getclassList,
-b=window._ielt8_getAttributes,
-c=np.getchildren,
-e=np.getdataset,
-f=np.getfirstElementChild,
-g=np.getlastElementChild,
-h=np.getnextElementSibling,
-i=np.getpreviousElementSibling,
-k=np.getchildElementCount,
-l=function(){return 1},
-m=function(){return 2},
-n=function(){return 4},
-o=function(){return 8},
-p=function(){return 16},
-q=np.getcontrol,
-l=np.getlabels,
-w=np.getreversed,
+var 
+np=window.Node.prototype,ep=window.Element.prototype,
+a=ep.getclassList,
+b=np._ielt8_getAttributes,
+c=ep.getchildren,
+f=ep.getfirstElementChild,
+g=ep.getlastElementChild,
+h=ep.getnextElementSibling,
+i=ep.getpreviousElementSibling,
+k=ep.getchildElementCount,
+q=ep.getcontrol,
+l=ep.getlabels,
+w=ep.getreversed,
 z=np.gettextContent,
-x=np.settextContent;
+x=np.settextContent,
+_g1=np.g1,_g2=np.g2,_g3=np.g3,_g4=np.g4,_g5=np.g5,_g6=np.g6,
+_g7=np.g7,_g8=np.g8,_g9=np.g9,_g10=np.g10,_g11=np.g11,_g12=np.g12,
+_g16=np.g16;
 if(this!=window){
-if(!this.hasAttribute)this.hasAttribute=np.hasAttribute;
-if(np.getAttribute!==this.getAttribute)this.getAttribute=np.getAttribute;
-if(np.setAttribute!==this.setAttribute)this.setAttribute=np.setAttribute;
-if(!this.compareDocumentPosition)this.compareDocumentPosition=np.compareDocumentPosition;
-if(!this.getElementsByClassName)this.getElementsByClassName=np.getElementsByClassName;
-if(!this.insertAfter)this.insertAfter=np.insertAfter;
-if(!this.addEventListener)this.addEventListener=window.addEventListener;
-if(!this.removeEventListener)this.removeEventListener=window.removeEventListener;
-if(!this.dispatchEvent)this.dispatchEvent=window.dispatchEvent;
-if(this.cloneNode!==np.cloneNode)this.cloneNode=np.cloneNode;
+try{
 if(!this._)this._={};
-if(!this._.__ielt8_attributes__)this._.__ielt8_attributes__=this.attributes;
-if(!this.querySelectorAll)this.querySelectorAll=window._ielt8_querySelectorAll;
-if(!this.querySelector)this.querySelector=window._ielt8_querySelector;
+if(!this._.__ielt8_attributes__)this._.__ielt8_attributes__ = this.attributes;
+}
+catch(e) {
+	e = window.__ielt8__wontfix;
+	if(e) {
+		e[this.sourceIndex] = {
+			__ielt8_attributes__ : this.attributes
+		}
+	}
+}
+np.__ielt8__element_init__(this);
 }
 </SCRIPT>
 </PUBLIC:COMPONENT>

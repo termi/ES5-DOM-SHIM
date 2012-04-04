@@ -1,16 +1,13 @@
 <!DOCTYPE html>
-<html>
+<html debug=true>
 <head>
-
+<script type='text/javascript' src='firebug/firebug.js'></script>
 
 <style>
 .null {
 	background: black !important;
 	color: red
 }
- * {
-     -moz-binding:url(ff3.xml#link);
- }
 
 .cotainer, .header, .footer {
 	display: block;
@@ -18,12 +15,12 @@
 
 </style>
 <!--[if lt IE 9]>
-<script src="/__SRC/a.ie8.js"></script>
+<script src="/__COMPILE/a.ie8.js"></script>
 <![endif]-->
 <!--[if lt IE 8]>
-<script src="/__SRC/a.ielt8.js"></script>
+<script src="/__COMPILE/a.ielt8.js"></script>
 <![endif]-->
-<script src="/__SRC/a.js"></script>
+<script src="/__COMPILE/a.js"></script>
 <script>
 document.createElement("j");
 document.createElement("c");
@@ -35,10 +32,10 @@ document.createElement("f");
 <body>
 
 <j id=test1 style="display:block;background:green;height:40px" class=test color1=gray color2=red color3=yellow>
-test
+test123
 </j>
 
-<div id=test2 class="test2 linked_data">
+<div id=test2 class="test2 linked_data" onrowenter1>
 test2
 </div>
 
@@ -69,7 +66,7 @@ test2
 				<h5>Img</h5>
 			</h>
 			
-			<img class="data" src="https://a248.e.akamai.net/assets.github.com/images/modules/header/logov6-hover.svg?1315858593" />
+			<img id="test3" class="data" src="https://www.google.ru/images/srpr/logo3w.png?1" />
 				
 			<f class="footer">
 				<p>Image up here</p>
@@ -82,7 +79,10 @@ test2
 	</f>
 </c>
 
+<OBJECT id="testObject" WIDTH="162" HEIGHT="150" DATA="gerl.jpg" TYPE="image/jpeg"></OBJECT>
+
 <script>
+
 function main() {
 	window.addEventListener("someEvent", function doSomething(event) {
 		var i,
@@ -108,7 +108,7 @@ function main() {
 	document.addEventListener("someEvent", dosome1, true);
 	window.addEventListener("someEvent", dosome1, false);
 	document.addEventListener("someEvent", dosome1, false);
-	
+
 	var j = document.getElementsByClassName("test")[0];
 	j.addEventListener("someEvent", console.log.bind(null, "j someEvent bubble"), false);
 	j = document.querySelector(".test");
@@ -126,7 +126,11 @@ function main() {
 	window.stopIt = function() {
 		clearInterval(testInterval);
 	}
+	//stopIt();
+	//window.console.open();
 }
 
 window.addEventListener('DOMContentLoaded', main);
+//window.attachEvent("onload", function(){alert("ololo")})
+
 </script>

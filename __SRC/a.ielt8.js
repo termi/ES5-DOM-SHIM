@@ -8,6 +8,8 @@
 // TODO:: see http://pkario.blogspot.com/2010/09/javascript-event-handling-all-browsers.html
 // required: 
 //	a.ie8.js [window.browser.msie, window.Node, ...]
+ 
+/** @version 2 */
 
 ;(function(global) {
 
@@ -15,14 +17,15 @@
 var /** @const*/
 	__URL_TO_ELEMENT_BEHAVIOR__     = '/a.ielt8.htc',
 	/** @const*/
-	__URL_TO_IE6_ELEMENT_BEHAVIOR__ = '/a.ie6.ielt8.htc',
+	__URL_TO_ATTRIBUTES_ELEMENT_BEHAVIOR__ = '/a.attributes.ielt8.htc',
 	/** @const*/
 	__STYLE_ID                      = "ielt8_style_prev_for_behaviour",
-	/** @const List of supportng tag names */
-	__SUPPORTED__TAG_NAMES__ = "html,body,div,span,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,abbr,address,cite,code,del,dfn,em,img,ins,kbd,q,samp,small,strong,sub,sup,var,b,i,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td,article,aside,canvas,details,figcaption,figure,footer,header,hgroup,menu,nav,section,summary,time,mark,audio,video,textarea,input,select";
+	/** @const List of supporting tag names */
+	__SUPPORTED__TAG_NAMES__ = "object,html,body,div,span,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,abbr,address,cite,code,del,dfn,em,img,ins,kbd,q,samp,small,strong,sub,sup,var,b,i,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td,article,aside,canvas,details,figcaption,figure,footer,header,hgroup,menu,nav,section,summary,time,mark,audio,video,textarea,input,select";
 //CONFIG END
 
 var nodeProto = global.Node.prototype,//Note: for IE < 8 `Node` and `Node.prototype` is just an JS objects created in a.ie8.js
+	Element_proto = global.Element.prototype,
 	browser = global.browser,
 	noDocumentReadyState,
 	supportedTagNames = __SUPPORTED__TAG_NAMES__.split(","),
@@ -31,13 +34,13 @@ var nodeProto = global.Node.prototype,//Note: for IE < 8 `Node` and `Node.protot
 		"object",//IE < 8 BUG?
 		"_"//use it for feature detecting
 	],
-	ieltbehaviorRules = [__URL_TO_ELEMENT_BEHAVIOR__],
+	ieltbehaviorRules = [__URL_TO_ATTRIBUTES_ELEMENT_BEHAVIOR__, __URL_TO_ELEMENT_BEHAVIOR__],
 	ielt9BehaviorRule = "{behavior:",
-	_call = Date.call;
-
-if(browser.msie < 7)ieltbehaviorRules.push(__URL_TO_IE6_ELEMENT_BEHAVIOR__);
+	_call = Date.call,
+	__ielt8__wontfix = [];
 	
-for(var jj = 0 ; jj < ieltbehaviorRules.length ; ++jj)
+var jj = ieltbehaviorRules.length;
+while(--jj >= 0)
 	ielt9BehaviorRule += (" url(\"" + ieltbehaviorRules[jj] + "\")");
 ielt9BehaviorRule += "}";
 	
@@ -50,37 +53,65 @@ if(nodeProto["ie"] && browser.msie < 8) {//IE < 8 polifill
 
 nodeProto["ielt8"] = true;
 
-//global["__ielt8__wontfix"] = [];//TODO:: use it to extend 'OBJECT' tag with compareDocumentPosition, getElementsByClassName and etc functions
+global["__ielt8__wontfix"] = __ielt8__wontfix;
 
 // Node.attributes path for IE < 8
 // No Node.attributes patch for document.head :(
 // [BUG]: '`attribute` shim dosn't work on `OBJECT` element
-var __notAnAttribute = {"insertAfter" : 1, "getElementsByClassName" : 1, "compareDocumentPosition" : 1, "_" : 1, "hasAttribute" : 1, "getAttribute" : 1, "setAttribute" : 1, "addEventListener" : 1, "removeEventListener" : 1, "dispatchEvent" : 1, "cloneNode" : 1, "querySelectorAll" : 1, "querySelector" : 1},
-	__getAtt = global["_ielt8_getAttributes"] = function() {
-	/*
-	[BUG]strange behavior on 'object' element: IE < 8 won't create '_' container
-	*/
-	var _ = this["_"],
-		__ielt8_attributes__ = _ && _["__ielt8_attributes__"],//__ielt8_attributes__ seted in .htc file
-		last__ielt8_attributes__length = _ && _["last__ielt8_attributes__length"],
-		result = 
-			__ielt8_attributes__ && last__ielt8_attributes__length === __ielt8_attributes__.length && _["__true_ielt8_attributes__"] || 
-			{"length" : 0},
-		val;
-	
+var __notAnAttribute = {"insertAfter" : 1, "getElementsByClassName" : 1, "compareDocumentPosition" : 1, "_" : 1, "hasAttribute" : 1, "getAttribute" : 1, "setAttribute" : 1, "addEventListener" : 1, "removeEventListener" : 1, "dispatchEvent" : 1, "cloneNode" : 1, "querySelectorAll" : 1, "querySelector" : 1, "contains" : 1, "isEqualNode" : 1};
+
+nodeProto["_ielt8_getAttributes"] = function () {
+	var _ = this["_"] || __ielt8__wontfix[this.sourceIndex] || {},//If where is no '_' failed silensy
+		__true_ielt8_attributes__ = _["__true_ielt8_attributes__"],
+		__ielt8_attributes__ = _["__ielt8_attributes__"], //__ielt8_attributes__ seted in .htc file
+		result = {"length":0},
+		last__ielt8_attributes__length = _["last__ielt8_attributes__length"],
+		val,
+		i,
+		__ielt8__saveAttrNames,
+		shimed_attributes = _["shimed_attributes"];
+
 	//if(!__ielt8_attributes__)throw Error("__ielt8_attributes__ is required")
-	if(!__ielt8_attributes__ || result.length)return result;
+	if (!__ielt8_attributes__)return result;
+
+	if(!_["__ielt8__saveAttrNames"])//For using in a.ie8.js::setAttribute
+		__ielt8__saveAttrNames = _["__ielt8__saveAttrNames"] = {};
 	
-	for(var i = 0, l = __ielt8_attributes__.length, k = 0 ; i < l ; i++)
-		if((val = __ielt8_attributes__[i]).specified && !(val.name in __notAnAttribute)){
-			result[k++] = val;
-			result[__ielt8_attributes__[i].name] = val;
-			result.length++;
+	if(!__true_ielt8_attributes__ || last__ielt8_attributes__length !== __ielt8_attributes__.length) {
+		__true_ielt8_attributes__ = _["__true_ielt8_attributes__"] = [];
+		i = -1;
+		try {
+			while(val = __ielt8_attributes__[++i]) {
+				if(!(val.name in __notAnAttribute) && 
+				   val.nodeValue !== null//Отличие <p attr> -> p.attr==="" . if(p.attr===null)->Это фейковый IE < 8 аттрибут
+				  ) {
+					if(__ielt8__saveAttrNames)__ielt8__saveAttrNames[val.name] = 1;
+					__true_ielt8_attributes__.push(val);
+				}
+			}
 		}
-	_["last__ielt8_attributes__length"] = __ielt8_attributes__.length;
-	_["__true_ielt8_attributes__"] = result;
+		catch(e){}
+		_["last__ielt8_attributes__length"] = __ielt8_attributes__.length;
+	}
+	
+	if(shimed_attributes) {
+		for(i in shimed_attributes) if(shimed_attributes.hasOwnProperty(i)) {
+			val = shimed_attributes[i];
+			result[result.length++] = val;
+			result[shimed_attributes[i].name] = val;		
+		}
+	}
+	
+	i = -1;
+	while(val = __true_ielt8_attributes__[++i]) {
+		if (val.specified) {
+			result[result.length++] = val;
+			result[__true_ielt8_attributes__[i].name] = val;
+		}
+	}
+	
 	return result;
-}
+};
 
 /**
  * Функция возвращяет массив элементов выбранных по CSS3-селектору. 
@@ -100,50 +131,38 @@ var __notAnAttribute = {"insertAfter" : 1, "getElementsByClassName" : 1, "compar
  *
  * @param {!string} selector CSS3-селектор
  * @param {Document|HTMLElement|Node} root элемент в котором мы будем искать
- * @param {boolean=} isFirst ищем только первый
+ * TODO::param {boolean=} isFirst ищем только первый
  * @return {Array.<HTMLElement>}
  * @version 2
- *  changeLog: 2     [24.11.2011 00:30] * Вынес из основного a.js и переименовал из $$0 в queryOneSelector и чуть изменил
-										- нестандартные псевдо-классы ":parent" и ":text-only" больше не поддерживаются
- *			   1.5.5 [24.11.2011 00:00] * $$(">*", document), $$("~*", document), $$("+*", document) теперь вернёт [] - пустой результат
- *			   1.5.4 [11.07.2011 13:58] [*Bug]Включил поддержку символа "-" в названиях класса и идентификатора
- *			   1.5.3 [25.05.2011 13:42] [*Bug]Исправил баг с CSS-аттрибут-селектором '&='
- *			   1.5.2 [11.05.2011 13:36] [*Bug]Исправил баг, когда пытался получить tagName у childNodes[n] у которого nodeType != 1
- *			   1.5.1 [06.05.2011 14:34] [*Bug]Поправил баг появляющийся в "strict mode", когда mod не был объявлен
- * 			   1.5   [05.05.2011 17:03] [*Bug]Свойство tagName сравнивалось с tag из селектора в неправильном регистре
- *			   1.4.1 [09.04.2011  1:00] Имплементация нестандартных псевдо-классов :parent и :text-only
- *			   1.4   [09.04.2011  0:40] [*Bug]Элемент по-умолчанию должен быть document(было document.body)
- *			   1.3.1 [22.03.2011 13.05] [*Bug]Исправил баг со свойством $$N.str_for_id (добавил букву "r" в начало)
- *             1.3   [21.03.2011 19.21] [*Bug]Исправил баг с селектором вида ",<selecrot>" при использовании querySelector
- *             1.2   [23.02.2011 20:50] Изменён алгоритм вызова querySelector если первый символ в selector = [>|+|~]
  *  TODO:: Изучить код https://github.com/ded/qwery - может быть будет что-нибуть полезное
  */
 function queryOneSelector(selector, root) {
+	//\.(.*?)(?=[:\[]|$) -> <.class1.class2>:focus or tag#id<.class1.class2>[attr*=value]
+	//TODO:: Реализовать концепцию isFirst ниже
 	root = root || document;
 	//TODO:: Не засовывать в result те элементы, которые уже были туда засованы
 	var /** @type {Array.<HTMLElement>} */result = [],
 		/** @type {HTMLElement} */child,
 		/** @type {number} */ir = -1,
-		/** @type {number} */kr;
-		
-	//TODO:: Реализовать концепцию isFirst ниже
-	//\.(.*?)(?=[:\[]|$) -> <.class1.class2>:focus or tag#id<.class1.class2>[attr*=value]
-	//param css3Attr Пример: [attr*=value]
-	//param css3Mod Пример: :nls-child(2n-0)
-	
-	ir = -1;//default value
-	
-	var /** @type {Array.<string>} */selectorArr = selector.match(/^([,>+~ ])?(\w*)(?:|\*)\#?([\w-]*)((?:\.?[\w-])*)(\[.*?\])?\:?([\w\-\+\%\(\)]*)$/),
+
+		/** @type {Array.<string>} */selectorArr = selector.match(/^([,>+~ ])?(\w*)(?:|\*)\#?([\w-]*)((?:\.?[\w-])*)(\[.*?\])?\:?([\w\-\+\%\(\)]*)$/),
 		/** @type {string} */mod = selectorArr[1],
 		/** @type {string} */tag = selectorArr[2].toUpperCase(),
 		/** @type {string} */id = selectorArr[3],
 		/** @type {(string|Array.<string>)} */classes = selectorArr[4],
 		/** @type {boolean} */isClasses = !!classes,
-		/** @type {(string|Array.<string>)} */css3Attr = selectorArr[5],
+		/** @type {(string|Array.<string>)} */css3Attr = selectorArr[5],//css3Attr Пример: [attr*=value]
 		/** @type {string} */_curClass,
-		/** @type {number} */kr = -1;
-	var /** @type {(string|Array.<string>)} */css3Mod = selectorArr[6],
-		/** @type {(Array.<Array>)} */css3Mod_add;//Pseudo-classes
+		/** @type {number} */kr = -1,
+
+		/** @type {(string|Array.<string>)} */css3Mod = selectorArr[6],//css3Mod Пример: :nls-child(2n-0)
+		/** @type {(Array.<Array>)} */css3Mod_add,//Pseudo-classes
+
+		/** @type {(Array.<number>)} */ind,
+		/** @type {number} */a,
+		/** @type {number} */b,
+		/** @type {number} */c,
+		/** @type {Node} */brother;
 		
 	if(isClasses)classes = (" " + classes.slice(1).replace(/\./g, " | ") + " ").split("|");
 		
@@ -166,7 +185,7 @@ function queryOneSelector(selector, root) {
 			}
 		break;
 		case '+':
-			while((root = root.nextSibling) && root.nodeType != 1){};
+			while((root = root.nextSibling) && root.nodeType != 1){}
 			if(root && (!tag || root.tagName.toUpperCase() == tag))result.push(root);
 		break;
 		case '~'://W3C: "an F element preceded by an E element"
@@ -259,7 +278,7 @@ function queryOneSelector(selector, root) {
 					case '!=':
 						match = (!value1 || !(new RegExp('(^| +)' + value2 + '($| +)').test(value1)));
 					break;
-				};
+				}
 			}
 			if(match && css3Mod) {
 				//In this block we lose "rs" value
@@ -299,10 +318,10 @@ function queryOneSelector(selector, root) {
 					break;
 				/* W3C: "an E element, the n-th rs of its parent" */
 					case 'nth-child':
-						var ind = css3Mod_add,
-							c = rs.nodeIndex || 0,
-							a = ind[3] ? (ind[2] === '%' ? -1 : 1) * ind[3] : 0,
-							b = ind[1];
+						ind = css3Mod_add;
+						c = rs.nodeIndex || 0;
+						a = ind[3] ? (ind[2] === '%' ? -1 : 1) * ind[3] : 0;
+						b = ind[1];
 				/* check if we have already looked into siblings, using exando - very bad */
 						if (c) {
 							match = !b ? !(c + a) : !((c + a) % b);
@@ -310,7 +329,7 @@ function queryOneSelector(selector, root) {
 						else {
 							match = false;
 				/* in the other case just reverse logic for n and loop siblings */
-							var brother = rs.parentNode.firstChild;
+							brother = rs.parentNode.firstChild;
 				/* looping in child to find if nth expression is correct */
 							do {
 				/* nodeIndex expando used from Peppy / Sizzle/ jQuery */
@@ -326,16 +345,16 @@ function queryOneSelector(selector, root) {
 				*/
 					case 'nth-last-child':
 				/* almost the same as the previous one */
-						var ind = css3Mod_add,
-							c = rs.nodeIndexLast || 0,
-							a = ind[3] ? (ind[2] === '%' ? -1 : 1) * ind[3] : 0,
-							b = ind[1];
+						ind = css3Mod_add;
+						c = rs.nodeIndexLast || 0;
+						a = ind[3] ? (ind[2] === '%' ? -1 : 1) * ind[3] : 0;
+						b = ind[1];
 						if (c) {
 							match = !b ? !(c + a) : !((c + a) % b);
 						}
 						else {
 							match = false;
-							var brother = rs.parentNode.lastChild;
+							brother = rs.parentNode.lastChild;
 							do {
 								if (brother.nodeType == 1 && (brother.nodeLastIndex = ++c) && rs === brother && (!b ? !(c + a) : !((c + a) % b))) {
 									match = true;
@@ -473,7 +492,7 @@ var queryManySelector = function(selector) {
 	}
 	
 	return result;
-}
+};
 /**
  * @param {!string} selector
  * @this {Document|HTMLElement|Node=}
@@ -484,9 +503,77 @@ function queryOneManySelector(selector) {
 }
 
 
-if(!document.querySelectorAll)document.querySelectorAll = global["_ielt8_querySelectorAll"] = queryManySelector;
-if(!document.querySelector)document.querySelector = global["_ielt8_querySelector"] = queryOneManySelector;
+if(!document.querySelectorAll)document.querySelectorAll = queryManySelector;
+if(!document.querySelector)document.querySelector = queryOneManySelector;
 
+var _returnFirstParam = function(a) {
+	return function() {
+		return a
+	}
+};
+nodeProto.g1 = _returnFirstParam(1);
+nodeProto.g2 = _returnFirstParam(2);
+nodeProto.g3 = _returnFirstParam(3);
+nodeProto.g4 = _returnFirstParam(4);
+nodeProto.g5 = _returnFirstParam(5);
+nodeProto.g6 = _returnFirstParam(6);
+nodeProto.g7 = _returnFirstParam(7);
+nodeProto.g8 = _returnFirstParam(8);
+nodeProto.g9 = _returnFirstParam(9);
+nodeProto.g10 = _returnFirstParam(10);
+nodeProto.g11 = _returnFirstParam(11);
+nodeProto.g12 = _returnFirstParam(12);
+nodeProto.g16 = _returnFirstParam(16);
+
+nodeProto["__ielt8__element_init__"] = function __ielt8__element_init__(thisObj) {
+	var _tmp_container;
+	if(thisObj.element)thisObj = thisObj.element;//¬_¬ only if the save `this` to local variable
+	
+	/*__ielt8__element_init__["plugins"].forEach(function(plugin) {
+		plugin(thisObj)
+	})*/
+	
+	if(!thisObj.isEqualNode)thisObj.isEqualNode = nodeProto.isEqualNode;
+	if(!thisObj.compareDocumentPosition)thisObj.compareDocumentPosition = nodeProto.compareDocumentPosition;
+	if(!thisObj.getElementsByClassName)thisObj.getElementsByClassName = Element_proto.getElementsByClassName;
+	if(!thisObj.insertAfter)thisObj.insertAfter = Element_proto.insertAfter;
+	/*@requared: window.addEventListener, window.removeEventListener, window.dispatchEvent */
+	if(!thisObj.addEventListener)thisObj.addEventListener = window.addEventListener;
+	if(!thisObj.removeEventListener)thisObj.removeEventListener = window.removeEventListener;
+	if(!thisObj.dispatchEvent)thisObj.dispatchEvent = window.dispatchEvent;
+
+
+	if(!thisObj.querySelectorAll)thisObj.querySelectorAll = queryManySelector;
+	if(!thisObj.querySelector)thisObj.querySelector = queryOneManySelector;
+	
+	if(!thisObj.hasAttribute)thisObj.hasAttribute = Element_proto.hasAttribute;
+
+	//Unsafe (with "OBJECT" tag, for example) set's
+	try {
+		
+		if(!(_tmp_container = thisObj._))thisObj._ = {};
+		if(!(_tmp_container = thisObj._)) {
+			if(!(_tmp_container = __ielt8__wontfix[thisObj.sourceIndex])) {
+				_tmp_container = __ielt8__wontfix[thisObj.sourceIndex] = {};
+			}
+		}
+		/*@requared window._ielt8_getAttributes */
+		//Save original attributes property if we don't do it
+		//if(!thisObj._.__ielt8_attributes__)thisObj._.__ielt8_attributes__ = thisObj.attributes;
+		_tmp_container.setAttribute = thisObj.setAttribute;
+		_tmp_container.getAttribute = thisObj.getAttribute;
+		_tmp_container.removeAttribute = thisObj.removeAttribute;
+		if(thisObj.cloneNode !== Element_proto.cloneNode)thisObj.cloneNode = Element_proto.cloneNode;
+		if(thisObj.getAttribute !== Element_proto.getAttribute)thisObj.getAttribute = Element_proto.getAttribute;
+		if(thisObj.setAttribute !== Element_proto.setAttribute)thisObj.setAttribute = Element_proto.setAttribute;
+		if(thisObj.removeAttribute !== Element_proto.removeAttribute)thisObj.removeAttribute = Element_proto.removeAttribute;
+		if(nodeProto.contains)thisObj.contains = nodeProto.contains;
+	}
+	catch(e) {
+		//console.error(e.message)
+	}
+}
+//__ielt8__element_init__["plugins"] = [];
 
 /*  ======================================================================================  */
 /*  ================================  Document  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
@@ -495,30 +582,26 @@ var originCreateElement = document.createElement;
 document.createElement = function(tagName) {
 	var el = _call.call(originCreateElement, document, tagName);
 	
-	
 	//FIX IE lt 8 Element.prototype
 	//Object.append(el, nodeProto);
-	//TODO:: add behavior
 	
 	tagName = tagName.toLowerCase();
 	if(!~__SUPPORTED__TAG_NAMES__.indexOf("," + tagName + ",") && !~supportedTagNames.indexOf(tagName) && !~notSupportedTagNames.indexOf(tagName)) {
-		//style NOT WORK with `behavior`!!!! ARRRRRRRHHHHhhhhhh....
-		/*var style = originCreateElement.call(document, "style");
+		var style = _call.call(originCreateElement, document, "style");
 		style.type = 'text/css';
 		style.styleSheet.cssText = tagName + "{behavior: url(\"" + __URL_TO_ELEMENT_BEHAVIOR__ + "\")}";
-		document.head.appendChild(style);*/
-		
-		//ugly, but work
-		if(/*document.readyState != "interactive" && */document.readyState != "complete")
-			document.write("<style>" + tagName + ielt9BehaviorRule + "</style>");
+		document.head.appendChild(style);
 		
 		supportedTagNames.push(tagName);
 	}
-	for(var jj = 0 ; jj < ieltbehaviorRules.length ; ++jj)
-		el.addBehavior(ieltbehaviorRules[jj]);
+	if(tagName !== "_") {
+		var jj = ieltbehaviorRules.length;
+		while(--jj >= 0)
+			el.addBehavior(ieltbehaviorRules[jj]);
+	}
 	
 	return el;
-}
+};
 document.createElement.orig = originCreateElement;
 
 
@@ -554,7 +637,6 @@ if(noDocumentReadyState) {
 
 
 
-
 var prevStyle = document.getElementById(__STYLE_ID),
 	add = "";
 
@@ -567,14 +649,12 @@ if(add) {
 	ielt9BehaviorRule.replace(" url(", " url(" + add + ") url(");
 }
 
-document.write(
-	"<style id='" + __STYLE_ID + 
-	"' data-url='" + ielt9BehaviorRule.replace("{behavior:", "").replace(")}", ")") + 
-	"'>" + __SUPPORTED__TAG_NAMES__ + ielt9BehaviorRule + 
-	"</style>"
-	);
-/*
-[BUG]there is no 'object' tag in this style, because IE < 8 won't apply behavior to 'object' element
-*/
+var style = _call.call(originCreateElement, document, "style");
+style.id = __STYLE_ID;
+style.type = 'text/css';
+style.setAttribute("data-url", ielt9BehaviorRule.replace("{behavior:", "").replace(")}", ")"));
+style.styleSheet.cssText = __SUPPORTED__TAG_NAMES__ + ielt9BehaviorRule;
+document.head.appendChild(style);
+
 }
 })(window);

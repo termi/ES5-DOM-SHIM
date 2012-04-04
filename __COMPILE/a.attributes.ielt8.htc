@@ -1,0 +1,8 @@
+<PUBLIC:COMPONENT lightWeight="true">
+<PUBLIC:PROPERTY NAME="attributes" GET="b" />
+<SCRIPT>
+var
+np=window.Node.prototype,
+b=np._ielt8_getAttributes;
+</SCRIPT>
+</PUBLIC:COMPONENT>
