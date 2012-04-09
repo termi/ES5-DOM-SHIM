@@ -7,7 +7,7 @@
 // ==/ClosureCompiler==
 /**
  * module
- * @version 5.1
+ * @version 5.1.1
  * TODO:: eng comments
  *        dateTime prop for IE < 8
  */
@@ -795,13 +795,17 @@ if (!Object.getOwnPropertyDescriptor || _getOwnPropertyDescriptorFallback) {
 // IE < 9 bug: [1,2].splice(0).join("") == "" but should be "12"
 if([1,2].splice(0).length != 2) {
 	var _origArraySplice = Array.prototype.splice;
-	/**
-	 * @param {number} index
-	 * @param {number=} howMany
-	 * @param {...} elementsToAdd
-	 */
-	Array.prototype.splice = function(index, howMany, elementsToAdd) {
-		return _origArraySplice.call(this, index, howMany === void 0 ? (this.length - index) : howMany, _arraySlice.call(arguments, 2))
+
+	Array.prototype.splice = function(start, deleteCount) {
+        if(start === void 0 && deleteCount === void 0)return [];
+
+		return _call(
+				_origArraySplice,
+				this,
+				start === void 0 ? 0 : start,
+				deleteCount === void 0 ? (this.length - start) : deleteCount,
+				_arraySlice.call(arguments, 2)
+			);
 	};
 }
 
