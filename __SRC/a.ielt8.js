@@ -9,7 +9,7 @@
 // required: 
 //	a.ie8.js [window.browser.msie, window.Node, ...]
  
-/** @version 2 */
+/** @version 2.1 */
 
 ;(function(global) {
 
@@ -611,7 +611,10 @@ document.createElement.orig = originCreateElement;
 /*  =======================================================================================  */
 /*  ======================================  Network  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-if(!global.XMLHttpRequest)global.XMLHttpRequest = ActiveXObject.bind(global, "Microsoft.XMLHTTP");
+if(!global.XMLHttpRequest)global.XMLHttpRequest = function() {
+	//TODO:: full XMLHttpRequest shim
+	return ActiveXObject("Microsoft.XMLHTTP");
+}
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Network  ======================================  */
 /*  =======================================================================================  */

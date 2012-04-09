@@ -7,7 +7,7 @@
 // ==/ClosureCompiler==
 /**
  * module
- * @version 5
+ * @version 5.1
  * TODO:: eng comments
  *        dateTime prop for IE < 8
  */
@@ -24,25 +24,25 @@ var INCLUDE_EXTEND_POLYFILLS = false;
 /*
 INCLUDE_EXTRAS:
  1. Exporting "browser" object to global
- 2. Exporting Utils.Dom.DOMStringCollection
- 3. Array.prototype.unique
- 4. Element.prototype.insertAfter
- 5. global.SendRequest -> ajax
- 6. global.forEach(<Object | Array>, iterator, context). if `iterator` return __false__ forEach stop working
- 7. global.randomString
- 8. $A(iterable, start, end, forse) - alias for Array.from with Array|Object|String|number support eg: $A({a:1, b:2}) == [1,2]
- 9. $K(iterable, forse) - alias for Object.keys with Arguments|Array|Object|String|number support eg: $A({a:1, b:2}) == ['a','b']
- 10. bubbleEventListener TODO:: describe in eng. If you known russian you can read JSDoc
- 11. $ alias for document.getElementById
- 12. $$ alias for document.querySelectorAll (with ">[any selector]" support)
- 13. $$0 -> $$[0]
- 14. Fix console From https://github.com/theshock/console-cap/blob/master/console.js
+ 2. Object.append, Object.extend (Object.append with overwrite exists properties), Object.inherit
+ 3. Exporting Utils.Dom.DOMStringCollection
+ 4. Array.prototype.unique
+ 5. Element.prototype.insertAfter
+ 6. global.SendRequest -> ajax
+ 7. global.forEach(<Object | Array>, iterator, context). if `iterator` return __false__ forEach stop working
+ 8. global.randomString
+ 9. $A(iterable, start, end, forse) - alias for Array.from with Array|Object|String|number support eg: $A({a:1, b:2}) == [1,2]
+ 10. $K(iterable, forse) - alias for Object.keys with Arguments|Array|Object|String|number support eg: $A({a:1, b:2}) == ['a','b']
+ 12. bubbleEventListener TODO:: describe in eng. If you known russian you can read JSDoc
+ 13. $ alias for document.getElementById
+ 14. $$ alias for document.querySelectorAll (with ">[any selector]" support)
+ 15. $$0 -> $$[0]
+ 16. Fix console From https://github.com/theshock/console-cap/blob/master/console.js
 */
 
 /*
 INCLUDE_EXTEND_POLYFILLS:
  1. 'reversed' for <ol> with DOM API
- 2. matchMedia() polyfill from https://github.com/paulirish/matchMedia.js
 */
 
 ;(
@@ -112,20 +112,6 @@ if(INCLUDE_EXTRAS) {
 	/** @type {boolean}
 	 * @const */
 	browser.ipad = browser["ipad"];
-}
-else {
-	browser.names = browser.agent.match(/(msie)/gi);
-	if(browser.names.length)browser[browser.names[0]] = true;
-
-	browser.msie = browser["msie"];
-
-	if(browser.msie)for(var i = 6 ; i < 11 ; i++)//IE from 6 to 10
-		if(new RegExp('msie ' + i).test(browser.agent)) {
-			browser.msie = browser["msie"] = i;
-
-			break;
-		}
-	browser["msie"] = browser.msie;
 
 	/** @type {string}
 	 * @const */
@@ -135,8 +121,24 @@ else {
 		browser.opera ? "O" :
 		browser.msie ? "ms" :
 		"";
+}
+else {
+	browser.names = browser.agent.match(/(msie)/gi);
+	if(browser.names.length)browser[browser.names[0]] = true;
+
+	browser.msie = browser["msie"];
 
 }//if(INCLUDE_EXTRAS)
+
+if(browser.msie)for(var i = 6 ; i < 11 ; i++)//IE from 6 to 10
+	if(new RegExp('msie ' + i).test(browser.agent)) {
+		browser.msie = browser["msie"] = i;
+
+		break;
+	}
+browser["msie"] = browser.msie;
+
+
 
 
 
@@ -166,7 +168,10 @@ if(!Function.prototype.bind)Function.prototype.bind = function (object, var_args
 					object,
 				args.concat(_arraySlice.call(arguments)));
 	};
-	_result.prototype = Object.create(__method.prototype);
+	if(__method.prototype) {
+		_result.prototype = Object.create(__method.prototype);
+		//_result.constructor = __method;
+	}
 	return _result;
 };
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Function prototype  ==================================  */
@@ -176,8 +181,20 @@ var
     _arraySlice = Array.prototype.slice
 
   , _applyFunction = Function.prototype.apply
+  
+	/** Unsafe bind for service and performance needs
+	 * @param {Function} __method
+	 * @param {Object} object
+	 * @param {...} var_args
+	 * @return {Function} */
+  , _unSafeBind = function(__method, object, var_args) {
+		var args = _arraySlice.call(arguments, 2);
+		return function () {
+			return _applyFunction.call(__method, object, args.concat(_arraySlice.call(arguments)));
+		}
+	}
 
-  , _hasOwnProperty = Function.prototype.call.bind(Object.prototype.hasOwnProperty)
+  , _hasOwnProperty = _unSafeBind(Function.prototype.call, Object.prototype.hasOwnProperty)
 
   , /**
 	 * Call _function
@@ -260,33 +277,7 @@ if(!global["Document"])global["Document"] = global["HTMLDocument"];//For IE8
 //TODO:: for IE < 8 :: if(!global["Document"] && !global["HTMLDocument"])global["Document"] = global["HTMLDocument"] = ??;//for IE < 8
 
 
-//Fix Function.prototype.apply to work with generic array-like object instead of an array
-// test: (function(a,b){console.log(a,b)}).apply(null, {0:1,1:2,length:2})
-var trueApply = false;
-try {
-	trueApply = isNaN.apply(null, {})
-}
-catch(e) { }
-if(!trueApply) {
-	Function.prototype.apply = function(contexts, args) {
-		try {
-			return args != undefined ?
-				_applyFunction.call(this, contexts, args) :
-				_applyFunction.call(this, contexts);
-		}
-		catch (e) {
-			if(e["number"] != -2146823260 ||//"Function.prototype.apply: Arguments list has wrong type"
-				args.length === void 0 || //Not an iterable object
-			   typeof args === "string"//Avoid using String
-			  )
-				throw e;
-
-			return _applyFunction.call(this, contexts, Array["from"](args));
-		}
-	};
-}
-
-
+if(INCLUDE_EXTRAS) {
 /*  =======================================================================================  */
 /*  ======================================  Classes  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
@@ -343,7 +334,7 @@ Object["inherit"] = function(Child, Parent) {
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Classes  ======================================  */
 /*  =======================================================================================  */
-
+}//if(INCLUDE_EXTRAS)
 
 // --------------- ================ es5 shim ================ ---------------
 // Based on https://github.com/kriskowal/es5-shim/blob/master/es5-shim.js
@@ -351,7 +342,18 @@ Object["inherit"] = function(Child, Parent) {
 /*  =======================================================================================  */
 /*  =================================  Object prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-function _retusn_Object_keys_OR_Object_getOwnPropertyNames(_ownedOnly) {
+/**
+ * ES5 15.2.3.14
+ * http://es5.github.com/#x15.2.3.14
+ * https://developer.mozilla.org/en/JavaScript/Reference/global_Objects/Object/keys
+ * Returns an array of all own enumerable properties found upon a given object, in the same order as that provided by a for-in loop (the difference being that a for-in loop enumerates properties in the prototype chain as well).
+ *
+ * Implementation from http://whattheheadsaid.com/2010/10/a-safer-object-keys-compatibility-implementation
+ *
+ * @param obj The object whose enumerable own properties are to be returned.
+ * @return {Array} object keys
+ */
+if(!Object.keys)Object.keys = (function() {
     var DontEnums = [
             'toString',
             'toLocaleString',
@@ -364,38 +366,26 @@ function _retusn_Object_keys_OR_Object_getOwnPropertyNames(_ownedOnly) {
         hasDontEnumBug = !{"toString":null}.propertyIsEnumerable(DontEnums[0]),
         DontEnumsLength = DontEnums.length;
 
-    return function (o) {
-        if (typeof o != "object" && typeof o != "function" || o === null)
+    return function (obj) {
+        if (typeof obj != "object" && typeof obj != "function" || obj === null)
             throw new TypeError("Object.keys called on a non-object");
 
         var result = [];
-        for (var name in o) {
-            if(!_ownedOnly || _hasOwnProperty(o, name))
+        for (var name in obj) {
+            if(_hasOwnProperty(obj, name))
                 result.push(name);
         }
 
         if (hasDontEnumBug) {
             for (var i = 0; i < DontEnumsLength; i++) {
-                if(!_ownedOnly || _hasOwnProperty(o, DontEnums[i]))
+                if(_hasOwnProperty(obj, DontEnums[i]))
                     result.push(DontEnums[i]);
             }
         }
 
         return result;
     };
-}
-/**
- * ES5 15.2.3.14
- * http://es5.github.com/#x15.2.3.14
- * https://developer.mozilla.org/en/JavaScript/Reference/global_Objects/Object/keys
- * Returns an array of all own enumerable properties found upon a given object, in the same order as that provided by a for-in loop (the difference being that a for-in loop enumerates properties in the prototype chain as well).
- *
- * Implementation from http://whattheheadsaid.com/2010/10/a-safer-object-keys-compatibility-implementation
- *
- * @param obj The object whose enumerable own properties are to be returned.
- * @return {Array} object keys
- */
-if(!Object.keys)Object.keys = _retusn_Object_keys_OR_Object_getOwnPropertyNames(true);
+})();
 
 
 /**
@@ -405,7 +395,9 @@ if(!Object.keys)Object.keys = _retusn_Object_keys_OR_Object_getOwnPropertyNames(
  * @param obj The object whose enumerable own properties are to be returned.
  * @return {Array} object keys
  */
-if(!Object.getOwnPropertyNames)Object.getOwnPropertyNames = _retusn_Object_keys_OR_Object_getOwnPropertyNames();
+if(!Object.getOwnPropertyNames)Object.getOwnPropertyNames = function(obj) {
+	return Object.keys(obj);
+}
 
 /**
  * ES5 15.2.3.8
@@ -796,7 +788,11 @@ if (!Object.getOwnPropertyDescriptor || _getOwnPropertyDescriptorFallback) {
 
 /*  ================================ bug fixing  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-/* [ielt9, bug] IE < 9 bug: [1,2].splice(0).join("") == "" but should be "12" */
+// ES5 15.4.4.12
+// http://es5.github.com/#x15.4.4.12
+// Default value for second param
+// [bugfix, ielt9, old browsers] 
+// IE < 9 bug: [1,2].splice(0).join("") == "" but should be "12"
 if([1,2].splice(0).length != 2) {
 	var _origArraySplice = Array.prototype.splice;
 	/**
@@ -876,23 +872,24 @@ if(INCLUDE_EXTRAS) {
  *	currentValue The current element being processed in the array.
  *	index The index of the current element being processed in the array.
  *	array The array reduce was called upon.
- * @param {*} initialValue Object to use as the first argument to the first call of the callback.
+ * @param {*=} initialValue Object to use as the first argument to the first call of the callback.
  * @return {*} single value
  */
 if(!Array.prototype.reduce)Array.prototype.reduce = function(accumulator, initialValue) {
 	// ES5 : "If IsCallable(callbackfn) is false, throw a TypeError exception." in "_call" function
 
 	var thisArray = _toObject(this),
-		l = thisArray.length, i = 0;
+		l = thisArray.length >>> 0,
+		i = 0;
 
-	if((l === 0 || l === null) && (arguments.length <= 1))// == on purpose to test 0 and false.// no value to return if no initial value, empty array
+	if(l === 0 && arguments.length <= 1)// == on purpose to test 0 and false.// no value to return if no initial value, empty array
 		throw new TypeError("Array length is 0 and no second argument");
 
-	initialValue || (initialValue = (++i, thisArray[0]));
+	if(initialValue === void 0)initialValue = (++i, thisArray[0]);
 
 	for( ; i < l ; ++i) {
 	  if(i in thisArray)
-	    initialValue = _call(accumulator, undefined, initialValue, thisArray[i], i, thisArray);
+	    initialValue = _call(accumulator, void 0, initialValue, thisArray[i], i, thisArray);
 	}
 
 	return initialValue;
@@ -912,12 +909,26 @@ array.reduceRight(function(previousValue, currentValue, index, array) {
 The first time the function is called, the previousValue and currentValue can be one of two values. If an initialValue was provided in the call to reduceRight, then previousValue will be equal to initialValue and currentValue will be equal to the last value in the array. If no initialValue was provided, then previousValue will be equal to the last value in the array and currentValue will be equal to the second-to-last value.
 
  * @param {Function} accumulator Function to execute on each value in the array.
- * @param {*} initialValue Object to use as the first argument to the first call of the callback.
+ * @param {*=} initialValue Object to use as the first argument to the first call of the callback.
  */
-if(!Array.prototype.reduceRight)Array.prototype.reduceRight = function(accumulator, initialValue)  {
-	return _arrayFrom(this).
-				slice(0).//Create new Array
-					reverse().reduce(accumulator, initialValue);
+if(!Array.prototype.reduceRight)Array.prototype.reduceRight = function(accumulator, initialValue) {
+	// ES5 : "If IsCallable(callbackfn) is false, throw a TypeError exception." in "_call" function
+
+	var thisArray = _toObject(this),
+		l = thisArray.length >>> 0;
+
+	if(l === 0 && arguments.length <= 1)// == on purpose to test 0 and false.// no value to return if no initial value, empty array
+		throw new TypeError("Array length is 0 and no second argument");
+
+	--l;
+	if(initialValue === void 0)initialValue = (--l, thisArray[l + 1]);
+
+	for( ; l >= 0 ; --l) {
+	  if(l in thisArray)
+	    initialValue = _call(accumulator, void 0, initialValue, thisArray[l], l, thisArray);
+	}
+
+	return initialValue;
 };
 
 
@@ -929,12 +940,17 @@ if(!Array.prototype.reduceRight)Array.prototype.reduceRight = function(accumulat
  * @param {Object} context Object to use as this when executing callback.
  */
 Array.prototype.forEach || (Array.prototype.forEach = function(iterator, context) {
-	var thisArray = _toObject(this);
-	for(var i in thisArray)
-		if(_hasOwnProperty(thisArray, i))
-			_call(iterator, context, thisArray[i], parseInt(i, 10), thisArray);
+	var thisArray = _toObject(this),
+		length = thisArray.length >>> 0,
+		i = -1;
+	
+	while (++i < length) {
+		if (i in thisArray) {
+			_call(iterator, context, thisArray[i], i, thisArray);
+		}
+	}			
 });
-var _forEach = Function.prototype.call.bind(Array.prototype.forEach);
+var _forEach = _unSafeBind(Function.prototype.call, Array.prototype.forEach);
 
 /** ES5 15.4.4.14
  * http://es5.github.com/#x15.4.4.14
@@ -945,9 +961,18 @@ var _forEach = Function.prototype.call.bind(Array.prototype.forEach);
  * @return {number}
  */
 if(!Array.prototype.indexOf)Array.prototype.indexOf = function(searchElement, fromIndex) {
-	var thisArray = _arrayFrom(this);
-	for(var i = fromIndex || 0, l = thisArray.length ; i < l ; i++)
-		if(thisArray[i] === searchElement)return i;
+	var thisArray = _toObject(this),
+		length = thisArray.length >>> 0,
+		i = fromIndex || 0;
+	
+	if(!length)return -1;
+	
+	// handle negative indices
+    i = i >= 0 ? i : Math.max(0, length + i);
+	
+	for( ; i < length ; i++)
+		if(i in thisArray && thisArray[i] === searchElement)return i;
+	
 	return -1;
 };
 /** ES5 15.4.4.15
@@ -958,10 +983,24 @@ if(!Array.prototype.indexOf)Array.prototype.indexOf = function(searchElement, fr
  * @param {number} fromIndex The index at which to start searching backwards. Defaults to the array's length, i.e. the whole array will be searched. If the index is greater than or equal to the length of the array, the whole array will be searched. If negative, it is taken as the offset from the end of the array. Note that even when the index is negative, the array is still searched from back to front. If the calculated index is less than 0, -1 is returned, i.e. the array will not be searched.
  * @return {number}
  */
-if(!Array.prototype.lastIndexOf)Array.prototype.lastIndexOf = function(searchElement, fromIndex) {
-	return _arrayFrom(this).
-				slice(0).//Create new Array
-					reverse().indexOf(searchElement, fromIndex)
+if(!Array.prototype.lastIndexOf)Array.prototype.lastIndexOf = function lastIndexOf(searchElement, fromIndex) {
+	var thisArray = _toObject(this),
+		length = thisArray.length >>> 0;
+
+	if(!length)return -1;
+
+	var i = length - 1;
+	if(fromIndex !== void 0)i = Math.min(i, fromIndex);
+	
+	// handle negative indices
+	i = i >= 0 ? i : length - Math.abs(i);
+	
+	for (; i >= 0; i--) {
+		if (i in thisArray && searchElement === thisArray[i]) {
+			return i;
+		}
+	}
+	return -1;
 };
 
 /**
@@ -979,7 +1018,7 @@ if(!Array.prototype.every)Array.prototype.every = function(callback, thisObject,
 	var result = _option_isAll;
 	_forEach(this, function(value, index) {
 		if(result == _option_isAll)result = !!_call(callback, thisObject, value, index, this);
-	});
+	}, this);
 	return result;
 };
 
@@ -1036,7 +1075,7 @@ if (!Array.prototype.map)Array.prototype.map = function(callback, thisArg) {
 	_forEach(this, function(v, k, obj) {
 		mappedValue = _call(callback, thisArg, v, k, obj);
 		result[k] = mappedValue;
-	});
+	}, this);
 
     return result;
 };
@@ -1082,14 +1121,12 @@ if (!String.prototype.trim || whitespace.trim()) {
     };
 }
 
-/*
- [bugfix]
- * ES5 15.5.4.14
- * http://es5.github.com/#x15.5.4.14
- * If separator is undefined, then the result array contains just one String, which is the this value (converted to a String). If limit is not undefined, then the output array is truncated so that it contains no more than limit elements.
- * "a".split(undefined, 0) -> []
- */
-if("a".split(void 0, 0).length) {
+// ES5 15.5.4.14
+// http://es5.github.com/#x15.5.4.14
+// [bugfix, chrome]
+// If separator is undefined, then the result array contains just one String, which is the this value (converted to a String). If limit is not undefined, then the output array is truncated so that it contains no more than limit elements.
+// "0".split(undefined, 0) -> []
+if("0".split(void 0, 0).length) {
 	var oldSplit = String.prototype.split;
 	String.prototype.split = function(separator, limit) {
 		if(separator === void 0 && limit === 0)return [];
@@ -1445,62 +1482,6 @@ if(!("contains" in _testElement))
 		return !!(this.compareDocumentPosition(arg) & 16)
 	};
 
-//https://developer.mozilla.org/en/DOM/Element.children
-//[IE lt 9] Fix "children" property in IE < 9
-// TODO: in `a.ie8.js` file
-if(!("children" in _testElement) || browser.msie && browser.msie < 9)
-	Object.defineProperty(elementProto, "children", {"get" : function() {
-		var arr = [],
-			child = this.firstChild;
-
-		while(child) {
-			if(child.nodeType == 1)arr.push(child);
-			child = child.nextSibling;
-		}
-
-		return arr;
-	}});
-
-//[IE lt 9] Traversal for IE < 9 and other
-// TODO: in `a.ie8.js` file
-if(_testElement.childElementCount == void 0)Object.defineProperties(elementProto, {
-	"firstElementChild" : {//https://developer.mozilla.org/en/DOM/Element.firstElementChild
-		"get" : function() {
-		    var node = this;
-		    // для старых браузеров
-		    // находим первый дочерний узел
-		    node = node.firstChild;
-		    // ищем в цикле следующий узел,
-		    // пока не встретим элемент с nodeType == 1
-		    while(node && node.nodeType != 1) node = node.nextSibling;
-		    // возвращаем результат
-		    return node;
-		}
-	},
-	"lastElementChild" : {//https://developer.mozilla.org/En/DOM/Element.lastElementChild
-		"get" : function() {
-		    var node = this;
-		    node = node.lastChild;
-		    while(node && node.nodeType != 1) node = node.previousSibling;
-		    return node;
-		}
-	},
-	"nextElementSibling" : {//https://developer.mozilla.org/En/DOM/Element.nextElementSibling
-		"get" : function() {
-		    var node = this;
-		    while(node = node.nextSibling) if(node.nodeType == 1) break;
-		    return node;
-		}
-	},
-	"previousElementSibling" : {//https://developer.mozilla.org/En/DOM/Element.previousElementSibling
-		"get" : function() {
-		    var node = this;
-		    while(node = node.previousSibling) if(node.nodeType == 1) break;
-    		return node;
-		}
-	}
-}
-);
 
 //https://developer.mozilla.org/En/DOM/Element.insertAdjacentHTML
 /*https://gist.github.com/1276030 by https://gist.github.com/eligrey*/
@@ -1637,7 +1618,7 @@ function fixNodeOnProto(proto) {
 	var cloneNode = proto.cloneNode;
 	delete proto.cloneNode;
 	proto.cloneNode = function _cloneNode(bool) {
-		if (bool === undefined) {
+		if (bool === void 0) {
 			bool = true;
 		}
 		return cloneNode.call(this, bool);
@@ -1794,8 +1775,7 @@ if(!("control" in document.createElement("label")))
  * http://www.impressivewebs.com/reverse-ordered-lists-html5/
  * http://html5doctor.com/ol-element-attributes/
  * TODO::
- *  1. shim api
- *  2. Equivalent list-style-type:
+ *  1. Equivalent list-style-type:
 		type="1"	decimal (default style)
 		type="a"	lower-alpha
 		type="A"	upper-alpha
@@ -2420,6 +2400,214 @@ var $$0 = global["$$0"] = function(selector, root) {
 
 /*  ======================================================================================  */
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  DOM  =======================================  */
+
+/*  =======================================================================================  */
+/*  ========================================  Date  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+//
+// Date
+// ====
+//
+
+// ES5 15.9.5.43
+// http://es5.github.com/#x15.9.5.43
+// This function returns a String value represent the instance in time
+// represented by this Date object. The format of the String is the Date Time
+// string format defined in 15.9.1.15. All fields are present in the String.
+// The time zone is always UTC, denoted by the suffix Z. If the time value of
+// this object is not a finite Number a RangeError exception is thrown.
+if(!Date.prototype.toISOString || (new Date(-62198755200000).toISOString().indexOf('-000001') === -1))
+    Date.prototype.toISOString = function() {
+        var result, length, value, year;
+        if (!isFinite(this)) {
+            throw new RangeError("Date.prototype.toISOString called on non-finite value.");
+        }
+
+        // the date time string format is specified in 15.9.1.15.
+        result = [this.getUTCMonth() + 1, this.getUTCDate(),
+            this.getUTCHours(), this.getUTCMinutes(), this.getUTCSeconds()];
+        year = this.getUTCFullYear();
+        year = (year < 0 ? '-' : (year > 9999 ? '+' : '')) + ('00000' + Math.abs(year)).slice(0 <= year && year <= 9999 ? -4 : -6);
+
+        length = result.length;
+        while (length--) {
+            value = result[length];
+            // pad months, days, hours, minutes, and seconds to have two digits.
+            if (value < 10) {
+                result[length] = "0" + value;
+            }
+        }
+        // pad milliseconds to have three digits.
+        return year + "-" + result.slice(0, 2).join("-") + "T" + result.slice(2).join(":") + "." +
+            ("000" + this.getUTCMilliseconds()).slice(-3) + "Z";
+    }
+
+// ES5 15.9.4.4
+// http://es5.github.com/#x15.9.4.4
+if(!Date.now)Date.now = function() {
+	return new Date().getTime();
+};
+
+// ES5 15.9.5.44
+// http://es5.github.com/#x15.9.5.44
+// This function provides a String representation of a Date object for use by
+// JSON.stringify (15.12.3).
+if(!Date.prototype.toJSON || !~((new Date(-62198755200000)).toJSON().indexOf('-000001')) ||
+    ~(function() {
+        // is Date.prototype.toJSON non-generic?
+        try {
+            return Date.prototype.toJSON.call({toISOString:function(){return -1;}});
+        } catch (err) {}
+    }())) {
+Date.prototype.toJSON = function(key) {
+	// When the toJSON method is called with argument key, the following
+	// steps are taken:
+
+	// 1.  Let O be the result of calling ToObject, giving it the this
+	// value as its argument.
+	// 2. Let tv be ToPrimitive(O, hint Number).
+	// 3. If tv is a Number and is not finite, return null.
+	// XXX
+	// 4. Let toISO be the result of calling the [[Get]] internal method of
+	// O with argument "toISOString".
+	// 5. If IsCallable(toISO) is false, throw a TypeError exception.
+	// In "_call"
+	// 6. Return the result of calling the [[Call]] internal method of
+	//  toISO with O as the this value and an empty argument list.
+	return _call(this.toISOString, this);
+
+	// NOTE 1 The argument is ignored.
+
+	// NOTE 2 The toJSON function is intentionally generic; it does not
+	// require that its this value be a Date object. Therefore, it can be
+	// transferred to other kinds of objects for use as a method. However,
+	// it does require that any such object have a toISOString method. An
+	// object is free to use the argument key to filter its
+	// stringification.
+};
+}
+
+// ES5 15.9.4.2
+// http://es5.github.com/#x15.9.4.2
+// based on work shared by Daniel Friesen (dantman)
+// http://gist.github.com/303249
+if (!Date.parse || "Date.parse is buggy") {
+    // XXX global assignment won't work in embeddings that use
+    // an alternate object for the context.
+    Date = (function(NativeDate) {
+
+        // Date.length === 7
+        var Date = function Date(Y, M, D, h, m, s, ms) {
+            var length = arguments.length;
+            if (this instanceof NativeDate) {
+                var date = length == 1 && String(Y) === Y ? // isString(Y)
+                    // We explicitly pass it through parse:
+                    new NativeDate(Date.parse(Y)) :
+                    // We have to manually make calls depending on argument
+                    // length here
+                    length >= 7 ? new NativeDate(Y, M, D, h, m, s, ms) :
+                    length >= 6 ? new NativeDate(Y, M, D, h, m, s) :
+                    length >= 5 ? new NativeDate(Y, M, D, h, m) :
+                    length >= 4 ? new NativeDate(Y, M, D, h) :
+                    length >= 3 ? new NativeDate(Y, M, D) :
+                    length >= 2 ? new NativeDate(Y, M) :
+                    length >= 1 ? new NativeDate(Y) :
+                                  new NativeDate();
+                // Prevent mixups with unfixed Date object
+                date.constructor = Date;
+                return date;
+            }
+            return NativeDate.apply(this, arguments);
+        };
+
+        // 15.9.1.15 Date Time String Format.
+        var isoDateExpression = new RegExp("^" +
+            "(\\d{4}|[\+\-]\\d{6})" + // four-digit year capture or sign + 6-digit extended year
+            "(?:-(\\d{2})" + // optional month capture
+            "(?:-(\\d{2})" + // optional day capture
+            "(?:" + // capture hours:minutes:seconds.milliseconds
+                "T(\\d{2})" + // hours capture
+                ":(\\d{2})" + // minutes capture
+                "(?:" + // optional :seconds.milliseconds
+                    ":(\\d{2})" + // seconds capture
+                    "(?:\\.(\\d{3}))?" + // milliseconds capture
+                ")?" +
+            "(" + // capture UTC offset component
+                "Z|" + // UTC capture
+                "(?:" + // offset specifier +/-hours:minutes
+                    "([-+])" + // sign capture
+                    "(\\d{2})" + // hours offset capture
+                    ":(\\d{2})" + // minutes offset capture
+                ")" +
+            ")?)?)?)?" +
+        "$");
+
+        var monthes = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365];
+
+        // Returns count of leap years before "year" since 0 CE
+        function leapYears(year) {
+            return Math.ceil(year / 4) - Math.ceil(year / 100) + Math.ceil(year / 400);
+        }
+
+        // Copy any custom methods a 3rd party library may have added
+        for (var key in NativeDate) {
+            Date[key] = NativeDate[key];
+        }
+
+        // Copy "native" methods explicitly; they may be non-enumerable
+        Date.now = NativeDate.now;
+        Date.UTC = NativeDate.UTC;
+        Date.prototype = NativeDate.prototype;
+        Date.prototype.constructor = Date;
+
+        // Upgrade Date.parse to handle simplified ISO 8601 strings
+        Date.parse = function parse(string) {
+            var match = isoDateExpression.exec(string);
+            if (match) {
+                // parse months, days, hours, minutes, seconds, and milliseconds
+                // provide default values if necessary
+                // parse the UTC offset component
+                var year = Number(match[1]),
+                    month = Number(match[2] || 1),
+                    day = Number(match[3] || 1),
+                    hour = Number(match[4] || 0),
+                    minute = Number(match[5] || 0),
+                    second = Number(match[6] || 0),
+                    millisecond = Number(match[7] || 0),
+                    // When time zone is missed, local offset should be used (ES 5.1 bug)
+                    // see https://bugs.ecmascript.org/show_bug.cgi?id=112
+                    offset = match[8] ? 0 : Number(new Date(1970, 0)),
+                    signOffset = match[9] === "-" ? 1 : -1,
+                    hourOffset = Number(match[10] || 0),
+                    minuteOffset = Number(match[11] || 0),    
+                    leapYears0 = leapYears(year),
+                    leapYears1 = leapYears(year + 1),
+                    result;
+                if (hour < (minute > 0 || second > 0 || millisecond > 0 ? 24 : 25) &&
+                    minute < 60 &&
+                    second < 60 &&
+                    millisecond < 1000 &&
+                    hourOffset < 24 && // detect invalid offsets
+                    minuteOffset < 60 &&
+                    month > 0 &&
+                    month < 13 &&
+                    day > 0 &&
+                    day < (1 + monthes[month] - monthes[month - 1] + (month === 2 ? leapYears1 - leapYears0 : 0))) {
+                    result = 365 * (year - 1970) + (month > 2 ? leapYears1 : leapYears0) - leapYears(1970) + monthes[month - 1] + day - 1;
+                    result = (((result * 24 + hour + hourOffset * signOffset) * 60 + minute + minuteOffset * signOffset) * 60 + second) * 1000 + millisecond + offset;
+                    if (-8.64e15 <= result && result <= 8.64e15) {
+                        return result;
+                    }
+                }
+                return NaN;
+            }
+            return NativeDate.parse.apply(this, arguments);
+        };
+
+        return Date;
+    })(Date);
+}
+/*  ======================================================================================  */
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Date  =====================================  */
 
 /*  =======================================================================================  */
 /*  ========================================  DEBUG  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */

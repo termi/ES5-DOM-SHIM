@@ -7,7 +7,7 @@
 // ==/ClosureCompiler==
 /**
  * ES5 and DOM shim for IE < 9
- * @version 2.1
+ * @version 2.2
  * required:
  *  - Object.append
  */
@@ -30,27 +30,6 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
 		"ielt9shims" : [],
 		"orig_" : orig_
 	}["ielt9shims"];
-
-
-/*  ======================================================================================  */
-/*  ==================================  Function prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
-
-/**
- * From prototypejs (prototypejs.org)
- * Wraps the function in another, locking its execution scope to an object specified by thisObj.
- * @param {Object} object
- * @param {...} var_args
- * @return {Function}
- * @version 2
- */
-if(!Function.prototype.bind)Function.prototype.bind = function(object, var_args) {
-	var __method = this, args = Array.prototype.slice.call(arguments, 1);
-	return function() {
-		return __method.apply(object, args.concat(Array.prototype.slice.call(arguments, 0)));
-	}
-};
-/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Function prototype  ==================================  */
-/*  =======================================================================================  */
 
 
 
@@ -130,7 +109,6 @@ if(!global["DocumentFragment"])global["DocumentFragment"] =
 
 var _arraySlice = Array.prototype.slice,
 	
-	_hasOwnProperty = Function.prototype.call.bind(Object.prototype.hasOwnProperty),
 	/**
 	 * Call _function
 	 * @param {Function} _function function to call
@@ -138,8 +116,21 @@ var _arraySlice = Array.prototype.slice,
 	 * @return {*} mixed
 	 * @version 2
 	 */
-  
     _applyFunction = Function.prototype.apply,
+	
+	/** Unsafe bind for service and performance needs
+	 * @param {Function} __method
+	 * @param {Object} object
+	 * @param {...} var_args
+	 * @return {Function} */
+    _unSafeBind = function(__method, object, var_args) {
+		var args = _arraySlice.call(arguments, 2);
+		return function () {
+			return _applyFunction.call(__method, object, args.concat(_arraySlice.call(arguments)));
+		}
+	},
+	
+	_hasOwnProperty = _unSafeBind(Function.prototype.call, Object.prototype.hasOwnProperty),
   
 	/**
 	 * Call _function
@@ -161,6 +152,31 @@ var _arraySlice = Array.prototype.slice,
 	elementProto = global["Element"].prototype;
 
 
+//Fix Function.prototype.apply to work with generic array-like object instead of an array
+// test: (function(a,b){console.log(a,b)}).apply(null, {0:1,1:2,length:2})
+var trueApply = false;
+try {
+	trueApply = isNaN.apply(null, {})
+}
+catch(e) { }
+if(!trueApply) {
+	Function.prototype.apply = function(contexts, args) {
+		try {
+			return args != void 0 ?
+				_applyFunction.call(this, contexts, args) :
+				_applyFunction.call(this, contexts);
+		}
+		catch (e) {
+			if(e["number"] != -2146823260 ||//"Function.prototype.apply: Arguments list has wrong type"
+				args.length === void 0 || //Not an iterable object
+			   typeof args === "string"//Avoid using String
+			  )
+				throw e;
+
+			return _applyFunction.call(this, contexts, Array["from"](args));
+		}
+	};
+}
 
 //[BUGFIX, IE lt 9] IE < 9 substr() with negative value not working in IE
 if("ab".substr(-1) !== "b") {
@@ -697,12 +713,69 @@ if (document.doctype === null && browser.msie > 7)//TODO:: this fix for IE < 8
 // Extend Text.prototype and HTMLDocument.prototype with shims. Note that get/set/has/remove|Attributes would be set too
 // TODO:: Do something with IE < 8
 if (!document.createTextNode().contains && global["Text"] && Text.prototype) {
-    _.push(_util_extendFunction.bind(null, Text.prototype, nodeProto));
+    _.push(_unSafeBind(_util_extendFunction, null, Text.prototype, nodeProto));
 }
 if (!document.createDocumentFragment().contains && global["HTMLDocument"] && HTMLDocument.prototype) {
-    _.push(_util_extendFunction.bind(null, HTMLDocument.prototype, nodeProto));
+    _.push(_unSafeBind(_util_extendFunction, null, HTMLDocument.prototype, nodeProto));
 }
 
+
+//https://developer.mozilla.org/en/DOM/Element.children
+//[IE lt 9] Fix "children" property in IE < 9
+if(!("children" in _testElement) || browser.msie && browser.msie < 9)_.push(function() {
+	Object.defineProperty(elementProto, "children", {"get" : function() {
+		var arr = [],
+			child = this.firstChild;
+
+		while(child) {
+			if(child.nodeType == 1)arr.push(child);
+			child = child.nextSibling;
+		}
+
+		return arr;
+	}});
+})
+
+//[IE lt 9, old browsers] Traversal for IE < 9 and other
+if(_testElement.childElementCount == void 0)_.push(function() {
+	Object.defineProperties(elementProto, {
+		"firstElementChild" : {//https://developer.mozilla.org/en/DOM/Element.firstElementChild
+			"get" : function() {
+			    var node = this;
+			    // для старых браузеров
+			    // находим первый дочерний узел
+			    node = node.firstChild;
+			    // ищем в цикле следующий узел,
+			    // пока не встретим элемент с nodeType == 1
+			    while(node && node.nodeType != 1) node = node.nextSibling;
+			    // возвращаем результат
+			    return node;
+			}
+		},
+		"lastElementChild" : {//https://developer.mozilla.org/En/DOM/Element.lastElementChild
+			"get" : function() {
+			    var node = this;
+			    node = node.lastChild;
+			    while(node && node.nodeType != 1) node = node.previousSibling;
+			    return node;
+			}
+		},
+		"nextElementSibling" : {//https://developer.mozilla.org/En/DOM/Element.nextElementSibling
+			"get" : function() {
+			    var node = this;
+			    while(node = node.nextSibling) if(node.nodeType == 1) break;
+			    return node;
+			}
+		},
+		"previousElementSibling" : {//https://developer.mozilla.org/En/DOM/Element.previousElementSibling
+			"get" : function() {
+			    var node = this;
+			    while(node = node.previousSibling) if(node.nodeType == 1) break;
+	    		return node;
+			}
+		}
+	})
+});
 
 // IE8 can't write to ownerDocument
 /*TODO:: is this realy need?
