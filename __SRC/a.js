@@ -7,7 +7,7 @@
 // ==/ClosureCompiler==
 /**
  * module
- * @version 5.1.1
+ * @version 6
  * TODO:: eng comments
  *        dateTime prop for IE < 8
  */
@@ -27,10 +27,9 @@ INCLUDE_EXTRAS:
  2. Object.append, Object.extend (Object.append with overwrite exists properties), Object.inherit
  3. Exporting Utils.Dom.DOMStringCollection
  4. Array.prototype.unique
- 5. Element.prototype.insertAfter
- 6. global.SendRequest -> ajax
- 7. global.forEach(<Object | Array>, iterator, context). if `iterator` return __false__ forEach stop working
- 8. global.randomString
+ 6. SendRequest -> ajax
+ 7. forEach(<Object | Array>, iterator, context). if `iterator` return __false__ forEach stop working
+ 8. randomString
  9. $A(iterable, start, end, forse) - alias for Array.from with Array|Object|String|number support eg: $A({a:1, b:2}) == [1,2]
  10. $K(iterable, forse) - alias for Object.keys with Arguments|Array|Object|String|number support eg: $A({a:1, b:2}) == ['a','b']
  12. bubbleEventListener TODO:: describe in eng. If you known russian you can read JSDoc
@@ -799,12 +798,10 @@ if([1,2].splice(0).length != 2) {
 	Array.prototype.splice = function(start, deleteCount) {
         if(start === void 0 && deleteCount === void 0)return [];
 
-		return _call(
-				_origArraySplice,
-				this,
-				start === void 0 ? 0 : start,
-				deleteCount === void 0 ? (this.length - start) : deleteCount,
-				_arraySlice.call(arguments, 2)
+		return _origArraySplice.apply(this,	[
+					start === void 0 ? 0 : start,
+					deleteCount === void 0 ? (this.length - start) : deleteCount
+				].concat(_arraySlice.call(arguments, 2))
 			);
 	};
 }
@@ -1134,7 +1131,7 @@ if("0".split(void 0, 0).length) {
 	var oldSplit = String.prototype.split;
 	String.prototype.split = function(separator, limit) {
 		if(separator === void 0 && limit === 0)return [];
-		return _call(oldSplit, this, arguments);
+		return _call(oldSplit, this, separator, limit);
 	}
 }
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  bug fixing  ==================================  */
@@ -1539,24 +1536,6 @@ if(!("insertAdjacentHTML" in _testElement)) {
 	};
 }
 
-if(INCLUDE_EXTRAS) {
-
-	if(!("insertAfter" in _testElement)) {
-		/**
-		 * NON STANDART METHOD
-		 * Вставляет DOM-элемент вслед за определённым DOM-элементом
-		 * @this {Node} Куда вставляем
-		 * @param {Node} elementToInsert Что вставляем
-		 * @param {Node} afterElement После чего вставляем
-		 * @return {Node} Переданый elementToInsert
-		 */
-		elementProto["insertAfter"] = function(elementToInsert, afterElement) {
-			//function(F,B){D=this;if(D._insertAfter){D._insertAfter(F,B)}else{(D.lastChild==B)?D.appendChild(F):D.insertBefore(F,B.nextSibling)}}
-			return this.insertBefore(elementToInsert, afterElement.nextSibling);
-		};
-	}
-
-} //if(INCLUDE_EXTRAS)
 
 // Emuleted HTMLTimeElement
 // TODO:: need more work
@@ -1629,60 +1608,63 @@ function fixNodeOnProto(proto) {
 	};
 }
 
-
-// Fix Chrome problem with DOMAttrModified event | http://blog.silkapp.com/2009/10/mutation-events-what-happen/
-function isDOMAttrModifiedSupported() {
-	var flag = false;
-
-	function callback() {
-		flag = true;
-	}
-
-	try {
-		_testElement.addEventListener('DOMAttrModified', callback, false);
-		_testElement.setAttribute('id', 'target');
-	}
-	catch(e) {
-
-	}
-	finally {
-		if(_testElement.removeEventListener)
-			_testElement.removeEventListener('DOMAttrModified', callback, false);
-	}
-
-	return flag;
+function mutationMacro(nodes) {
+    var node = null
+    nodes = [].map.call(nodes, function (node) {
+        if (typeof node === "string") {
+            return document.createTextNode(node)
+        }
+        return node
+    })
+    if (nodes.length === 1) {
+        node = nodes[0]
+    } else {
+        node = document.createDocumentFragment()
+        nodes.forEach(function (item) {
+            node.appendChild(item)
+        })
+    }
+    return node
 }
 
-if(!isDOMAttrModifiedSupported()
-   && _testElement.dispatchEvent //[temporary ielt9]TODO:: remove this when "DOMAttrModified" event whould be imulated in IE < 9
-   ) {
-	/**
-	 * @param {Function} oldHandle
-	 * @param {number=} attrChange
-	 */
-	var new_set_remove_Attribute = function(oldHandle, attrChange) {
-		return function(name, val) {
-			/** @type {Event} */
-			var e = document.createEvent("MutationEvents");
-			/** @type {string} */
-			var prev = this.getAttribute(name);
-			oldHandle.apply(this, arguments);
-			e.initMutationEvent("DOMAttrModified", true, true, null, prev,
-				((attrChange || val === null) ? "" : val),
-				name,
-				attrChange || ((prev == null) ?
-					2://e.ADDITION :
-					1//e.MODIFICATION
-							  )
-			);
-			this.dispatchEvent(e);
-		}
+//New DOM4 API
+if(!_testElement["after"]) {
+	elementProto["after"] = function () {
+		if (this.parentNode === null)return;
+
+		var node = mutationMacro(arguments);
+		this.parentNode.insertBefore(node, this.nextSibling);
 	};
 
-	elementProto.setAttribute = new_set_remove_Attribute(elementProto.setAttribute || _testElement.setAttribute/*IE < 8*/);
-	elementProto.removeAttribute = new_set_remove_Attribute(elementProto.removeAttribute || _testElement.removeAttribute/*IE < 8*/, 3);//3 === REMOVAL
-}
+	elementProto["before"] = function () {
+		if (this.parentNode === null)return;
 
+		var node = mutationMacro(arguments);
+		this.parentNode.insertBefore(node, this);
+	};
+
+	elementProto["append"] = function () {
+		var node = mutationMacro(arguments)
+		this.appendChild(node)
+	};
+	
+	elementProto["prepend"] = function () {
+		var node = mutationMacro(arguments)
+		this.insertBefore(node, this.firstChild)
+	};
+
+	elementProto["replace"] = function () {
+		if (this.parentNode === null)return;
+
+		var node = mutationMacro(arguments)
+		this.parentNode.replaceChild(node, this)
+	};
+
+	elementProto["remove"] = function () {
+		if (this.parentNode === null)return;
+		this.parentNode.removeChild(this)
+	};
+}
 
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Element.prototype  ==================================  */
@@ -2257,7 +2239,6 @@ catch(e) {
 if(!_testElement.addEventListener) {
 	elementProto.addEventListener = global.addEventListener;
 	elementProto.removeEventListener = global.removeEventListener;
-	elementProto.createEvent = global.createEvent;
 	elementProto.dispatchEvent = global.dispatchEvent;
 }
 

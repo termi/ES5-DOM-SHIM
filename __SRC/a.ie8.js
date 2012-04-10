@@ -7,7 +7,7 @@
 // ==/ClosureCompiler==
 /**
  * ES5 and DOM shim for IE < 9
- * @version 2.2
+ * @version 3
  * required:
  *  - Object.append
  */

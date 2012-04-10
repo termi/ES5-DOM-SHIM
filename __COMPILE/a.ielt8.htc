@@ -1,6 +1,5 @@
 <PUBLIC:COMPONENT lightWeight="true">
 <PUBLIC:PROPERTY NAME="classList" GET="a" />
-<!--PUBLIC:PROPERTY NAME="attributes" GET="b" /-->
 <PUBLIC:PROPERTY NAME="children" GET="c" />
 <PUBLIC:PROPERTY NAME="firstElementChild" GET="f" />
 <PUBLIC:PROPERTY NAME="lastElementChild" GET="g" />
@@ -33,7 +32,6 @@
 var 
 np=window.Node.prototype,ep=window.Element.prototype,
 a=ep.getclassList,
-b=np._ielt8_getAttributes,
 c=ep.getchildren,
 f=ep.getfirstElementChild,
 g=ep.getlastElementChild,
@@ -49,18 +47,6 @@ _g1=np.g1,_g2=np.g2,_g3=np.g3,_g4=np.g4,_g5=np.g5,_g6=np.g6,
 _g7=np.g7,_g8=np.g8,_g9=np.g9,_g10=np.g10,_g11=np.g11,_g12=np.g12,
 _g16=np.g16;
 if(this!=window){
-try{
-if(!this._)this._={};
-if(!this._.__ielt8_attributes__)this._.__ielt8_attributes__ = this.attributes;
-}
-catch(e) {
-	e = window.__ielt8__wontfix;
-	if(e) {
-		e[this.sourceIndex] = {
-			__ielt8_attributes__ : this.attributes
-		}
-	}
-}
 np.__ielt8__element_init__(this);
 }
 </SCRIPT>

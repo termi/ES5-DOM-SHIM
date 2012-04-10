@@ -1,6 +1,5 @@
 ﻿<PUBLIC:COMPONENT lightWeight="true">
 <PUBLIC:PROPERTY NAME="classList" GET="getClassList" />
-<PUBLIC:PROPERTY NAME="attributes" GET="getAttributes" />
 <PUBLIC:PROPERTY NAME="children" GET="getChildren" />
 <PUBLIC:PROPERTY NAME="firstElementChild" GET="getFirstElementChild" />
 <PUBLIC:PROPERTY NAME="lastElementChild" GET="getLastElementChild" />
@@ -39,7 +38,6 @@ var
 	Element_proto=window.Element.prototype,
 	getChildren=Element_proto.getchildren,
 	getClassList=Element_proto.getclassList,
-	getAttributes = Node_proto._ielt8_getAttributes,
 	getLastElementChild=Element_proto.getlastElementChild,
 	getFirstElementChild=Element_proto.getfirstElementChild,
 	getNextElementSibling=Element_proto.getnextElementSibling,
@@ -65,18 +63,6 @@ var
 	_g16=Node_proto.g16;
 
 if(this != window) {//Strange IE bug where thisObj === window
-	try{
-		if(!this._)this._ = {};
-		if(!this._.__ielt8_attributes__)this._.__ielt8_attributes__ = this.attributes;
-	}
-	catch(e) {
-		e = window.__ielt8__wontfix;
-		if(e) {
-			e[this.sourceIndex] = {
-				__ielt8_attributes__ : this.attributes
-			}
-		}
-	}
 	Node_proto.__ielt8__element_init__(this);
 }
 </SCRIPT>

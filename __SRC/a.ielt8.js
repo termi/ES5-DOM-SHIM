@@ -9,15 +9,13 @@
 // required: 
 //	a.ie8.js [window.browser.msie, window.Node, ...]
  
-/** @version 2.1 */
+/** @version 3 */
 
 ;(function(global) {
 
 //CONFIG START
 var /** @const*/
 	__URL_TO_ELEMENT_BEHAVIOR__     = '/a.ielt8.htc',
-	/** @const*/
-	__URL_TO_ATTRIBUTES_ELEMENT_BEHAVIOR__ = '/a.attributes.ielt8.htc',
 	/** @const*/
 	__STYLE_ID                      = "ielt8_style_prev_for_behaviour",
 	/** @const List of supporting tag names */
@@ -34,7 +32,7 @@ var nodeProto = global.Node.prototype,//Note: for IE < 8 `Node` and `Node.protot
 		"object",//IE < 8 BUG?
 		"_"//use it for feature detecting
 	],
-	ieltbehaviorRules = [__URL_TO_ATTRIBUTES_ELEMENT_BEHAVIOR__, __URL_TO_ELEMENT_BEHAVIOR__],
+	ieltbehaviorRules = [__URL_TO_ELEMENT_BEHAVIOR__],
 	ielt9BehaviorRule = "{behavior:",
 	_call = Date.call,
 	__ielt8__wontfix = [];
@@ -54,64 +52,6 @@ if(nodeProto["ie"] && browser.msie < 8) {//IE < 8 polifill
 nodeProto["ielt8"] = true;
 
 global["__ielt8__wontfix"] = __ielt8__wontfix;
-
-// Node.attributes path for IE < 8
-// No Node.attributes patch for document.head :(
-// [BUG]: '`attribute` shim dosn't work on `OBJECT` element
-var __notAnAttribute = {"insertAfter" : 1, "getElementsByClassName" : 1, "compareDocumentPosition" : 1, "_" : 1, "hasAttribute" : 1, "getAttribute" : 1, "setAttribute" : 1, "addEventListener" : 1, "removeEventListener" : 1, "dispatchEvent" : 1, "cloneNode" : 1, "querySelectorAll" : 1, "querySelector" : 1, "contains" : 1, "isEqualNode" : 1};
-
-nodeProto["_ielt8_getAttributes"] = function () {
-	var _ = this["_"] || __ielt8__wontfix[this.sourceIndex] || {},//If where is no '_' failed silensy
-		__true_ielt8_attributes__ = _["__true_ielt8_attributes__"],
-		__ielt8_attributes__ = _["__ielt8_attributes__"], //__ielt8_attributes__ seted in .htc file
-		result = {"length":0},
-		last__ielt8_attributes__length = _["last__ielt8_attributes__length"],
-		val,
-		i,
-		__ielt8__saveAttrNames,
-		shimed_attributes = _["shimed_attributes"];
-
-	//if(!__ielt8_attributes__)throw Error("__ielt8_attributes__ is required")
-	if (!__ielt8_attributes__)return result;
-
-	if(!_["__ielt8__saveAttrNames"])//For using in a.ie8.js::setAttribute
-		__ielt8__saveAttrNames = _["__ielt8__saveAttrNames"] = {};
-	
-	if(!__true_ielt8_attributes__ || last__ielt8_attributes__length !== __ielt8_attributes__.length) {
-		__true_ielt8_attributes__ = _["__true_ielt8_attributes__"] = [];
-		i = -1;
-		try {
-			while(val = __ielt8_attributes__[++i]) {
-				if(!(val.name in __notAnAttribute) && 
-				   val.nodeValue !== null//Отличие <p attr> -> p.attr==="" . if(p.attr===null)->Это фейковый IE < 8 аттрибут
-				  ) {
-					if(__ielt8__saveAttrNames)__ielt8__saveAttrNames[val.name] = 1;
-					__true_ielt8_attributes__.push(val);
-				}
-			}
-		}
-		catch(e){}
-		_["last__ielt8_attributes__length"] = __ielt8_attributes__.length;
-	}
-	
-	if(shimed_attributes) {
-		for(i in shimed_attributes) if(shimed_attributes.hasOwnProperty(i)) {
-			val = shimed_attributes[i];
-			result[result.length++] = val;
-			result[shimed_attributes[i].name] = val;		
-		}
-	}
-	
-	i = -1;
-	while(val = __true_ielt8_attributes__[++i]) {
-		if (val.specified) {
-			result[result.length++] = val;
-			result[__true_ielt8_attributes__[i].name] = val;
-		}
-	}
-	
-	return result;
-};
 
 /**
  * Функция возвращяет массив элементов выбранных по CSS3-селектору. 
@@ -557,9 +497,6 @@ nodeProto["__ielt8__element_init__"] = function __ielt8__element_init__(thisObj)
 				_tmp_container = __ielt8__wontfix[thisObj.sourceIndex] = {};
 			}
 		}
-		/*@requared window._ielt8_getAttributes */
-		//Save original attributes property if we don't do it
-		//if(!thisObj._.__ielt8_attributes__)thisObj._.__ielt8_attributes__ = thisObj.attributes;
 		_tmp_container.setAttribute = thisObj.setAttribute;
 		_tmp_container.getAttribute = thisObj.getAttribute;
 		_tmp_container.removeAttribute = thisObj.removeAttribute;
