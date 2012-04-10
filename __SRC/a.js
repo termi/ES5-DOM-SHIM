@@ -799,13 +799,10 @@ if([1,2].splice(0).length != 2) {
 	Array.prototype.splice = function(start, deleteCount) {
         if(start === void 0 && deleteCount === void 0)return [];
 
-		return _call(
-				_origArraySplice,
-				this,
-				start === void 0 ? 0 : start,
-				deleteCount === void 0 ? (this.length - start) : deleteCount,
-				_arraySlice.call(arguments, 2)
-			);
+		return _origArraySplice.apply(this,	[
+					start === void 0 ? 0 : start,
+					deleteCount === void 0 ? (this.length - start) : deleteCount
+				].concat(_arraySlice.call(arguments, 2)));
 	};
 }
 
@@ -1134,7 +1131,7 @@ if("0".split(void 0, 0).length) {
 	var oldSplit = String.prototype.split;
 	String.prototype.split = function(separator, limit) {
 		if(separator === void 0 && limit === 0)return [];
-		return _call(oldSplit, this, arguments);
+		return _call(oldSplit, this, separator, limit);
 	}
 }
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  bug fixing  ==================================  */
