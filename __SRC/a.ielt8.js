@@ -19,14 +19,13 @@ var /** @const*/
 	/** @const*/
 	__STYLE_ID                      = "ielt8_style_prev_for_behaviour",
 	/** @const List of supporting tag names */
-	__SUPPORTED__TAG_NAMES__ = "object,html,body,div,span,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,abbr,address,cite,code,del,dfn,em,img,ins,kbd,q,samp,small,strong,sub,sup,var,b,i,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td,article,aside,canvas,details,figcaption,figure,footer,header,hgroup,menu,nav,section,summary,time,mark,audio,video,textarea,input,select";
+	__SUPPORTED__TAG_NAMES__ = "*";
 //CONFIG END
 
 var nodeProto = global.Node.prototype,//Note: for IE < 8 `Node` and `Node.prototype` is just an JS objects created in a.ie8.js
 	Element_proto = global.Element.prototype,
 	browser = global.browser,
 	noDocumentReadyState,
-	supportedTagNames = __SUPPORTED__TAG_NAMES__.split(","),
 	notSupportedTagNames = [
 		"script", "style",
 		"object",//IE < 8 BUG?
@@ -446,6 +445,10 @@ function queryOneManySelector(selector) {
 if(!document.querySelectorAll)document.querySelectorAll = queryManySelector;
 if(!document.querySelector)document.querySelector = queryOneManySelector;
 
+if(!nodeProto.hasAttribute)nodeProto.hasAttribute = function(name) {
+	return this.getAttribute(name) !== null;
+};
+
 var _returnFirstParam = function(a) {
 	return function() {
 		return a
@@ -497,13 +500,7 @@ nodeProto["__ielt8__element_init__"] = function __ielt8__element_init__(thisObj)
 				_tmp_container = __ielt8__wontfix[thisObj.sourceIndex] = {};
 			}
 		}
-		_tmp_container.setAttribute = thisObj.setAttribute;
-		_tmp_container.getAttribute = thisObj.getAttribute;
-		_tmp_container.removeAttribute = thisObj.removeAttribute;
 		if(thisObj.cloneNode !== Element_proto.cloneNode)thisObj.cloneNode = Element_proto.cloneNode;
-		if(thisObj.getAttribute !== Element_proto.getAttribute)thisObj.getAttribute = Element_proto.getAttribute;
-		if(thisObj.setAttribute !== Element_proto.setAttribute)thisObj.setAttribute = Element_proto.setAttribute;
-		if(thisObj.removeAttribute !== Element_proto.removeAttribute)thisObj.removeAttribute = Element_proto.removeAttribute;
 		if(nodeProto.contains)thisObj.contains = nodeProto.contains;
 	}
 	catch(e) {
@@ -519,18 +516,6 @@ var originCreateElement = document.createElement;
 document.createElement = function(tagName) {
 	var el = _call.call(originCreateElement, document, tagName);
 	
-	//FIX IE lt 8 Element.prototype
-	//Object.append(el, nodeProto);
-	
-	tagName = tagName.toLowerCase();
-	if(!~__SUPPORTED__TAG_NAMES__.indexOf("," + tagName + ",") && !~supportedTagNames.indexOf(tagName) && !~notSupportedTagNames.indexOf(tagName)) {
-		var style = _call.call(originCreateElement, document, "style");
-		style.type = 'text/css';
-		style.styleSheet.cssText = tagName + "{behavior: url(\"" + __URL_TO_ELEMENT_BEHAVIOR__ + "\")}";
-		document.head.appendChild(style);
-		
-		supportedTagNames.push(tagName);
-	}
 	if(tagName !== "_") {
 		var jj = ieltbehaviorRules.length;
 		while(--jj >= 0)

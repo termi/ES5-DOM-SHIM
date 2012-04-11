@@ -565,11 +565,6 @@ if (!Object.defineProperty || definePropertyFallback) {
         if ((typeof descriptor != "object" && typeof descriptor != "function") || descriptor === null)
             throw new TypeError(ERR_NON_OBJECT_DESCRIPTOR + descriptor);
 
-		//[ie lt 9] If object is HTML Node
-		//Save original attribute value using special `setAttribute` function
-		if(object.nodeType && object.setAttribute && object.setAttribute["ielt9"] && object.hasAttribute(property))
-			object.setAttribute(property, object.getAttribute(property), true/*_forceSaveAttribute*/);
-
         // make a valiant attempt to use the real defineProperty
         // for I8's DOM elements.
         if (definePropertyFallback) {
@@ -1213,6 +1208,7 @@ var _Event = function (type, dict) {// Event constructor
 
 	dict = dict || {};
 	e.initEvent(type, dict.bubbles || false, dict.cancelable || false);
+	if(!("isTrusted" in e))e.isTrusted = false;
 
 	return e;
 };
@@ -1251,6 +1247,7 @@ var _CustomEvent = function (type, dict) {// CustomEvent constructor
 	dict.detail = (dict.detail !== void 0) ? dict.detail : null;
 	(e.initCustomEvent || (e.detail = dict.detail, e.initEvent)).call
 		(e, type, dict.bubbles || false, dict.cancelable || false, dict.detail);
+	if(!("isTrusted" in e))e.isTrusted = false;
 
 	return e;
 };
@@ -1573,7 +1570,7 @@ Object.defineProperty((global["HTMLUnknownElement"] && global["HTMLUnknownElemen
 // Opera agress that its not optional
 // IE < 9 has javascript implimentation marked as `shim`
 // FROM https://github.com/Raynos/DOM-shim/blob/master/src/all/bugs.js
-if(!document.importNode["shim"])
+if(document.importNode && !document.importNode["shim"])
 try {
 	document.importNode(_testElement);
 } catch (e) {
@@ -2599,6 +2596,18 @@ if (!Date.parse || "Date.parse is buggy") {
 }
 /*  ======================================================================================  */
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Date  =====================================  */
+
+
+
+if(!INCLUDE_EXTRAS) {
+	if(!definePropertyWorksOnObject) {
+		Object.defineProperty = null;
+		delete Object.defineProperty;
+	}
+}
+
+
+
 
 /*  =======================================================================================  */
 /*  ========================================  DEBUG  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */

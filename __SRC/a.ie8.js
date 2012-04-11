@@ -86,6 +86,8 @@ var _throwDOMException = function(errStr) {
 //Emulating HEAD for ie < 9
 document.head || (document.head = document.getElementsByTagName('head')[0]);
 
+document.defaultView || (document.defaultView = global);
+
 if(DEBUG) {
 	//test DOMElement is an ActiveXObject
 	if(!(document.createElement("div") instanceof ActiveXObject))
@@ -333,6 +335,10 @@ if(!_DOMException) {
 
 var preventDefault_ = function(){this.returnValue = false};
 var stopPropagation_ = function(){this.cancelBubble = true};
+var stopImmediatePropagation_ = function() {
+	this.__stopNow = true;
+	this.stopPropagation()
+};
 
 var guid = 0,// текущий номер обработчика
 	//Т.к. мы кладём всё в один контейнер "_", нужно убедится, что названия свойств не будут пересикаться с другими названиями из другой части библиотеки a.js (a.ielt8.htc и a.ie6.htc)
@@ -351,12 +357,12 @@ function fixEvent(event) {
 	//http://javascript.gakaa.com/event-detail.aspx
 	//http://www.w3.org/TR/2011/WD-DOM-Level-3-Events-20110531/#event-type-click
 	//indicates the current click count; the attribute value must be 1 when the user begins this action and increments by 1 for each click.
-	if(event.type === "click" && event.detail === undefined)event.detail = 1;
-	else if(event.type === "dblclick" && event.detail === undefined)event.detail = 2;
+	if(event.type === "click" && event.detail === void 0)event.detail = 1;
+	else if(event.type === "dblclick" && event.detail === void 0)event.detail = 2;
 	
-	// добавить preventDefault/stopPropagation для IE
 	event.preventDefault || (event.preventDefault = preventDefault_);
 	event.stopPropagation || (event.stopPropagation = stopPropagation_);
+	event.stopImmediatePropagation || (event.stopImmediatePropagation = stopImmediatePropagation_);
 
 	event.target || (event.target = event.srcElement || document);// добавить target для IE
 
@@ -377,7 +383,7 @@ function fixEvent(event) {
 	// записать нажатую кнопку мыши в which для IE. 1 == левая; 2 == средняя; 3 == правая
 	event.which || event.button && (event.which = event.button & 1 ? 1 : event.button & 2 ? 3 : event.button & 4 ? 2 : 0);
 		
-	if(!event.timeStamp)event.timeStamp = +new Date()
+	if(!event.timeStamp)event.timeStamp = +new Date();
 	
 	if(!event.eventPhase)event.eventPhase = (event.target == thisObj) ? 2 : 3; // "AT_TARGET" = 2, "BUBBLING_PHASE" = 3
 	
@@ -394,6 +400,10 @@ function fixEvent(event) {
 
 // вспомогательный универсальный обработчик. Вызывается в контексте элемента всегда this = element
 function commonHandle(event) {
+	if(fixEvent === void 0) {//фильтруем редко возникающую ошибку, когда событие отрабатывает после unload'а страницы. 
+		return;
+	}
+
 	var thisObj = this,
 		_ = thisObj["_"],
 		errors = [],//Инициализуется массив errors для исключений
@@ -401,9 +411,13 @@ function commonHandle(event) {
 	
 	if(!_ || !_[eventsUUID])return;
 	
-	var handlers = _[eventsUUID][event.type];
 	// получить объект события и проверить, подготавливали мы его для IE или нет
-	if(!(event = event || window.event)["__isFixed"])event = fixEvent.call(thisObj, event);
+	event || (event = window.event);
+	if(!event["__isFixed"])event = fixEvent.call(thisObj, event);
+
+	var handlers = _[eventsUUID][event.type];
+
+	if(!handlers)return;
 
 	for(var g in handlers)if(_hasOwnProperty(handlers, g)) {
 		var handler = handlers[g];
@@ -412,10 +426,7 @@ function commonHandle(event) {
 			//Передаём контекст и объект event, результат сохраним в event['result'] для передачи значения дальше по цепочке
 			if(
 				(
-					event['result'] = (
-						(typeof _handler != "function") && handler.handleEvent) ?
-							handler.handleEvent(event) : //Registering an EventListener with a function object that also has a handleEvent property -> Call EventListener as a function
-							_call(handler, this, event)
+					event['result'] = _call(handler, this, event)
 				)
 				=== false
 			  ) {//Если вернели false - остановим обработку функций
@@ -429,7 +440,7 @@ function commonHandle(event) {
 			if(console)console.error(e);
 		}
 
-		if(event.stopNow)break;//Мгновенная остановка обработки событий
+		if(event.__stopNow)break;//Мгновенная остановка обработки событий
 	}
 	
 	if(errors.length == 1) {//Если была только одна ошибка - кидаем ее дальше
@@ -446,7 +457,12 @@ function commonHandle(event) {
 
 if(!document.addEventListener)global.addEventListener = document.addEventListener = function(_type, _handler, useCapture) {
 	//TODO:: useCapture == true
-	if(typeof _handler != "function" && !(typeof _handler == "object" && _handler.handleEvent))return;
+	if(typeof _handler != "function") {
+		if(typeof _handler == "object" && _handler.handleEvent) {//Registering an EventListener with a function object that also has a handleEvent property -> Call EventListener as a function
+			_handler = _handler.handleEvent;
+		}
+		else return;
+	}
 	
 	var /** @type {Node} */
 		thisObj = this,
@@ -456,10 +472,14 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 		_callback,
 		/** @type {boolean} */
 		_useInteractive = false;
+		/* @type {number} 
+		_event_phase = useCapture ? 1 : 3;*/
 		
 	if(!_)_ = thisObj["_"] = {};
+	//_ = _[_event_phase] || (_[_event_phase] = {});
 	
 	if(_type === "DOMContentLoaded") {//IE
+		_useInteractive = true;
 		var a = document.getElementById("__ie_onload");
 		if(!a) {
 			document.write("<script id=\"__ie_onload\" defer=\"defer\" src=\"javascript:void(0)\"><\/script>");
@@ -499,7 +519,7 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 			//waits for script execution.
 			if (thisObj.readyState === 'loaded') {
 				thisObj.onreadystatechange = null;
-				thisObj.attachEvent("onreadystatechange", _callback);
+				thisObj.attachEvent("onreadystatechange", _unSafeBind(commonHandle, thisObj, {"type" : _type}));
 			}
 		};
 		_type = "readystatechange";
@@ -519,19 +539,15 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 	if(!_handler.guid)_handler.guid = ++guid;
 	
 	//Инициализовать служебную структуру events и обработчик _[handleUUID]. 
-	//Обработчик _[handleUUID] фильтрует редко возникающую ошибку, когда событие отрабатывает после unload'а страницы. 
-	//Основная же его задача - передать вызов универсальному обработчику commonHandle с правильным указанием текущего элемента this. 
+	//Основная его задача - передать вызов универсальному обработчику commonHandle с правильным указанием текущего элемента this. 
 	//Как и events, _[handleUUID] достаточно инициализовать один раз для любых событий.
-	if(!(_callback = _[eventsUUID])) {
-		_[eventsUUID] = {};
-		_callback = _[handleUUID] = function(event) {
-			if(event !== void 0)
-				return commonHandle.call(thisObj, event);
-		}
+	if(!(_callback = _[handleUUID])) {
+		_callback = _[handleUUID] = _unSafeBind(commonHandle, thisObj);
 	}
-	
+
 	//Если обработчиков такого типа событий не существует - инициализуем events[type] и вешаем
-	// _[handleUUID] как обработчик на elem для запуска браузером по событию type.
+	// commonHandle как обработчик на elem для запуска браузером по событию type.
+	if(!_[eventsUUID])_[eventsUUID] = {};
 	if(!_[eventsUUID][_type]) {
 		_[eventsUUID][_type] = {};
 		
@@ -545,24 +561,32 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 	_[eventsUUID][_type][_handler.guid] = _handler;
 };
 
-if(!document.removeEventListener)global.removeEventListener = document.removeEventListener = function(_type, _handler) {
-	var thisObj = this,
-		_ = thisObj["_"];		
+if(!document.removeEventListener)global.removeEventListener = document.removeEventListener = function(_type, _handler, useCapture) {
+	var /** @type {Node} */
+		thisObj = this,
+		/** @type {Object} */
+		_ = thisObj["_"];
+		/* @type {number} 
+		_event_phase = useCapture ? 1 : 3;*/
+	
 	if(typeof _handler != "function" || !_handler.guid || !_)return;
+
+	//_ = _[_event_phase] || (_[_event_phase] = {});
+	//if(!_)return;
+
 	var handlers = _[eventsUUID] && _[eventsUUID][_type];//Получить список обработчиков
 	
 	delete handlers[_handler.guid];//Удалить обработчик по его номеру
 
 	for(var any in handlers)if(_hasOwnProperty(handlers, any))return;//TODO: проверить, что тут делается. Глупость какая-то.Проверить, не пуст ли список обработчиков
 	//Если пуст, то удалить служебный обработчик и очистить служебную структуру events[type]
-	thisObj.detachEvent("on" + _type, _[handleUUID]);
+	thisObj.detachEvent("on" + _type, commonHandle);
 
 	delete _[eventsUUID][_type];
 
-	//Если событий вообще не осталось - удалить events и _[handleUUID] за ненадобностью.
+	//Если событий вообще не осталось - удалить events за ненадобностью.
 	for(var any in _[eventsUUID])if(_hasOwnProperty(_[eventsUUID], any))return;
 	
-	delete _[handleUUID];
 	delete _[eventsUUID];
 };
 
@@ -579,34 +603,34 @@ The return value of dispatchEvent indicates whether any of the listeners which h
 Exceptions 
 EventException	
 UNSPECIFIED_EVENT_TYPE_ERR: Raised if the Event's type was not specified by initializing the event before dispatchEvent was called. Specification of the Event's type as null or an empty string will also trigger this exception
- * @param {string} event is an event object to be dispatched.
+ * @param {(Event|CustomEvent)} _event is an event object to be dispatched.
  * @this {Element} is the target of the event.
  * @return {boolean} The return value is false if at least one of the event handlers which handled this event called preventDefault. Otherwise it returns true.
  */
-if(!document.dispatchEvent)global.dispatchEvent = document.dispatchEvent = function(event) {
-	
+if(!document.dispatchEvent)global.dispatchEvent = document.dispatchEvent = function(_event) {
+	if(!_event.type)return true;
 	/**
 	 * @type {Node}
 	 */
 	var thisObj = this;
 	
 	try {
-		return thisObj.fireEvent("on" + event.type, event);
+		return thisObj.fireEvent("on" + _event.type, _event);
 	}
 	catch(e) {
 		//Shim for Custome events in IE < 9
 		if(e["number"] === -2147024809) {//"Недопустимый аргумент."
-			if(DEBUG)event._custom_event_ = true;//FOR DEBUG
-			var node = event.target = thisObj;
+			if(DEBUG)_event._custom_event_ = true;//FOR DEBUG
+			var node = _event.target = thisObj;
 			//Всплываем событие
-			while(!event.cancelBubble && node) {//Если мы вызвали stopPropogation() - больше не всплываем событие
-				if("_" in node)//Признак того, что на элемент могли навесить событие
-					commonHandle.call(node, event);
+			while(!_event.cancelBubble && node) {//Если мы вызвали stopPropogation() - больше не всплываем событие
+				if("_" in node && node["_"][eventsUUID])//Признак того, что на элемент могли навесить событие
+					commonHandle.call(node, _event);
 				//Если у события отключено всплытие - не всплываем его
-				node = event.bubbles ? (node === document ? window : node.parentNode) : null;
+				node = _event.bubbles ? (node === document ? document.defaultView : node.parentNode) : null;
 			}
 			
-			return !event.cancelBubble;
+			return !_event.cancelBubble;
 		}
 		else throw e;
 	}
@@ -632,7 +656,9 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 		thisObj.cancelable = _cancelable;//https://developer.mozilla.org/en/DOM/event.cancelable
 		
 		thisObj.isTrusted = false;
-		thisObj.target = null;		
+		thisObj.target = null;
+
+		if(!thisObj.timeStamp)thisObj.timeStamp = +new Date();
 	}
 	function _initCustomEvent(_type, _bubbles, _cancelable, _detail) {
 		//https://developer.mozilla.org/en/DOM/CustomEvent
@@ -687,6 +713,7 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 if(global.Event && global.Event.prototype) {
 	Event.prototype.stopPropagation = stopPropagation_;
     Event.prototype.preventDefault = preventDefault_;
+    Event.prototype.stopImmediatePropagation = stopImmediatePropagation_;
 }
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Events  ======================================  */
@@ -1041,125 +1068,6 @@ var filter = elem.style['filter'];
 		return obj.currentStyle;
 	}
 }
-
-/* getAttribute, setAttribute, hasAttribute fix in IE*/
-//TODO:: getAttributeNS etc
-var randomValue = _testElement["sentinel"] = Math.round(Math.random() * 1e9);
-if(_testElement.getAttribute("sentinel") == randomValue + "" || nodeProto["ielt8"]) {
-	var _ie8_getAttribute = _testElement.getAttribute,
-		//_ielt9_hasAttribute = _testElement.hasAttribute,//No need
-		_ie8_setAttribute = _testElement.setAttribute,
-		_ie8_removeAttribute = _testElement.removeAttribute;
-	
-	nodeProto.getAttribute = function(name) {
-		var thisObj = this,
-			result,
-			_ = thisObj["_"],
-			_attributes = thisObj.attributes;
-		
-		//result = (result = _attributes && _attributes[name]) && result.value;
-		
-		if(!result && _ && _["shimed_attributes"])
-			result = (_ = _["shimed_attributes"][name]) && _.value;
-			
-		if(!result) {
-			result = _call(_ && _.getAttribute ?
-				_.getAttribute :
-				_ie8_getAttribute, thisObj, name);
-		}
-		
-		return result == null ? null : result;
-	};
-	
-	nodeProto.setAttribute = function(name, value, _forceSaveAttribute) {
-		value = value + "";
-		
-		var thisObj = this,
-			_ = thisObj["_"],
-			__ielt8__saveAttrNames = _ && _["__ielt8__saveAttrNames"],
-			_attributes = __ielt8__saveAttrNames || thisObj.attributes;
-		
-		//Try get __ielt8__saveAttrNames second time after "tuch" thisObj.attributes property
-		if(!__ielt8__saveAttrNames)
-			(__ielt8__saveAttrNames = _ && _["__ielt8__saveAttrNames"]) &&
-			(_attributes = __ielt8__saveAttrNames);
-			
-		if(!(name in _attributes) && name in thisObj || _forceSaveAttribute) {//Property defined as Object.definedProperty
-			_ = thisObj["_"] || (thisObj["_"] = {});
-			
-			_ = (_["shimed_attributes"] || (_["shimed_attributes"] = {}));
-			if(_[name]) {
-				_ = _[name];
-				_.value = _.textContent = _.nodeValue = value;
-			}
-			else {
-				_[name] = {
-					"expando" : false,
-					attributes: null,
-					childNodes: null,
-					firstChild : null,
-					lastChild : null,
-					localName: name,
-					name: name,
-					nextSibling: null,
-					nodeName: name,
-					nodeType: 2,
-					nodeValue: value,
-					ownerDocument: document,
-					ownerElement: thisObj,
-					parentElement: null,
-					parentNode: null,
-					prefix: null,
-					previousSibling: null,
-					specified: true,
-					value: value
-				};
-			}
-		}
-		else {
-			if(__ielt8__saveAttrNames)__ielt8__saveAttrNames[name] = 1;
-			try {
-				value = _call(_ && _.setAttribute ?
-					_.setAttribute :
-					_ie8_setAttribute, thisObj, name, value);
-			}
-			catch(e){alert("ERRROROR:  "+_.setAttribute + "thisObj:" + this + " | tagName" + this.tagName + " | name:" + name + " | value:" + value + " | " + e.message)}
-		}
-		
-		//if(needTriggered)thisObj[name] = thisObj[name];//Error:Недостаточно места в стеке
-		
-		return value;
-	};
-	nodeProto.setAttribute["ielt9"] = true;
-	
-	nodeProto.removeAttribute = function(name) {
-		var thisObj = this,
-			__ielt8__saveAttrNames = _ && _["__ielt8__saveAttrNames"],
-			_attributes = __ielt8__saveAttrNames || thisObj.attributes,
-			result = false;
-		
-		if(!(name in _attributes) && name in thisObj) {//Property defined as Object.definedProperty
-			var _ = thisObj["_"];
-			
-			if(_ && _["shimed_attributes"]) {
-				result = !!_["shimed_attributes"][name];
-				delete _["shimed_attributes"][name];
-			}
-		}
-		else {
-			result = _call(_ && _.removeAttribute ?
-				_.removeAttribute :
-				_ie8_removeAttribute, thisObj, name) || result;
-		}
-		
-		return result
-	};
-
-	nodeProto.hasAttribute = function(name) {
-		return this.getAttribute(name) !== null;
-	};
-}
-
 
 var html5_elements = 'abbr article aside audio canvas command datalist details figure figcaption footer header hgroup keygen mark meter nav output progress section source summary time video',
 	html5_elements_array = html5_elements.split(' ');
