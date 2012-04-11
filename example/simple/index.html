@@ -20,7 +20,7 @@
 <!--[if lt IE 8]>
 <script src="/__COMPILE/a.ielt8.js"></script>
 <![endif]-->
-<script src="/__COMPILE/a.js"></script>
+<script src="/__COMPILE/a.noextras.js?1"></script>
 <script>
 document.createElement("j");
 document.createElement("c");
@@ -114,7 +114,7 @@ function main() {
 	j = document.querySelector(".test");
 	j.addEventListener("someEvent", console.log.bind(null, "j someEvent capture"), true);
 	
-	$("test2").addEventListener("someEvent", console.log.bind(null, "test2 someEvent capture"), true);
+	//$("test2").addEventListener("someEvent", console.log.bind(null, "test2 someEvent capture"), true);
 	
 	var att = 0;
 	
