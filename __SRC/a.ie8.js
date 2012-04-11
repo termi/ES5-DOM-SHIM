@@ -42,7 +42,7 @@ var browser = global["browser"] = {
 	agent : navigator.userAgent.toLowerCase()
 };
 browser.names = browser.agent.match(/(msie)/gi);
-if(browser.names.length)browser[browser.names[0]] = true;
+if(browser.names && browser.names.length)browser[browser.names[0]] = true;
 /** @type {boolean}
  * @const */
 browser.msie = browser["msie"];

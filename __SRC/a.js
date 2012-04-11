@@ -123,7 +123,7 @@ if(INCLUDE_EXTRAS) {
 }
 else {
 	browser.names = browser.agent.match(/(msie)/gi);
-	if(browser.names.length)browser[browser.names[0]] = true;
+	if(browser.names && browser.names.length)browser[browser.names[0]] = true;
 
 	browser.msie = browser["msie"];
 
@@ -275,7 +275,7 @@ if(!global["HTMLDocument"])global["HTMLDocument"] = global["Document"];//For IE9
 if(!global["Document"])global["Document"] = global["HTMLDocument"];//For IE8
 //TODO:: for IE < 8 :: if(!global["Document"] && !global["HTMLDocument"])global["Document"] = global["HTMLDocument"] = ??;//for IE < 8
 
-
+var createExtendFunction;
 if(INCLUDE_EXTRAS) {
 /*  =======================================================================================  */
 /*  ======================================  Classes  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
@@ -284,7 +284,7 @@ if(INCLUDE_EXTRAS) {
  * @param {boolean=} overwrite
  * @return {function(this:Object, Object, ...[*]): Object}
  */
-function createExtendFunction(overwrite) {
+createExtendFunction = function(overwrite) {
 	/**
 	 * @param {Object} obj
 	 * @param {...} ravArgs
@@ -1131,7 +1131,7 @@ if("0".split(void 0, 0).length) {
 	var oldSplit = String.prototype.split;
 	String.prototype.split = function(separator, limit) {
 		if(separator === void 0 && limit === 0)return [];
-		return _call(oldSplit, this, separator, limit);
+		return oldSplit.apply(this, agruments);
 	}
 }
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  bug fixing  ==================================  */
@@ -1351,12 +1351,12 @@ var methods = {
 		if(token === "")_throwDOMException("SYNTAX_ERR");
 		if((token + "").indexOf(" ") > -1)_throwDOMException("INVALID_CHARACTER_ERR");
 	},
-	add: function(token) {
+	add: function(token, canDuplicate) {
 		this.checkToken(token);
 
 		var thisObj = this, v = thisObj.value;
 
-		if(thisObj._container.indexOf(token) !== -1)return;
+		if(!canDuplicate && thisObj._container.indexOf(token) !== -1)return;
 
 		thisObj.value += ((v && !(new RegExp("\\s+$", "g")).test(v) ? " " : "") + token);
 
@@ -1402,8 +1402,8 @@ var methods = {
 
 		return result;
 	},
-	update: function(string) {
-		string = string || "";//default value
+	update: function(_string) {
+		var string = _string || "";//default value
 
 		var isChange = !!this.length;
 
@@ -1415,8 +1415,14 @@ var methods = {
 			this.value = "";
 		}
 
-		if(string && (string = string.trim()))
-			string.split((new RegExp("\\s+", "g"))).forEach(this.add.bind(this));
+		if(string) {
+			if(string = string.trim()) {
+				string.split((new RegExp("\\s+", "g"))).forEach(function(token){
+					this.add(token, true);
+				}, this);
+			}
+			else this.value = _string;//empty value should stringify to contain the attribute's whitespace
+		}			
 
 		if(isChange && this._onchange)this._onchange.call(this);
 
