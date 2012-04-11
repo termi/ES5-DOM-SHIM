@@ -1131,7 +1131,7 @@ if("0".split(void 0, 0).length) {
 	var oldSplit = String.prototype.split;
 	String.prototype.split = function(separator, limit) {
 		if(separator === void 0 && limit === 0)return [];
-		return oldSplit.apply(this, agruments);
+		return oldSplit.apply(this, arguments);
 	}
 }
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  bug fixing  ==================================  */
