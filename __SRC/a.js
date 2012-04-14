@@ -22,21 +22,26 @@ var INCLUDE_EXTEND_POLYFILLS = false;
 //GCC DEFINES END
 
 /*
+IF INCLUDE_EXTRAS == false ->
+ broken Object.defineProperty will be deleted
+
 INCLUDE_EXTRAS:
- 1. Exporting "browser" object to global
- 2. Object.append, Object.extend (Object.append with overwrite exists properties), Object.inherit
- 3. Exporting Utils.Dom.DOMStringCollection
- 4. Array.prototype.unique
- 6. SendRequest -> ajax
- 7. forEach(<Object | Array>, iterator, context). if `iterator` return __false__ forEach stop working
- 8. randomString
- 9. $A(iterable, start, end, forse) - alias for Array.from with Array|Object|String|number support eg: $A({a:1, b:2}) == [1,2]
- 10. $K(iterable, forse) - alias for Object.keys with Arguments|Array|Object|String|number support eg: $A({a:1, b:2}) == ['a','b']
- 12. bubbleEventListener TODO:: describe in eng. If you known russian you can read JSDoc
- 13. $ alias for document.getElementById
- 14. $$ alias for document.querySelectorAll (with ">[any selector]" support)
- 15. $$0 -> $$[0]
- 16. Fix console From https://github.com/theshock/console-cap/blob/master/console.js
+Exporting these objects to global (window)
+ 1. browser
+ 2. Utils.Dom.DOMStringCollection
+ 3. XHR from https://github.com/Raynos/xhr with customisations
+ 4. $A(iterable, start, end, forse) - alias for Array.from with Array|Object|String|number support eg: $A({a:1, b:2}) == [1,2]
+ 5. $K(iterable, forse) - alias for Object.keys with Arguments|Array|Object|String|number support eg: $A({a:1, b:2}) == ['a','b']
+ 6. $(selector, root) alias for root.querySelector(selector) (with ">[any selector]" support)
+ 7. $$(selector, root) alias for root.querySelectorAll(selector) (with ">[any selector]" support)
+ 8. $$0 alias for $
+Extending objects
+ 1. Object.append(object, donor, [donor2, ...])
+ 2. Object.extend(object, donor, [donor2, ...]) (Object.append with overwrite exists properties)
+ 3. Object.inherit(Child, Parent)
+ 4. Array.prototype.unique()
+ 5. String.random(length)
+Fix console From https://github.com/theshock/console-cap/blob/master/console.js
 */
 
 /*
@@ -112,14 +117,14 @@ if(INCLUDE_EXTRAS) {
 	 * @const */
 	browser.ipad = browser["ipad"];
 
-	/** @type {string}
-	 * @const */
+	/* @type {string}
+	 * @const 
 	browser["cssPrefix"] =
 		browser.mozilla ? "Moz" :
 		browser.webkit || browser.safari ? "Webkit" ://and iPad, iPhone, iPod
 		browser.opera ? "O" :
 		browser.msie ? "ms" :
-		"";
+		"";*/
 }
 else {
 	browser.names = browser.agent.match(/(msie)/gi);
@@ -239,6 +244,7 @@ var
 
 		return Object(obj);
 	}
+  , _toString = Object.prototype.toString
 
   , _throwDOMException = function(errStr) {
 		var ex = Object.create(DOMException.prototype);
@@ -774,6 +780,32 @@ if (!Object.getOwnPropertyDescriptor || _getOwnPropertyDescriptorFallback) {
     };
 }
 
+//from https://github.com/paulmillr/es6-shim/blob/master/es6-shim.js
+if(!Object["is"])Object["is"] = function(x, y) {
+  if (x === y) {
+    // 0 === -0, but they are not identical
+    if (x === 0) {
+      return 1 / x === 1 / y;
+    } else {
+      return true;
+    }
+  }
+
+  // NaN !== NaN, but they are identical.
+  // NaNs are the only non-reflexive value, i.e., if x !== x,
+  // then x is a NaN.
+  // isNaN is broken: it converts its argument to number, so
+  // isNaN("foo") => true
+  return x !== x && y !== y;
+}
+if(!Object["isnt"])Object["isnt"] = function(x, y) {
+  return !Object["is"](x, y);
+}
+//TODO::
+// 1. getOwnPropertyDescriptors
+// 2. getPropertyDescriptor
+// 3. getPropertyNames
+
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Object prototype  ==================================  */
 /*  =======================================================================================  */
 
@@ -1079,12 +1111,14 @@ if (!Array.prototype.map)Array.prototype.map = function(callback, thisArg) {
 /**
  * http://es5.github.com/#x15.4.3.2
  * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/isArray
+ * https://gist.github.com/1034882
  * Returns true if an object is an array, false if it is not.
  * @param {*} obj The object to be checked
  * @return {boolean}
  */
-Array['isArray'] = Array['isArray'] || function(obj) {
-	return !!(obj && obj.concat && obj.unshift && !obj.callee);
+if(!Array.isArray)Array.isArray = function(obj) {
+	return '' + obj !== obj &&// is not the string '[object Array]' and
+           _toString.call(obj) == '[object Array]'// test with Object.prototype.toString
 };
 
 
@@ -1182,10 +1216,35 @@ if(!String.prototype["toArray"])String.prototype["toArray"] = function() {
 // TODO::
 //  1. Maybe https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/String/TrimRight ?
 //  2. Maybe https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/String/TrimLeft ?
+//  https://gist.github.com/1036520
 
-/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  String.prototype  ==================================  */
+
+
 /*  ======================================================================================  */
+/*  ================================  Number  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+//from https://github.com/paulmillr/es6-shim/blob/master/es6-shim.js
 
+if(!Number["isFinite"])Number["isFinite"] = function(value) {
+	return typeof value === 'number' && global.isFinite(value);	
+};
+
+if(!Number["isInteger"])Number["isInteger"] = function(value) {
+	return Number["isFinite"](value) &&
+		value >= -9007199254740992 && value <= 9007199254740992 &&
+		Math.floor(value) === value;
+};
+
+if(!Number["isNaN"])Number["isNaN"] = function(value) {
+	return Object["is"](value, NaN);
+};
+if(!Number["toInteger"])Number["toInteger"] = function(value) {
+	var number = +value;
+	if (Number["isNaN"](number)) return +0;
+	if (number === 0 || !Number["isFinite"](number)) return number;
+	return Math.sign(number) * Math.floor(Math.abs(number));
+}
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Number  ==================================  */
+/*  ======================================================================================  */
 
 
 /*  ======================================================================================  */
@@ -1348,19 +1407,19 @@ var methods = {
 		if(token === "")_throwDOMException("SYNTAX_ERR");
 		if((token + "").indexOf(" ") > -1)_throwDOMException("INVALID_CHARACTER_ERR");
 	},
-	add: function(token, canDuplicate) {
+	add: function(token, initialisation) {
 		this.checkToken(token);
 
 		var thisObj = this, v = thisObj.value;
 
-		if(!canDuplicate && thisObj._container.indexOf(token) !== -1)return;
+		if(!initialisation && thisObj._container.indexOf(token) !== -1)return;
 
 		thisObj.value += ((v && !(new RegExp("\\s+$", "g")).test(v) ? " " : "") + token);
 
 		this._container.push(token);
 		this[(this.length = this._container.length) - 1] = token;
 
-		if(thisObj._onchange)thisObj._onchange.call(thisObj);
+		if(!initialisation && thisObj._onchange)thisObj._onchange.call(thisObj);
 	},
 	remove: function(token) {
 		this.checkToken(token);
@@ -1458,7 +1517,7 @@ if(!("classList" in _testElement)) {
 				cont = thisObj["_"] || (thisObj["_"] = {}),//Положим _cachedClassList в контейнер "_"
 				_cachedClassList = "_ccl_";
 
-			if(!cont[_cachedClassList])cont[_cachedClassList] = new DOMStringCollection(thisObj.getAttribute("class"), function() {
+			if(!cont[_cachedClassList])cont[_cachedClassList] = new DOMStringCollection(thisObj.className, function() {
 				thisObj.setAttribute("class", this.value);//this instanceof DOMStringCollection
 				if(thisObj.className != this.value)thisObj.className = this.value;
 			});
@@ -1669,6 +1728,45 @@ if(!_testElement["after"]) {
 	};
 }
 
+if(!elementProto.matchesSelector) {
+	elementProto.matchesSelector =
+		elementProto["webkitMatchesSelector"] ||
+		elementProto["mozMatchesSelector"] ||
+		elementProto["msMatchesSelector"] ||
+		elementProto["oMatchesSelector"] || function(selector) {
+			var isSimpleSelector = /^[\w#.]\w*$/.test(selector);
+			if(isSimpleSelector) {
+				switch (selector.charAt(0)) {
+					case '#':
+						return thisObj.id === selector.slice(1);
+					break;
+					case '.':
+						return !!~(" " + thisObj.className + " ").indexOf(" " + selector.slice(1) + " ");
+					break;
+					default:
+						return thisObj.tagName === selector;
+				}
+			}
+			var thisObj = this,
+				parent = thisObj.parentNode,
+				tmp,
+				match = false;
+			
+			if(parent) {
+				match = parent.querySelector(selector) === thisObj;
+			}
+
+			if(!match && (parent = thisObj.ownerDocument)) {
+				tmp = parent.querySelectorAll(selector);
+			    for ( e in tmp ) if(_hasOwnProperty(tmp, e)) {
+			        match = tmp[e] === thisObj;
+			        if(match)return true;
+			    }
+			}
+		    return match;
+		}
+}
+
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Element.prototype  ==================================  */
 /*  ======================================================================================  */
@@ -1849,138 +1947,55 @@ if(INCLUDE_EXTEND_POLYFILLS && !('reversed' in document.createElement("ol"))) {
 /*  ======================================  Network  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
 if(INCLUDE_EXTRAS) {
-/**
- * Функция посылки запроса к файлу на сервере
- * TODO:: Переделать на объект-замыкание AJAX и не использовать global для хранения флагов/настроек
- * @param {!string} path путь к файлу
- * @param {string} args аргументы вида a=1&b=2&c=3... или пустая строка ""
- * @param {function(XMLHttpRequest)=} onDone
- * @param {function(XMLHttpRequest)=} onError — функции-обработчик ответа от сервера, если в функцию передаётся null - значит она была прервана по timeout
- * @param {({post:boolean, temporary:boolean, timeOut:number, onProccess:Function}|
-			   {post:boolean, temporary:boolean, timeOut:number}|
-			   {post:boolean, temporary:boolean}|
-			   {post:boolean}|
-			   {temporary:boolean, post:boolean, onProccess:Function}|
-			   {temporary:boolean, onProccess:Function}|
-			   {temporary:boolean, timeOut:number}|
-			   {temporary:boolean}|
-			   {timeOut:number, temporary:boolean, post:boolean}|
-			   {timeOut:number, onProccess:Function}|
-			   {timeOut:number, post:boolean}|
-			   {timeOut:number}|
-			   {onProccess:Function, post:boolean, timeOut:number}|
-			   {onProccess:Function, post:boolean}|
-			   {onProccess:Function})=} options Дополнительные опции: post - любое true значение означает, что нужно применить POST метод; temporary - любое значение означает, что нужно создать новый XHR объект и удалить его после выполнения запроса; timeOut - время в мс, по истечении которого, выполнения запроса прирывается и вызывается функция onError; onProccess - функция вызываемая во время выполнения запроса
- * @version 2.3
- *  versionLog: 2.3 [23.06.2011 15:10] options.temporary включается, если глобальный XHR занят
- *				2.2 [22.06.2011 13:00] [bug*]Не задавался options по-умолчанию
- *				2.1 [25.05.2011 14:51] Внедрил getXmlHttp внутрь функции
- *				2   [23.05.2011 13:46] Рефакторинг кода: Убрал пораметры method, onProccess и temp в новый параметр options.
-Короткая версия:
-function xhr(m,u,c,x) {
-	with(new(global.XMLHttpRequest||ActiveXObject)("Microsoft.XMLHTTP"))
-		onreadystatechange = function(x){
-			readyState ^ 4 || c(x)
-		},
-		open(m, u),
-		send(c)
-}
-  TODO:: Посмотреть реализацию тут http://code.google.com/p/microajax/
-         и тут https://github.com/ded/Reqwest
 
-    xhr.get({
-      url : 'views/ajaxLoad.html',
-      handleAs : 'text',
-      timeout: 30000,
-      load : function(data) {
-        pane.innerHTML = data;
-        dijit.byId("ajaxContainer").resize();
-        prog.stop();
-      },
-      error: function(err) {
-        pane.innerHTML = err;
-        prog.stop();
-      }
-    });
-  };
- */
-var SendRequest = global["SendRequest"] = function(path, args, onDone, onError, options) {
-	options = options || {};//Default value
+//https://github.com/Raynos/xhr/blob/master/index.js
+//Thx Raynos !!!
+var XHR = global["XHR"] = function(options, callback) {
+	options = Object.extend({}, XHR.defaults, options);
 
-	//TODO:: Прерывать соединение по timeOut, и вызывать funcError и определённым кодом ошибки
-	// Получаем объект XMLHTTPRequest
-    if(!SendRequest.XHR || SendRequest.outOfDate){
-    	SendRequest.XHR = null;//Удалим старый XHR//Avoid memory leak
-		SendRequest.outOfDate = false;
-		SendRequest.XHR = new global.XMLHttpRequest();
-        global.working = false;
+    var xhr = new XMLHttpRequest();
+    
+    xhr.onreadystatechange = function () {
+        if (this.readyState === 4) {
+
+        	if(xhr.status !== 200 && options["error"]) {
+        		options["error"].call(this, this.response || 
+                	this.responseText || this.responseXML)
+        	}
+        	else {
+        		callback.call(this, null, this.response || 
+                	this.responseText || this.responseXML)	
+        	}
+            
+        }
+        else if(options["proccess"])
+        	options["proccess"].call(this)
     }
-    if(!SendRequest.XHRs)SendRequest.XHRs = [];
-	//Каждые 5 минут поднимаем флаг, что XHR устарел
-	if(!SendRequest.timeOutTimer)
-		SendRequest.timeOutTimer = setTimeout(function() {
-			SendRequest.timeOutTimer = !(SendRequest.outOfDate = true);
-		}, 3e5);
 
-	var method = options["post"] ? "POST" : "GET",
-		//Создаём отдельный XHR в случае, если глобальный XHR занят или, если в опциях указан temporary
-		temp = options["temporary"] || global.working;
-
-	// Запрос
-    if ((!global.working && SendRequest.XHR) || temp) {
-    	var http1 = temp ? SendRequest.XHRs[SendRequest.guid] = new global.XMLHttpRequest() : SendRequest.XHR,
-    		tmpXHRguid = temp ? SendRequest.guid++ : null;
-
-    	//Проверяем, если требуется сделать GET-запрос
-		if(!options["post"] && args.length > 0)
-			path += "?" + args;//добавляем закодированный текст в URL запроса
-
-        //Инициализируем соединение
-		http1.open(method, path, true);
-
-        //прикрепляем к запросу функцию-обработчик событий
-        http1.onreadystatechange = function() {// 4 - данные готовы для обработки
-        	if (http1.readyState == 4) {
-            	if(http1.status == 200) {// если статус 200 (ОК) - выдать ответ пользователю
-            		if(onDone)onDone(http1);
-            	}
-            	else if(onError)onError(http1);
-
-                if(!temp)global.working = false;
-                else delete SendRequest.XHRs[tmpXHRguid];//Удалим временный объект XHR
-            }
-            else{ // данные в процессе получения, можно повеселить пользователя сообщениями ЖДИТЕ ОТВЕТА
-            	if(options["onProccess"])options["onProccess"]();
-            }
-        };
-        if(!temp)global.working = true;
-
-        try {
-			if (options["post"]) {//Если это POST-запрос
-				//Устанавливаем заголовоки
-				//Отсылаем специальный заголовок, чтобы сервер знал, что это AJAX
-				http1.setRequestHeader("X-Requested-With", "HTTPRequest");
-				http1.setRequestHeader("Content-Type","application/x-www-form-urlencoded; charset=utf-8");
-				//req.setRequestHeader('Connection', 'close');
-
-				//Посылаем запрос
-				http1.send(args);
-			}
-			else {//Если это GET-запрос
-				//Посылаем нуль-запрос
-				http1.send(null);
-			}
-		}
-		catch(e) {
-
-		}
+    if(!options["error"])xhr.onerror = function (evt) {
+        callback.call(this, evt)
     }
-	if(!SendRequest.XHR) {
-		if(DEBUG)console.error("Ошибка при создании XMLHTTP объекта!");
-		return false;//alert('Ошибка при создании XMLHTTP объекта!')
+
+    try {
+	    xhr.open(options["method"], options["uri"]);
+	    if (options["headers"]) {
+	        Object.keys(options["headers"]).forEach(function (key) {
+	            xhr.setRequestHeader(key, options["headers"][key])
+	        })
+	    }
+
+	    xhr.send(options["data"]);
 	}
+	catch (e) {
+		(options["error"] || callback).call(this, e);
+	}
+
+    return xhr;
+}
+XHR.defaults = {
+	"X-Requested-With" : "HTTPRequest",
+	"Content-Type" : "application/x-www-form-urlencoded; charset=utf-8"
 };
-SendRequest.guid = 0;
 
 }//if(INCLUDE_EXTRAS)
 
@@ -1992,28 +2007,13 @@ SendRequest.guid = 0;
 
 if(INCLUDE_EXTRAS) {
 /**
- * Внешняя forEach для массивов и объектов
- * Не использует встроенный в Array метод forEach, для того, чтобы сделать прерывание по iterator.call() == false
- * Hint: Для Array вызывайте метод [].forEach()
- * @param {!Array|Object} obj Объект или массив, который будем перебирать
- * @param {!Function} iterator функция вызываемая для каждого найденного элемента
- * @param {Object=} context Контент в рамках которого мы будем вызывать функцию
- * @return {Array|Object} объект или массив obj
- */
-global["forEach"] = function forEach(obj, iterator, context) {
-	for(var key in obj)
-		if(_hasOwnProperty(obj, key))if(iterator.call(context, obj[key], key, obj) === false)break;
-    return obj;
-};
-
-/**
  * Random string
  * !!! ВНИМАНИЕ !!! Результирующая строка ~ в 5% случаев будет длинной length - 1
  * @param {!number} length Размер строки
  * @return {string}
- * TODO:: Поддержка length > 10. Сейчас получается хрень: randomString(14) == "l.5lqc17jlpzt(e+13)"
+ * TODO:: Поддержка length > 10. Сейчас получается хрень: String.random(14) == "l.5lqc17jlpzt(e+13)"
  */
-var randomString = global["randomString"] = function(length) {
+if(!String.random)String.random = function(length) {
     return (Math.round(Math.random() * parseInt("z".repeat(++length), 36))).toString(36);//36 - 0-9a-z
 };
 
@@ -2114,83 +2114,8 @@ var $K = global["$K"] = function(iterable, forse) {
 	return results;
 };
 
-
-/**
- * TODO: Engish comment
- * Создаёт универсальный обработчик для всех или нескольких вложенных элементов
- * В качестве обработчика можно передавать хеш-массив(Object) или функцию.
- *  Если обработчик-хеш-массив(Object), то вызывается функция по значению найденного атрибута.
- *  Первым параметром передаётся event
- *  Вторым параметром передаётся элемент, в котором был найден атрибут.
- *  Третьим параметром передаётся найденное значение атрибута. В последующие параметры передаются
- *   другие найденные атрибуты, если attribute-массив.
- *
- * @param {(string|Array.<string>)} attribute Название атрибута или свойства по которому будет определятся функция для вызова из namedFunctions. Или массив атрибутов, первый из которых - название функции для вызова, остальные будут получены и переданы в функцию в качестве параметров вызова
- * @param {!(Function|Object)} namedFunctions Функция или Именованный хеш-массив(Object) функций типа: {"a" : funcA, "b" : funcB}
- * @param {Object?} context Контекст в рамках которого будет вызыватся функция. По-умолчанию, тот элемент на который bubbleEventListener вешается в качестве обработчика
- * @param {number?} flags 0x1(allowMany) [Default:false]-Разрешить множественный вызов. Функция продолжит поиск обработчиков при нахождении первого, 0x2(allowPropname) [Default:false]-Разрешить поиск не только по аттрибутам, но и по свойствам
- * @return {function(Event)} Событие для кнопок. "Вешается" DOM-функцияей addEventLintener. Должно быть подготовлено к использованию в IE
- * TODO:: Сделать правильную обработку атрибута "class"
- */
-global["bubbleEventListener"] = function bubbleEventListener(attribute, namedFunctions, context, flags) {
-	if(DEBUG) {
-		if(!namedFunctions ||
-		   (typeof namedFunctions != "object" && typeof namedFunctions != funcType))
-				console.error("bubbleEventListener::namedFunctions must be an Object or Function")
-		else if(typeof namedFunctions == "object") {
-			if(!_arrayFrom(namedFunctions).length)console.error("bubbleEventListener::no functions are sets")
-			else {
-				var s = true;
-				$K(namedFunctions).forEach(function(key){
-					if(typeof namedFunctions[key] != funcType)s = false;
-				});
-				if(!s)console.error("bubbleEventListener::all values in namedFunctions MUST be a Functions")
-			}
-		}
-		if(Array.isArray(attribute) && !attribute.length)console.error("bubbleEventListener::в массиве attribute должен быть хотябы один элемент")
-	}
-
-	var _attr = (Array.isArray(attribute) ? attribute[0] : attribute);//TODO:: Выяснить зачем я делал это -> .toLowerCase(); С propName это не работает
-
-		return function(event) {
-			event = event || window.event;
-			var elem = event.target || (event.target = event.srcElement),
-				/** @type {HTMLElement} Элемент, на котором останавливаем поиски action'а */
-				stopElement = this,//Контекст this у функции !!!ДОЛЖЕН!!! указываеть на элемент, на который эту функцию повесили в качестве обработчика
-				/** @type {string} Значение атрибута - имя функции */
-				elemAttrValue,
-				/** @type {Object|null|Function} */
-				f,//Функция для вызова
-				result;
-
-			/*if(_attr == "class") {//Только для аттрибута "class" делаем исключение
-				//TODO:: Сделать, чтобы имя функция вызывалась даже тогда, когда в аттребуте "class" больше одного класса
-			}*/
-
-			do {
-				elemAttrValue = elem.getAttribute(_attr) || (flags & 0x2 ? elem[_attr] : null);
-				if(elemAttrValue == null)continue;
-				/** @type {Array} */
-				var params = [event, elem, elemAttrValue];//Параметры вызова функции для apply()
-
-				if(Array.isArray(attribute) && attribute.length > 1)
-					for(var i = 1, l = attribute.length ; i < l ; ++i)params.push(elem.getAttribute(attribute[i]));
-
-				if(typeof namedFunctions == funcType)result = namedFunctions.apply(context || stopElement, params);
-				else {
-					f = namedFunctions[elemAttrValue];
-					if(f)result = f.apply(context || stopElement, params);
-					else if(DEBUG)console.log("bubbleEventListener::нету функции с названием " + elemAttrValue);
-				}
-
-				if(!(flags & 0x1))break;
-			} while(elem != stopElement && (elem = elem.parentNode));
-
-			return result;
-		}
-}
-
 }//if(INCLUDE_EXTRAS)
+
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Utils  ======================================  */
 /*  ======================================================================================  */
@@ -2248,16 +2173,17 @@ if(!_testElement.addEventListener) {
 
 if(INCLUDE_EXTRAS) {
 /**
- * document.getElementById alias
- * @param {!string|HTMLElement} id
- * @return {HTMLElement} founded element
+ * querySelector alias
+ * @param {!string|Node} selector or element
+ * @param {Node|Array.<Node>} roots or element
+ * @return {Node} founded element
  */
-var $ = function(id) {
-	if(typeof id == 'string' || typeof id == 'number')id = document.getElementById(String(id));
-
-	return id;
+var $ = function(selector, roots) {
+	if(typeof selector == 'string' || typeof selector == 'number')return $$(selector, roots, true);
+	return selector;
 };
 if(!global["$"])global["$"] = $;//Do not rewrite jQuery
+global["$$0"] = $;
 
 /**
  * document.querySelector with `roots` as Array and special selector (">*", "~*", "+*") support
@@ -2267,123 +2193,57 @@ if(!global["$"])global["$"] = $;//Do not rewrite jQuery
  * @return {Array.<HTMLElement>} result
  * @version 2
  */
-var $$ = global["$$"] = function(selector, roots/*, noCache*/, isFirst) {
+var $$ = global["$$"] = function(selector, roots, isFirst) {
 	//$$N.test = $$N["test"];//$$N["test"] TODO:: добавить в $$N["test"] проверку на нестандартные селекторы
 	//TODO:: вернуть назад поддержку нестандартных псевдо-классов
 	//if(document.querySelector && !($$N.test && $$N.test.test(selector)) {
-	roots = roots || document;
+	roots = roots || [document];
+	if(!Array.isArray(roots))roots = [roots];
+
 	/* replace not quoted args with quoted one -- Safari doesn't understand either */
 	//if(browser.safary)//[termi 30.01.12]commented it due not actual for now
 	//	selector = selector.replace(/=([^\]]+)/, '="$1"');
 
-	var isSpecialMod = /[>\+\~]/.test(selector.charAt(0)) ||
-					/(\,>)|(\,\+)|(\,\~)/.test(selector),
+	selector = (selector || "").trim();
+	if(!selector)return [];
+
+	var isSpecialMod = /[>\+\~]/.test(selector.charAt(0)) || /(\,>)|(\,\+)|(\,\~)/.test(selector),
 		i = -1,
-		root;
+		root,
+		result = [],
+		tmp;
 
-	if(document.querySelector) {
-		var result = [];
-
-		if(selector) {
+	while(root = roots[++i]) {
+		if(document.querySelector) {
 			if(isSpecialMod) {//spetial selectors like ">*", "~div", "+a"
-				//Мы надеемся :(, что в селекторе не бедет [attrName=","]
-				//TODO:: переделать сплитер, чтобы он правильно работал даже для [attrName=","]
-				selector = selector.split(",")["unique"]();
+				if("id" in root) {
+					//Мы надеемся :(, что в селекторе не будет [attrName=","]
+					//TODO:: переделать сплитер, чтобы он правильно работал даже для [attrName=","]
+					selector = selector.split(",")["unique"]();
 
-				while(root = selector[++i])
-					result = $$.N(root, roots, result);
+					if(!root.id)root.id = $$.str_for_id + $$.uid_for_id++;
 
-				return result;
-			}
+					tmp = "#" + root.id;
 
-			if(!Array.isArray(roots))return _arrayFrom(roots.querySelectorAll(selector));
-
-			while(root = roots[++i] && (!isFirst || !result.length))
-				result.concat(_arrayFrom(root.querySelectorAll(selector)))
-
-		}
-
-		return result;
-	}
-
-	throw new Error("querySelector not supported")
-};
-/**
- * TODO: Engish comment
- * Функция возвращяет массив элементов выбранных по CSS3-велектору.
- * Также добавляет во все наёденные элементы объекты-контейнеры '_'. '_' можно использовать для хранения переменных,
- *  связанных с данным элементом, чтобы не захламлять пространство имён объекта
- * Множественные селекторы, разделённые знаком "," не поддерживаются (смотрите функцию $$)
- * Вызывается querySelector, если поддерживается браузером
- * Данная функция поддерживает отличный от стандартного синтаксис:
- * - Поддерживаются первые символы в селекторе - ">", "+" или "~".
- *  --!!! Побочный эффект: Если в браузере есть querySelector, то для каждого элемента из массива roots будет
- *        добавлен аттрибут "id", если его нету.
- * TODO:: Поддержка нестандартных псевдо-классов:
- *  -":parent"
- *  -":text-only" Только если элемент не содержит вложеных элементов - только, если содержит текст или пустой
- *    http://alastairc.ac/2006/10/text-nodes-and-css/
- *  -"::textNode" for selecting text nodes (node.nodeType == 3)
- *
- * @param {!string} selector CSS3-селектор
- * @param {Document|HTMLElement|Node|Array.<HTMLElement>=} roots Список элементов в которых мы будем искать
- * @param {Array=} prefetchResult ссылка на массив уже сформированных результатов, к которым будет добавлен текущий результат
- * @param {boolean=} isFirst ищем только первый
- * @return {Array.<HTMLElement>}
- * @version 2
- */
-$$.N = function(selector, roots, prefetchResult, isFirst) {
-	//TODO:: Не засовывать в result те элементы, которые уже были туда засованы
-	roots = !roots ? [document] : (Array.isArray(roots) ? roots : [roots]);
-
-	var /** @type {Array.<HTMLElement>} */result = prefetchResult || [],
-		/** @type {Node|HTMLElement} */rt,
-        /** @type {number} */ir = -1;
-
-    //TODO:: вернуть назад поддержку нестандартных псевдо-классов
-	//if(document.querySelector && !$$N.nonStandartPseudoClasses.regExp.test(selector)) {
-	if(document.querySelector) {
-		var /** @type {boolean} */isSpecialMod,
-			/** @type {boolean} */noway = false,
-			/** @type {string} */specialSelector;
-
-		if(selector.charAt(0) == ",")selector = selector.substr(1);
-		isSpecialMod = /[>\+\~]/.test(selector.charAt(0));
-        //TODO:: Тут ошибка. Селекторы вида ">*" не работают
-
-		while(rt = roots[++ir]) {
-			if(isSpecialMod) {
-				if(rt == document)noway = true;//Бесполезно вызывать селекторы с начальными >, + или ~ для document
-				else {
-					if(!rt.id)rt.id = $$.N.str_for_id + $$.N.uid_for_id++;
-					specialSelector = "#" + rt.id + selector;
-					rt = rt.parentNode;
+					result.concat(_arrayFrom(roots.querySelectorAll(tmp + selector.join("," + tmp))));
 				}
 			}
-			else specialSelector = selector;
-			if(noway){}
-			else if(isFirst)result.push(rt.querySelector(specialSelector));
-			else result = result.concat(_arrayFrom(rt.querySelectorAll(specialSelector)));
+			else {
+				result.concat(_arrayFrom(roots.querySelectorAll(selector)));
+			}
+			
+			if(isFirst && result.length)return result[0];
 		}
-
-		return result;
+		else throw new Error("querySelector not supported");
 	}
 
-	throw new Error("querySelector not supported")
+	return result;
 };
 /** @type {string} unique prefix (HTMLElement.id) */
-$$.N.str_for_id = "r" + randomString(6);
+$$.str_for_id = "r" + String.random(6);
 /** @type {number} unique identificator с $$N.str_for_id */
-$$.N.uid_for_id = 0;
+$$.uid_for_id = 0;
 
-/**
- * @param {!string} selector
- * @param {Document|HTMLElement|Node=} root
- * @return {HTMLElement|Node}
- */
-var $$0 = global["$$0"] = function(selector, root) {
-	return $$(selector, root, true)[0];
-}
 }//if(INCLUDE_EXTRAS)
 
 /*  ======================================================================================  */

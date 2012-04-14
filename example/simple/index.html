@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html debug=true>
 <head>
-<script type='text/javascript' src='firebug/firebug.js'></script>
+<script type='text/javascript' src='../libs/firebug/firebug.js'></script>
 
 <style>
 .null {
@@ -15,12 +15,12 @@
 
 </style>
 <!--[if lt IE 9]>
-<script src="/__SRC/a.ie8.js"></script>
+<script src="/__COMPILE/a.ie8.js"></script>
 <![endif]-->
 <!--[if lt IE 8]>
-<script src="/__SRC/a.ielt8.js"></script>
+<script src="/__COMPILE/a.ielt8.js"></script>
 <![endif]-->
-<script src="/__SRC/a.js?1"></script>
+<script src="/__COMPILE/a.js?2"></script>
 <script>
 document.createElement("j");
 document.createElement("c");
@@ -103,14 +103,17 @@ function main() {
 	
 	var dosome1;
 	document.addEventListener("someEvent", dosome1 = function(event) {
-		console.log((this === document ? "document" : "window") + " someEvent " + (event.eventPhase === Event.BUBBLING_PHASE ? "bubble" : "capture") + "" + event.timeStamp)
+		console.log((this === document ? "document" : "window") + " someEvent " + (event.eventPhase === Event.BUBBLING_PHASE ? "bubble" : event.eventPhase === Event.AT_TARGET ? "target" : "capture") + "" + event.timeStamp)
 	}, false);
 	document.addEventListener("someEvent", dosome1, true);
 	window.addEventListener("someEvent", dosome1, false);
 	document.addEventListener("someEvent", dosome1, false);
 
 	var j = document.getElementsByClassName("test")[0];
-	j.addEventListener("someEvent", console.log.bind(null, "j someEvent bubble"), false);
+	j.addEventListener("someEvent", function(e) {
+		console.log("j someEvent bubble");
+	}
+		, false);
 	j = document.querySelector(".test");
 	j.addEventListener("someEvent", console.log.bind(null, "j someEvent capture"), true);
 	

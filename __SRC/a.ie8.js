@@ -151,7 +151,9 @@ var _arraySlice = Array.prototype.slice,
 	 * @const */
 	_testElement = document.createElement('_'),
 	nodeProto = global["Node"].prototype,
-	elementProto = global["Element"].prototype;
+	elementProto = global["Element"].prototype,
+
+	nativeDate = Date;
 
 
 //Fix Function.prototype.apply to work with generic array-like object instead of an array
@@ -336,7 +338,7 @@ if(!_DOMException) {
 var preventDefault_ = function(){this.returnValue = false};
 var stopPropagation_ = function(){this.cancelBubble = true};
 var stopImmediatePropagation_ = function() {
-	this.__stopNow = true;
+	this["__stopNow"] = true;
 	this.stopPropagation()
 };
 
@@ -362,7 +364,7 @@ function fixEvent(event) {
 	
 	event.preventDefault || (event.preventDefault = preventDefault_);
 	event.stopPropagation || (event.stopPropagation = stopPropagation_);
-	event.stopImmediatePropagation || (event.stopImmediatePropagation = stopImmediatePropagation_);
+	event["stopImmediatePropagation"] || (event["stopImmediatePropagation"] = stopImmediatePropagation_);
 
 	event.target || (event.target = event.srcElement || document);// добавить target для IE
 
@@ -382,8 +384,8 @@ function fixEvent(event) {
 
 	// записать нажатую кнопку мыши в which для IE. 1 == левая; 2 == средняя; 3 == правая
 	event.which || event.button && (event.which = event.button & 1 ? 1 : event.button & 2 ? 3 : event.button & 4 ? 2 : 0);
-		
-	if(!event.timeStamp)event.timeStamp = +new Date();
+
+	if(!event.timeStamp)event.timeStamp = +new nativeDate();
 	
 	if(!event.eventPhase)event.eventPhase = (event.target == thisObj) ? 2 : 3; // "AT_TARGET" = 2, "BUBBLING_PHASE" = 3
 	
@@ -420,13 +422,19 @@ function commonHandle(event) {
 	if(!handlers)return;
 
 	for(var g in handlers)if(_hasOwnProperty(handlers, g)) {
-		var handler = handlers[g];
+		var handler = handlers[g],
+			context;
+
+		if(typeof handler === "object") {
+			context = handler;
+			handler = handler.handleEvent;
+		}
 
 		try {
 			//Передаём контекст и объект event, результат сохраним в event['result'] для передачи значения дальше по цепочке
 			if(
 				(
-					event['result'] = _call(handler, this, event)
+					event['result'] = _call(handler, context || thisObj, event)
 				)
 				=== false
 			  ) {//Если вернели false - остановим обработку функций
@@ -440,7 +448,7 @@ function commonHandle(event) {
 			if(console)console.error(e);
 		}
 
-		if(event.__stopNow)break;//Мгновенная остановка обработки событий
+		if(event["__stopNow"])break;//Мгновенная остановка обработки событий
 	}
 	
 	if(errors.length == 1) {//Если была только одна ошибка - кидаем ее дальше
@@ -457,11 +465,10 @@ function commonHandle(event) {
 
 if(!document.addEventListener)global.addEventListener = document.addEventListener = function(_type, _handler, useCapture) {
 	//TODO:: useCapture == true
-	if(typeof _handler != "function") {
-		if(typeof _handler == "object" && _handler.handleEvent) {//Registering an EventListener with a function object that also has a handleEvent property -> Call EventListener as a function
-			_handler = _handler.handleEvent;
-		}
-		else return;
+	if(typeof _handler != "function" &&
+	   !(typeof _handler === "object" && _handler.handleEvent)//Registering an EventListener with a function object that also has a handleEvent property -> Call EventListener as a function
+	  ) {
+		return;
 	}
 	
 	var /** @type {Node} */
@@ -713,7 +720,7 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 if(global.Event && global.Event.prototype) {
 	Event.prototype.stopPropagation = stopPropagation_;
     Event.prototype.preventDefault = preventDefault_;
-    Event.prototype.stopImmediatePropagation = stopImmediatePropagation_;
+    Event.prototype["stopImmediatePropagation"] = stopImmediatePropagation_;
 }
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Events  ======================================  */
@@ -853,17 +860,17 @@ try {
 if(!document.ELEMENT_NODE) {
 	var _constantContainer = {
 		ELEMENT_NODE : 1,
-		ATTRIBUTE_NODE : 2,
+		ATTRIBUTE_NODE : 2,// historical
 		TEXT_NODE : 3,
-		CDATA_SECTION_NODE : 4,
-		ENTITY_REFERENCE_NODE : 5,
-		ENTITY_NODE : 6,
+		CDATA_SECTION_NODE : 4,// historical
+		ENTITY_REFERENCE_NODE : 5,// historical
+		ENTITY_NODE : 6,// historical
 		PROCESSING_INSTRUCTION_NODE : 7,
 		COMMENT_NODE : 8,
 		DOCUMENT_NODE : 9,
 		DOCUMENT_TYPE_NODE : 10,
 		DOCUMENT_FRAGMENT_NODE : 11,
-		NOTATION_NODE : 12
+		NOTATION_NODE : 12// historical
 	};
 	_util_extendFunction(document, _constantContainer);
 	_util_extendFunction(nodeProto, _constantContainer);
@@ -1005,18 +1012,23 @@ function isCssClass(element, classes) {
 
 var attr = "getElementsByClassName";
 if(!(attr in _testElement))document[attr] = elementProto[attr] = function(clas) {
-	var ar = [];
+	var root = this,
+		ar = [],
+		nodes,
+		i = -1,
+		node;
 	if(arguments.length) {
 		clas = (clas + "").trim().split(" ");
-		
-		clas.length && _recursivelyWalk(this.childNodes, function (el, index) {
-			if(el.nodeType == 1 && isCssClass(el, clas)) {
-				ar.push(el);
+		nodes = root.getElementsByTagName('*');
+
+		while (node = nodes[++i]) {
+			if (isCssClass(node, clas)) {
+				ar.push(node);
 			}
-		});
+		}
 	}
 	else throw new Error('WRONG_ARGUMENTS_ERR');
-	return ar;
+	return ar;	
 };
 
 
@@ -1116,17 +1128,12 @@ if(browser.msie && browser.msie < 9) {
  * Больше по теме: http://pastie.org/935834
  *
  * Функция клонирует DOM-элемент
- * Альтернатива <Node>.cloneNode в IE < 9. В остальных браузерах просто вызывается <Node>.cloneNode
- * Дополнительно, функция удаляет id у вновь склонированного элемента, если delete_id != false
- * @param {Node|Element} element Элемент для клонирования
+ * Альтернатива <Node>.cloneNode в IE < 9
  * @param {boolean=} include_all [false] Клонировать ли все дочерние элементы? По-умолчанию, false
- * @param {boolean=} delete_id [false] Удалить аттрибут id из нового элемента? По-умолчанию, false
- * @version 3
- *  chacgeLog: 3 [23.11.2011 19:00] Переделал. include_all and delete_id default now false. Передаю в nodeProto в качестве cloneNode для IE < 9
- *			   2 [06.07.2011 20:00] Добавил поддержку клонирования td и tr для IE < 9
- *			   1 [--.--.2011 --:--] Initial release
+ * @this {Node} element Элемент для клонирования
+ * @version 4
  */
-var _cloneElement = global["cloneElement"] = function(element, include_all, delete_id) {//Экспортируем cloneElement для совместимости и для вызова напрямую	
+var _cloneElement = function(include_all) {//Экспортируем cloneElement для совместимости и для вызова напрямую	
 	// Обновляем функцию _cloneElement
 	if(document.createDocumentFragment !== _cloneElement.oldCreateDocumentFragment && _cloneElement.safeElement != false)
 		_cloneElement.safeElement = 
@@ -1136,7 +1143,9 @@ var _cloneElement = global["cloneElement"] = function(element, include_all, dele
 			:
 			false;
 	
-	var result;
+	var element = this,
+		result,
+		nativeCloneNode;
 	
 	//Следующий вариант не работает с HTML5
 	//if(_cloneElement.safeDocumentFragment) {
@@ -1168,17 +1177,20 @@ var _cloneElement = global["cloneElement"] = function(element, include_all, dele
 			//if(nodeProto["ielt8"])Object["append"](el, nodeProto);
 		}
 	}
-	else result = _cloneElement.nativeCloneNode.call(element, include_all);
-	
-	if(delete_id && result.id)result.id = "";
+	else {
+		nativeCloneNode =
+			element["_"] && element["_"]["nativeCloneNode"] ||
+			_cloneElement.nativeCloneNode;
+
+		result = _call(nativeCloneNode, element, include_all);
+	}
 	
 	return result;
 };
-_cloneElement.nativeCloneNode = nodeProto["cloneNode"] || document.documentElement.cloneNode;
+_cloneElement.nativeCloneNode = nodeProto["cloneNode"] || _testElement["cloneNode"];
 
 if(browser.msie && browser.msie < 9) {
-	//nodeProto["_cloneNode_"] = _testElement.cloneNode;//Original function
-	nodeProto["cloneNode"] = function(deep){return _cloneElement(this, deep)};
+	nodeProto["cloneNode"] = _cloneElement;
 }
 
 

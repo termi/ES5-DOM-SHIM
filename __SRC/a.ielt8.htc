@@ -19,17 +19,12 @@
 <PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_CONTAINS" GET="_g8" />
 <PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_CONTAINED_BY" GET="_g16" />
 <PUBLIC:PROPERTY NAME="ELEMENT_NODE" GET="_g1" />
-<PUBLIC:PROPERTY NAME="ATTRIBUTE_NODE" GET="_g2" />
 <PUBLIC:PROPERTY NAME="TEXT_NODE" GET="_g3" />
-<PUBLIC:PROPERTY NAME="CDATA_SECTION_NODE" GET="_g4" />
-<PUBLIC:PROPERTY NAME="ENTITY_REFERENCE_NODE" GET="_g5" />
-<PUBLIC:PROPERTY NAME="ENTITY_NODE" GET="_g6" />
 <PUBLIC:PROPERTY NAME="PROCESSING_INSTRUCTION_NODE" GET="_g7" />
 <PUBLIC:PROPERTY NAME="COMMENT_NODE" GET="_g8" />
 <PUBLIC:PROPERTY NAME="DOCUMENT_NODE" GET="_g9" />
 <PUBLIC:PROPERTY NAME="DOCUMENT_TYPE_NODE" GET="_g10" />
 <PUBLIC:PROPERTY NAME="DOCUMENT_FRAGMENT_NODE" GET="_g11" />
-<PUBLIC:PROPERTY NAME="NOTATION_NODE" GET="_g12" />
 
 <SCRIPT>
 /*@requared window.Node.prototype = { ielt8 : true }*/
@@ -50,16 +45,12 @@ var
 	setTextContent=Node_proto.settextContent,
 	_g1=Node_proto.g1,
 	_g2=Node_proto.g2,
-	_g3=Node_proto.g3,
 	_g4=Node_proto.g4,
-	_g5=Node_proto.g5,
-	_g6=Node_proto.g6,
 	_g7=Node_proto.g7,
 	_g8=Node_proto.g8,
 	_g9=Node_proto.g9,
 	_g10=Node_proto.g10,
 	_g11=Node_proto.g11,
-	_g12=Node_proto.g12,
 	_g16=Node_proto.g16;
 
 if(this != window) {//Strange IE bug where thisObj === window

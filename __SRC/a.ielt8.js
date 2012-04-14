@@ -11,7 +11,15 @@
  
 /** @version 3 */
 
+//GCC DEFINES START
+/** @define {boolean} */
+var IS_DEBUG = false;
+//GCC DEFINES END
+
 ;(function(global) {
+
+/** @const @type {boolean} */
+var DEBUG = IS_DEBUG && !!(window && window.console);
 
 //CONFIG START
 var /** @const*/
@@ -23,8 +31,8 @@ var /** @const*/
 //CONFIG END
 
 var nodeProto = global.Node.prototype,//Note: for IE < 8 `Node` and `Node.prototype` is just an JS objects created in a.ie8.js
-	Element_proto = global.Element.prototype,
-	browser = global.browser,
+	elementProto = global.Element.prototype,
+	browser = global.browser || {},
 	noDocumentReadyState,
 	notSupportedTagNames = [
 		"script", "style",
@@ -69,20 +77,25 @@ global["__ielt8__wontfix"] = __ielt8__wontfix;
  *  -"::textNode" for selecting text nodes (node.nodeType == 3)
  *
  * @param {!string} selector CSS3-селектор
- * @param {Document|HTMLElement|Node} root элемент в котором мы будем искать
- * TODO::param {boolean=} isFirst ищем только первый
+ * @param {Node|Array.<Node>} roots элемент в котором мы будем искать
+ * @param {Array.<HTMLElement> = } result Pre-results
  * @return {Array.<HTMLElement>}
- * @version 2
+ * @version 3
  *  TODO:: Изучить код https://github.com/ded/qwery - может быть будет что-нибуть полезное
  */
-function queryOneSelector(selector, root) {
+function queryOneSelector(selector, roots, result) {
 	//\.(.*?)(?=[:\[]|$) -> <.class1.class2>:focus or tag#id<.class1.class2>[attr*=value]
 	//TODO:: Реализовать концепцию isFirst ниже
-	root = root || document;
+	if(!roots)roots = [document];
+	else if(!Array.isArray(roots))roots = [roots];
+	
+	var isPreResult = !!result;
+	result = result || [];
+	
 	//TODO:: Не засовывать в result те элементы, которые уже были туда засованы
-	var /** @type {Array.<HTMLElement>} */result = [],
+	var /** @type {Object} */resultKeys = {},
 		/** @type {HTMLElement} */child,
-		/** @type {number} */ir = -1,
+		/** @type {Node} */root,
 
 		/** @type {Array.<string>} */selectorArr = selector.match(/^([,>+~ ])?(\w*)(?:|\*)\#?([\w-]*)((?:\.?[\w-])*)(\[.*?\])?\:?([\w\-\+\%\(\)]*)$/),
 		/** @type {string} */mod = selectorArr[1],
@@ -99,56 +112,128 @@ function queryOneSelector(selector, root) {
 
 		/** @type {(Array.<number>)} */ind,
 		/** @type {number} */a,
-		/** @type {number} */b,
+		/** @type {string} */b,
 		/** @type {number} */c,
-		/** @type {Node} */brother;
+		/** @type {Node} */brother,
+
+		/** @type {number} */i = -1,
+		/** @type {Node} */rs,
+		/** @type {boolean} */match;
+	
+	if(isClasses)classes = classes.replace(/\./g, " ");
 		
-	if(isClasses)classes = (" " + classes.slice(1).replace(/\./g, " | ") + " ").split("|");
+	if(!isPreResult) {// ! matchesSelector
 		
-	switch(mod) {
-		default://mod == ' ' || mod == ','
-			if(id) {
-				child = document.getElementById(id);
-				if(!tag || child.tagName.toUpperCase() == tag)result.push(child);
-				id = "";
+			switch(mod) {
+				default://mod == ' ' || mod == ','
+					while(root = roots[++i]) {
+						if(id) {
+							child = document.getElementById(id);
+							if(!tag || child.tagName.toUpperCase() == tag)result.push(child);
+							id = "";
+						}
+						else {
+							/*if(mod === " ") {
+								a = root.compareDocumentPosition
+							}*/
+
+							if(isClasses) {
+								result = result.concat.apply(result, root.getElementsByClassName(classes));
+							}
+							else if(tag) {
+								result = result.concat.apply(result, (!tag && root.all) ? root.all : root.getElementsByTagName(tag || "*"));
+							}
+						}
+					}
+					if(isClasses)isClasses = false;
+					else if(tag)tag = "";
+				break;
+				case '+':
+					while(root = roots[++i]) {
+						while((root = root.nextSibling) && root.nodeType != 1){}
+						match = root && (!tag || root.tagName.toUpperCase() == tag) &&
+							!(root.sourceIndex in resultKeys);
+						if(match && isClasses) {
+							kr = -1;
+							_curClass = ' ' + root.className + ' ';
+							while(classes[++kr] && match)
+								match = !!~_curClass.indexOf(classes[kr]);
+						}
+						if(match) {
+							result.push(root);
+							if(!root.sourceIndex)root.sourceIndex = UUID++;
+							resultKeys[root.sourceIndex] = true;
+						}
+					}
+					isClasses = false;
+					tag = "";
+				break;
+				case '~'://W3C: "an F element preceded by an E element"
+					while(root = roots[++i]) {
+						while (root = root.nextSibling) {//TODO:: Не засовывать в result те элементы, которые уже были туда засованы
+							match = root.nodeType == 1 && (!tag || root.tagName.toUpperCase() == tag) &&
+								!(root.sourceIndex in resultKeys);
+							if(match && isClasses) {
+								kr = -1;
+								_curClass = ' ' + root.className + ' ';
+								while(classes[++kr] && match)
+									match = !!~_curClass.indexOf(classes[kr]);
+							}
+							if(match) {
+								result.push(root);
+								if(!root.sourceIndex)root.sourceIndex = UUID++;
+								resultKeys[root.sourceIndex] = true;
+							}
+						}
+					}
+					isClasses = false;
+					tag = "";
+				break;
+				case '>'://W3C: "an F element preceded by an E element"
+					while(root = roots[++i]) {
+						a = -1;
+						while(child = root.childNodes[++a]) {
+							match = child.nodeType == 1 && (!tag || child.tagName.toUpperCase() == tag) &&
+								!(root.sourceIndex in resultKeys);
+							if(match && isClasses) {
+								kr = -1;
+								_curClass = ' ' + root.className + ' ';
+								while(classes[++kr] && match)
+									match = !!~_curClass.indexOf(classes[kr]);
+							}
+							if(match) {
+								result.push(root);
+								if(!root.sourceIndex)root.sourceIndex = UUID++;
+								resultKeys[root.sourceIndex] = true;
+							}
+						}
+					}
+					isClasses = false;
+					tag = "";
+				break;
 			}
-			else if(isClasses) {				
-				while(_curClass = classes[++ir])
-					result = result.concat(root.getElementsByClassName(_curClass));
-				
-				isClasses = false;
-			}
-			else {
-				var elements = (!tag && root.all) ? root.all : root.getElementsByTagName(tag || "*");
-				while(elements[++kr])result.push(elements[kr]);
-			}
-		break;
-		case '+':
-			while((root = root.nextSibling) && root.nodeType != 1){}
-			if(root && (!tag || root.tagName.toUpperCase() == tag))result.push(root);
-		break;
-		case '~'://W3C: "an F element preceded by an E element"
-			while (root = root.nextSibling) {//TODO:: Не засовывать в result те элементы, которые уже были туда засованы
-				if(root.nodeType == 1 && (!tag || root.tagName.toUpperCase() == tag))result.push(root);
-			}
-		break;
-		case '>'://W3C: "an F element preceded by an E element"
-			kr = -1;
-			while(child = root.childNodes[++kr])
-				if(child.nodeType == 1 && (!tag || child.tagName.toUpperCase() == tag))result.push(child);
-		break;
+		
+		
+		mod = "";
 	}
 	
-	if(result.length && (isClasses || css3Attr || css3Mod || id)) {
-		var i = 0, rs, match;
 	
+
+	if(result.length && (tag || isClasses || css3Attr || css3Mod || id || mod)) {
+		i = 0;
+		if(isClasses)classes = (" " + classes.slice(1).replace(/\./g, " | ") + " ").split("|");
+
 		while(rs = result[i++]) {
 			match = !(id && rs.id != id);
 			
 			if(match && isClasses) {
-				var k = -1, rsClName = ' ' + rs.className + ' ';
-				while(classes[++k] && match)
-					match = ~rsClName.indexOf(classes[k]);
+				kr = -1;
+				_curClass = ' ' + rs.className + ' ';
+				while(classes[++kr] && match)
+					match = !!~_curClass.indexOf(classes[kr]);
+			}
+			if(match && tag) {
+				match = rs.tagName.toUpperCase() == tag;
 			}
 			if(match && css3Attr) {
 				//TODO:: [attrName1][attrName2]
@@ -216,6 +301,10 @@ function queryOneSelector(selector, root) {
 				/* value1 doesn't contain given value2 */
 					case '!=':
 						match = (!value1 || !(new RegExp('(^| +)' + value2 + '($| +)').test(value1)));
+					break;
+
+					case '~='://TODO::
+
 					break;
 				}
 			}
@@ -380,12 +469,14 @@ function queryOneSelector(selector, root) {
 				}
 				
 			}
+		
 			if(!match)result.splice(--i, 1);
 		}
 	}
 	
 	return result;
-}
+};
+
 /**
  * Получение эллементов по классам и тэгам
  * HINT: Пользоватся такой функцией можно только после загрузки страницы (addLoadEvent)
@@ -393,27 +484,45 @@ function queryOneSelector(selector, root) {
  * @this {Document|HTMLElement|Node} root элемент в котором мы будем искать
  * @return {Array.<HTMLElement>} Список найденных элементов
  * @version 4.0
- *  changeLog: 4.0 [24.11.2011 00:30] * Вынес из основного a.js и переименовал из $$ в queryManySelector и чуть изменил
- * 			   3.0 [06.05.2011 15:47] [*bug] Исправил баг, когда поиск элементов продолжался, даже тогда, когда предыдущая выборка не дала результата
- *			   2.8 [23.02.2011 21:50] <bugfix> Не передавался isFirst в queryOneSelector
- *  		   2.7:(*)Функция разделена на две: queryOneSelector - выбор по одному селектору и queryManySelector - выбор по нескольким селекторам разделённым запятой
- *  		   2.6:(+)Теперь можно использовать "*" на месте tagName
- *  		   2.5:(!)Исправлена ошибка с множественным селектором, при котором правило идущее за "," (запятой) не выполнялось 
- *  		   2.4:(!)Исправлена ошибка как в 2.1. (+)Теперь селектор можно начинать с модификатора (>,~,+)
- *  		   2.2:(!)Исправлена ошибка в модификаторах '~' и '+'
- *  		   2.1:(!)Исправлена ошибка при которой не находились элементы во втором селекторе, если в первом ничего не найдено ["tag1>.class2, tag2>.class2"]
  */
-var queryManySelector = function(selector) {
+var queryManySelector = function queryManySelector(selector) {
 	//var rules = selector.replace(/ *([,>+~. ]) */g, "$1").match(/[^,]\w*/g),
-	var root = this;
-	
-	var rules = (selector + ",").replace(/ *([,>+~ ]) */g, "$1").replace(/\((\dn)\+(\d)\)/, "\($1%$2\)").match(/(^[+> ~]?|,|\>|\+|~| ).*?(?=[,>+~ ]|$)/g),
-		i = 0,
-		rule,
-		selElements = [],
-		//TODO:: flei = 0;//firstLastElementIndex - индекс первого элемента из последних добавленных элементов (перед ',')
+	var root = this,
 		result = [],
-		hightRoot = root;
+		rule,
+		rules,
+		i = 0,
+		selElements,
+		hightRoot = root,
+		rt,
+		k,
+		isSimpleSelector = /^[\w#.]\w*$/.test(selector);//quick return or generic call, missed ~ in attributes selector;
+
+	if(isSimpleSelector) {
+		switch (selector.charAt(0)) {
+			case '#':
+				rule = selector.slice(1);
+				selElements = root.getElementById(rule);
+				//workaround with IE bug about returning element by name not by ID.
+				//Solution completely changed, thx to deerua.
+				//Get all matching elements with this id
+				if (browser.msie < 9 && selElements.id !== rule) {
+					selElements = selElements.ownerDocument.all[rule];
+				}
+				result.push(selElements);
+			break;
+			case '.':
+				result = result.concat.apply(result, root.getElementsByClassName(selector.slice(1)));
+			break;
+			default:
+				result = result.concat.apply(result, root.getElementsByTagName(selector));
+			break;
+		}
+		return result;
+	}
+	
+	rules = (selector + ",").replace(/ *([,>+~ ]) */g, "$1").replace(/\((\dn)\+(\d)\)/, "\($1%$2\)").match(/(^[+> ~]?|,|\>|\+|~| ).*?(?=[,>+~ ]|$)/g);
+	selElements = [];
 		
 	while((rule = rules[i++])) {
 		if(rule.charAt(0) == ',') {//Если первая буква серектора - запятая
@@ -425,20 +534,96 @@ var queryManySelector = function(selector) {
 		else if(selElements && selElements.length > 0)	{
 			root = selElements;
 		}
-		if(selElements)selElements = queryOneSelector(rule, root);
+		if(selElements) {
+			selElements = queryOneSelector(rule, root);
+		}
 		if(selElements && !selElements.length)selElements = null;
 		//Если selElements == null и не равно "," - значит мы ничего не нашли на пред. шаге
 	}
 	
 	return result;
 };
+
+
 /**
  * @param {!string} selector
- * @this {Document|HTMLElement|Node=}
+ * @this {Document|HTMLElement|Node}
  * @return {HTMLElement|Node}
  */
-function queryOneManySelector(selector) {	
-	return this.querySelectorAll(selector)[0];
+function queryOneManySelector(selector) {
+	var thisObj = this,
+		isSimpleSelector = /^[\w#.]\w*$/.test(selector),//quick return or generic call, missed ~ in attributes selector;
+		tmp,
+		node;
+
+	if(isSimpleSelector) {
+		switch (selector.charAt(0)) {
+			case '#':
+				tmp = selector.slice(1);
+				node = thisObj.getElementById(tmp);
+				//workaround with IE bug about returning element by name not by ID.
+				//Solution completely changed, thx to deerua.
+				//Get all matching elements with this id
+				if (browser.msie < 9 && node.id !== tmp) {
+					node = node.ownerDocument.all[tmp];
+				}
+				return node;
+			break;
+			case '.':
+				return thisObj.getElementsByClassName(selector.slice(1))[0];
+			break;
+			default:
+				return thisObj.getElementsByTagName(selector)[0];
+			break;
+		}
+	}
+
+	return thisObj.querySelectorAll(selector)[0] || null;
+}
+
+/**
+ * @param {!string} selector
+ * @this {HTMLElement}
+ * @return {boolean}
+ */
+function _matchesSelector(selector) {
+	var thisObj = this,
+		isSimpleSelector = /^[\w#.]\w*$/.test(selector),
+		isEasySelector = !isSimpleSelector && !/([,>+~ ])/.test(selector),
+		tmp,
+		match,
+		e;
+
+	if(isSimpleSelector) {
+		switch (selector.charAt(0)) {
+			case '#':
+				return thisObj.id === selector.slice(1);
+			break;
+			case '.':
+				return !!~(" " + thisObj.className + " ").indexOf(" " + selector.slice(1) + " ");
+			break;
+			default:
+				return thisObj.tagName === selector;
+			break;
+		}
+	}
+	else if(isEasySelector) {
+		tmp = queryOneSelector(selector, null, [thisObj]);
+		if(DEBUG) {
+			if(tmp.length !== 1)console.error("matchesSelector error 1");
+			if(tmp[0] !== thisObj)console.error("matchesSelector error 2");
+		}
+		return tmp[0] === thisObj;
+	}
+	else {
+		tmp = thisObj.ownerDocument;
+		tmp = tmp.querySelectorAll(selector);
+		for ( e in tmp ) if(Object.prototype.hasOwnProperty.call(tmp, e)) {
+	        match = tmp[e] === thisObj;
+	        if(match)return true;
+	    }
+	    return false;
+	}
 }
 
 
@@ -458,28 +643,33 @@ nodeProto.g1 = _returnFirstParam(1);
 nodeProto.g2 = _returnFirstParam(2);
 nodeProto.g3 = _returnFirstParam(3);
 nodeProto.g4 = _returnFirstParam(4);
-nodeProto.g5 = _returnFirstParam(5);
-nodeProto.g6 = _returnFirstParam(6);
+//nodeProto.g5 = _returnFirstParam(5);// historical
+//nodeProto.g6 = _returnFirstParam(6);// historical
 nodeProto.g7 = _returnFirstParam(7);
 nodeProto.g8 = _returnFirstParam(8);
 nodeProto.g9 = _returnFirstParam(9);
 nodeProto.g10 = _returnFirstParam(10);
 nodeProto.g11 = _returnFirstParam(11);
-nodeProto.g12 = _returnFirstParam(12);
+//nodeProto.g12 = _returnFirstParam(12);// historical
 nodeProto.g16 = _returnFirstParam(16);
 
 nodeProto["__ielt8__element_init__"] = function __ielt8__element_init__(thisObj) {
-	var _tmp_container;
 	if(thisObj.element)thisObj = thisObj.element;//¬_¬ only if the save `this` to local variable
 	
 	/*__ielt8__element_init__["plugins"].forEach(function(plugin) {
 		plugin(thisObj)
 	})*/
 	
+	if(!thisObj.after)thisObj.after = elementProto.after;
+	if(!thisObj.before)thisObj.before = elementProto.before;
+	if(!thisObj.append)thisObj.append = elementProto.append;
+	if(!thisObj.prepend)thisObj.prepend = elementProto.prepend;
+	if(!thisObj.replace)thisObj.replace = elementProto.replace;
+	if(!thisObj.remove)thisObj.remove = elementProto.remove;
+
 	if(!thisObj.isEqualNode)thisObj.isEqualNode = nodeProto.isEqualNode;
 	if(!thisObj.compareDocumentPosition)thisObj.compareDocumentPosition = nodeProto.compareDocumentPosition;
-	if(!thisObj.getElementsByClassName)thisObj.getElementsByClassName = Element_proto.getElementsByClassName;
-	if(!thisObj.insertAfter)thisObj.insertAfter = Element_proto.insertAfter;
+	if(!thisObj.getElementsByClassName)thisObj.getElementsByClassName = elementProto.getElementsByClassName;
 	/*@requared: window.addEventListener, window.removeEventListener, window.dispatchEvent */
 	if(!thisObj.addEventListener)thisObj.addEventListener = window.addEventListener;
 	if(!thisObj.removeEventListener)thisObj.removeEventListener = window.removeEventListener;
@@ -488,26 +678,39 @@ nodeProto["__ielt8__element_init__"] = function __ielt8__element_init__(thisObj)
 
 	if(!thisObj.querySelectorAll)thisObj.querySelectorAll = queryManySelector;
 	if(!thisObj.querySelector)thisObj.querySelector = queryOneManySelector;
+	if(!thisObj.matchesSelector)thisObj.matchesSelector = _matchesSelector;
 	
-	if(!thisObj.hasAttribute)thisObj.hasAttribute = Element_proto.hasAttribute;
+	if(!thisObj.hasAttribute)thisObj.hasAttribute = elementProto.hasAttribute;
 
 	//Unsafe (with "OBJECT" tag, for example) set's
 	try {
 		
-		if(!(_tmp_container = thisObj._))thisObj._ = {};
-		if(!(_tmp_container = thisObj._)) {
-			if(!(_tmp_container = __ielt8__wontfix[thisObj.sourceIndex])) {
-				_tmp_container = __ielt8__wontfix[thisObj.sourceIndex] = {};
-			}
+		if(!thisObj["_"])thisObj["_"] = {};
+		if(thisObj.cloneNode !== elementProto.cloneNode) {
+			thisObj["_"]["nativeCloneNode"] = thisObj.cloneNode;
+			thisObj.cloneNode = elementProto.cloneNode;
 		}
-		if(thisObj.cloneNode !== Element_proto.cloneNode)thisObj.cloneNode = Element_proto.cloneNode;
 		if(nodeProto.contains)thisObj.contains = nodeProto.contains;
 	}
 	catch(e) {
 		//console.error(e.message)
 	}
+	if(!thisObj["_"])__ielt8__wontfix.push(thisObj);
 }
 //__ielt8__element_init__["plugins"] = [];
+
+var origCloneNode = nodeProto["cloneNode"];
+nodeProto["cloneNode"] = function(deep) {
+	var el = _call.call(origCloneNode, this, deep);
+	
+	var jj = ieltbehaviorRules.length;
+	while(--jj >= 0)
+		el.addBehavior(ieltbehaviorRules[jj]);
+	
+	
+	return el;
+}
+
 
 /*  ======================================================================================  */
 /*  ================================  Document  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */

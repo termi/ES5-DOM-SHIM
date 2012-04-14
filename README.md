@@ -6,7 +6,7 @@ based on:
 - https://github.com/paulmillr/es6-shim
 - https://github.com/Raynos/DOM-shim
 
-__Status__: Beta   
+__Status__: Beta Dev
 [__Demo__](http://h123.ru/ES5-DOM-SHIM/simple/index.html) Try it in IE7 (or in IE6 ¬_¬)! And take a look at the source
 
 ## Goal
@@ -54,20 +54,26 @@ __Status__: Beta
   2. Put `a.ielt8.htc` and `a.ie6.ielt8.htc` to the root of your site
  
 ## EXSTRAs
-1. Exporting "browser" object to global
-2. Exporting Utils.Dom.DOMStringCollection to global
-3. Array.prototype.unique
-4. Element.prototype.insertAfter
-5. global.SendRequest -> ajax
-6. global.forEach(<Object | Array>, iterator, context). if `iterator` return __false__ forEach stop working
-7. global.randomString
-8. $A(iterable, start, end, forse) - alias for Array.from with Array|Object|String|number support eg: $A({a:1, b:2}) == [1,2]
-9. $K(iterable, forse) - alias for Object.keys with Arguments|Array|Object|String|number support eg: $A({a:1, b:2}) == ['a','b']
-10. bubbleEventListener TODO:: describe in eng. If you known russian you can read JSDoc
-11. $ alias for document.getElementById
-12. $$ alias for document.querySelectorAll (with ">[any selector]" support)
-13. $$0 -> $$[0]
-14. Fix console from https://github.com/theshock/console-cap/blob/master/console.js
+IF INCLUDE_EXTRAS == false ->
+ broken Object.defineProperty will be deleted
+
+INCLUDE_EXTRAS:
+- Exporting these objects to global (window)
+	1. browser
+	2. Utils.Dom.DOMStringCollection
+	3. XHR from https://github.com/Raynos/xhr with customisations
+	4. $A(iterable, start, end, forse) - alias for Array.from with Array|Object|String|number support eg: $A({a:1, b:2}) == [1,2]
+	5. $K(iterable, forse) - alias for Object.keys with Arguments|Array|Object|String|number support eg: $A({a:1, b:2}) == ['a','b']
+	6. $(selector, root) alias for root.querySelector(selector) (with ">[any selector]" support)
+	7. $$(selector, root) alias for root.querySelectorAll(selector) (with ">[any selector]" support)
+	8. $$0 alias for $
+- Extending objects
+	1. Object.append(object, donor, [donor2, ...])
+	2. Object.extend(object, donor, [donor2, ...]) (Object.append with overwrite exists properties)
+	3. Object.inherit(Child, Parent)
+	4. Array.prototype.unique()
+	5. String.random(length)
+- Fix console From https://github.com/theshock/console-cap/blob/master/console.js
  
 ## Same-domain limitation
 
@@ -87,10 +93,8 @@ http://jsperf.com/es5-dom-shim-test
 2. Incompatibility with http://code.google.com/p/ie7-js/ [working on it]
 
 ## TODO
-0. Tests
-2. element.dataset (http://code.eligrey.com/html5/dataset/latest/html5-dataset.js)
-4. http://dvcs.w3.org/hg/url/raw-file/tip/Overview.html (https://gist.github.com/1384398 & https://gist.github.com/1235332)
-5. insertAdjacentText and insertAdjacentElement
+1. Tests
+2. http://dvcs.w3.org/hg/url/raw-file/tip/Overview.html (https://gist.github.com/1384398 & https://gist.github.com/1235332)
 
 ## License
 
