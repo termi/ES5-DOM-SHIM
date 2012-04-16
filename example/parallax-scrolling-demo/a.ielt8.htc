@@ -26,9 +26,6 @@
 <PUBLIC:PROPERTY NAME="DOCUMENT_TYPE_NODE" GET="_g10" />
 <PUBLIC:PROPERTY NAME="DOCUMENT_FRAGMENT_NODE" GET="_g11" />
 
-<PUBLIC:PROPERTY NAME="offsetTop" GET="getOffsetTop" />
-<PUBLIC:PROPERTY NAME="offsetLeft" GET="getOffsetLeft" />
-
 <SCRIPT>
 /*@requared window.Node.prototype = { ielt8 : true }*/
 var 
@@ -54,9 +51,7 @@ var
 	_g9=Node_proto.g9,
 	_g10=Node_proto.g10,
 	_g11=Node_proto.g11,
-	_g16=Node_proto.g16,
-	getOffsetTop=Element_proto.getoffsetTop,
-	getOffsetLeft=Element_proto.getoffsetLeft;
+	_g16=Node_proto.g16;
 
 if(this != window) {//Strange IE bug where thisObj === window
 	Node_proto.__ielt8__element_init__(this);

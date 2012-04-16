@@ -23,6 +23,8 @@
 <PUBLIC:PROPERTY NAME="DOCUMENT_NODE" GET="_g9" />
 <PUBLIC:PROPERTY NAME="DOCUMENT_TYPE_NODE" GET="_g10" />
 <PUBLIC:PROPERTY NAME="DOCUMENT_FRAGMENT_NODE" GET="_g11" />
+<PUBLIC:PROPERTY NAME="offsetTop" GET="b" />
+<PUBLIC:PROPERTY NAME="offsetLeft" GET="d" />
 <SCRIPT>
 var 
 np=window.Node.prototype,ep=window.Element.prototype,
@@ -40,7 +42,9 @@ z=np.gettextContent,
 x=np.settextContent,
 _g1=np.g1,_g2=np.g2,_g3=np.g3,_g4=np.g4,_g7=np.g7,
 _g8=np.g8,_g9=np.g9,_g10=np.g10,_g11=np.g11,
-_g16=np.g16;
+_g16=np.g16,
+b=ep.getoffsetTop,
+d=ep.getoffsetLeft;
 if(this!=window){
 np.__ielt8__element_init__(this);
 }

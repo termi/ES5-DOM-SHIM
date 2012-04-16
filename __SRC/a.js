@@ -161,7 +161,7 @@ browser["msie"] = browser.msie;
  */
 if(!Function.prototype.bind)Function.prototype.bind = function (object, var_args) {
 	//If IsCallable(Target) is false, throw a TypeError exception.
-	if (typeof this != "function") {
+	if (typeof this != "function" && !browser.msie && (this+"").trim().indexOf("function") !== 0) {
 		throw new TypeError("Function.prototype.bind called on incompatible " + this);
 	}
 	var __method = this, args = _arraySlice.call(arguments, 1),
@@ -1734,7 +1734,11 @@ if(!elementProto.matchesSelector) {
 		elementProto["mozMatchesSelector"] ||
 		elementProto["msMatchesSelector"] ||
 		elementProto["oMatchesSelector"] || function(selector) {
-			var isSimpleSelector = /^[\w#.]\w*$/.test(selector);
+			if(!selector)return false;
+			if(selector === "*")return true;
+
+			var thisObj = this,
+				isSimpleSelector = /^[\w#.]\w*$/.test(selector);
 			if(isSimpleSelector) {
 				switch (selector.charAt(0)) {
 					case '#':
@@ -1744,11 +1748,10 @@ if(!elementProto.matchesSelector) {
 						return !!~(" " + thisObj.className + " ").indexOf(" " + selector.slice(1) + " ");
 					break;
 					default:
-						return thisObj.tagName === selector;
+						return thisObj.tagName && thisObj.tagName.toUpperCase() === selector.toUpperCase();
 				}
 			}
-			var thisObj = this,
-				parent = thisObj.parentNode,
+			var parent = thisObj.parentNode,
 				tmp,
 				match = false;
 			
@@ -1758,7 +1761,7 @@ if(!elementProto.matchesSelector) {
 
 			if(!match && (parent = thisObj.ownerDocument)) {
 				tmp = parent.querySelectorAll(selector);
-			    for ( e in tmp ) if(_hasOwnProperty(tmp, e)) {
+			    for (var e in tmp ) if(_hasOwnProperty(tmp, e)) {
 			        match = tmp[e] === thisObj;
 			        if(match)return true;
 			    }
@@ -2225,11 +2228,11 @@ var $$ = global["$$"] = function(selector, roots, isFirst) {
 
 					tmp = "#" + root.id;
 
-					result.concat(_arrayFrom(roots.querySelectorAll(tmp + selector.join("," + tmp))));
+					result = result.concat(_arrayFrom(root.querySelectorAll(tmp + selector.join("," + tmp))));
 				}
 			}
 			else {
-				result.concat(_arrayFrom(roots.querySelectorAll(selector)));
+				result = result.concat(_arrayFrom(root.querySelectorAll(selector)));
 			}
 			
 			if(isFirst && result.length)return result[0];
@@ -2237,7 +2240,7 @@ var $$ = global["$$"] = function(selector, roots, isFirst) {
 		else throw new Error("querySelector not supported");
 	}
 
-	return result;
+	return isFirst ? result[0] : result;
 };
 /** @type {string} unique prefix (HTMLElement.id) */
 $$.str_for_id = "r" + String.random(6);

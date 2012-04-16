@@ -22,9 +22,10 @@ __Status__: Beta Dev
  - This lib is not about performance in IE < 9
  - That's all cautions
  
-## Install `(Note: if you don't need EXSTRAs use a.noexstras.js instead of a.js)`
+## Install
+###`(Note: if you don't need EXSTRAs use a.noexstras.js instead of a.js)`
  - For modern browsers:
-  - Add main script in `head` section
+  Add main script in `head` section
   
             <script src="a.js"></script>
 			
@@ -54,11 +55,13 @@ __Status__: Beta Dev
   2. Put `a.ielt8.htc` and `a.ie6.ielt8.htc` to the root of your site
  
 ## EXSTRAs
+
 IF INCLUDE_EXTRAS == false ->
  broken Object.defineProperty will be deleted
 
 INCLUDE_EXTRAS:
-- Exporting these objects to global (window)
+
+ - Exporting these objects to global (window)
 	1. browser
 	2. Utils.Dom.DOMStringCollection
 	3. XHR from https://github.com/Raynos/xhr with customisations
@@ -67,13 +70,13 @@ INCLUDE_EXTRAS:
 	6. $(selector, root) alias for root.querySelector(selector) (with ">[any selector]" support)
 	7. $$(selector, root) alias for root.querySelectorAll(selector) (with ">[any selector]" support)
 	8. $$0 alias for $
-- Extending objects
+ - Extending objects
 	1. Object.append(object, donor, [donor2, ...])
 	2. Object.extend(object, donor, [donor2, ...]) (Object.append with overwrite exists properties)
 	3. Object.inherit(Child, Parent)
 	4. Array.prototype.unique()
 	5. String.random(length)
-- Fix console From https://github.com/theshock/console-cap/blob/master/console.js
+ - Fix console From https://github.com/theshock/console-cap/blob/master/console.js
  
 ## Same-domain limitation
 

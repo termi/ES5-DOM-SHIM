@@ -325,6 +325,22 @@ if(!_DOMException) {
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Exception  ==================================  */
 /*  =======================================================================================  */
 
+/*  ======================================================================================  */
+/*  ======================================  Window  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+//http://javascript.gakaa.com/window-scrollx-2-0-scrolly.aspx
+if(!("pageXOffset" in global)) {
+	_.push(function() {
+		var _getScrollX = document.compatMode === "CSS1Compat" ? function(){return document.body.parentNode.scrollLeft} : function(){return document.body.scrollLeft};
+		var _getScrollY = document.compatMode === "CSS1Compat" ? function(){return document.body.parentNode.scrollTop} : function(){return document.body.scrollTop};
+
+		Object.defineProperty(global, "pageXOffset", {"get" : _getScrollX});
+		Object.defineProperty(global, "pageYOffset", {"get" : _getScrollY});
+	});
+}
+
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Window  ======================================  */
+/*  ======================================================================================  */
 
 /*  ======================================================================================  */
 /*  ======================================  Events  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
@@ -486,19 +502,35 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 	//_ = _[_event_phase] || (_[_event_phase] = {});
 	
 	if(_type === "DOMContentLoaded") {//IE
+		if (document.readyState == 'complete')return;
+
 		_useInteractive = true;
-		var a = document.getElementById("__ie_onload");
-		if(!a) {
-			document.write("<script id=\"__ie_onload\" defer=\"defer\" src=\"javascript:void(0)\"><\/script>");
-			a = document.getElementById("__ie_onload");
-			a.onreadystatechange = function(e) {
-				var n = this;
-				if(n.readyState == "complete") {
-					if(n.alreadyDone)return;
-					n.alreadyDone = true;
-					commonHandle.call(thisObj, {"type" : _type});
+		
+		if(!browser[_type]) {
+			browser[_type] = true;
+			var a = document.getElementById("__ie_onload");
+			if(!a) {
+				document.write("<script id=\"__ie_onload\" defer=\"defer\" src=\"javascript:void(0)\"><\/script>");
+				a = document.getElementById("__ie_onload");
+				a.onreadystatechange = function(e) {
+					var n = this;
+					if(n.readyState == "complete") {
+						if(n.alreadyDone)return;
+						n.alreadyDone = true;
+						commonHandle.call(thisObj, {"type" : _type});
+					}
 				}
-			}
+			}/*
+			function poll() {
+				try { document.documentElement.doScroll('left'); } catch(e) { setTimeout(poll, 50); return; }
+				commonHandle.call(thisObj, {"type" : _type});
+			};
+
+			var top;
+			if (document.createEventObject && document.documentElement.doScroll) {
+				try { top = !global.frameElement; } catch(e) { }
+				if (top) poll();
+			}*/
 		}
 	}
 	/* TODO:: DOMAttrModified
@@ -506,7 +538,7 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 	
 	}
 	*/
-	else if(_type === "load" && thisObj.tagName.toUpperCase() === "SCRIPT") {//[script:onload]
+	else if(_type === "load" && "tagName" in thisObj && thisObj.tagName.toUpperCase() === "SCRIPT") {//[script:onload]
 		//FROM https://github.com/jrburke/requirejs/blob/master/require.js
 		//Probably IE. IE (at least 6-8) do not fire
 		//script onload right after executing the script, so
@@ -531,6 +563,7 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 		};
 		_type = "readystatechange";
 	}
+	else if(_type === "DOMMouseScroll")_type = mousewheel;//TODO:: Test it
 	
 	/*
 	TODO::
@@ -769,6 +802,54 @@ if(!("children" in _testElement) || browser.msie && browser.msie < 9)_.push(func
 		return arr;
 	}});
 })
+
+//[IE lt 9] Fix "offsetLeft" and "offsetTop" properties in IE < 9
+if(browser.msie < 9)_.push(function() {
+	function unsafeGetOffsetRect(elem, X_else_Y) {
+		var box = elem.getBoundingClientRect(),
+			body = document.body,
+			docElem = document.documentElement;
+	 
+	 	return X_else_Y ?
+	 		Math.round(box.left + (window.pageXOffset || docElem.scrollLeft || body.scrollLeft) - (docElem.clientLeft || body.clientLeft || 0)) :
+	 		Math.round(box.top + (window.pageYOffset || docElem.scrollTop || body.scrollTop) - (docElem.clientTop || body.clientTop || 0));
+	}
+	function getOffsetSum(elem, X_else_Y) {
+		var result = 0,
+			prop = X_else_Y ? "offsetLeft" : "offsetTop";
+
+		while(elem) {
+			result = result + parseInt(elem[prop], 10);
+			elem = elem.offsetParent;
+		}
+	 
+		return result;
+	}
+
+	function safeGetOffsetRect(elem, X_else_Y) {
+		var result;
+		try {
+			result = unsafeGetOffsetRect(elem, X_else_Y);
+		}
+		catch(e) {
+			result = getOffsetSum(elem, X_else_Y);
+		}
+		return result;
+	}
+	Object.defineProperties(elementProto, {
+		"offsetLeft" : {//https://developer.mozilla.org/en/DOM/Element.firstElementChild
+			"get" : function() {
+			    return safeGetOffsetRect(this, true);
+			}
+		},
+		"offsetTop" : {//https://developer.mozilla.org/En/DOM/Element.lastElementChild
+			"get" : function() {
+			    return safeGetOffsetRect(this);
+			}
+		}
+	});
+})
+	
 
 //[IE lt 9, old browsers] Traversal for IE < 9 and other
 if(_testElement.childElementCount == void 0)_.push(function() {
@@ -1187,7 +1268,11 @@ var _cloneElement = function(include_all) {//Экспортируем cloneEleme
 	
 	return result;
 };
-_cloneElement.nativeCloneNode = nodeProto["cloneNode"] || _testElement["cloneNode"];
+_cloneElement.nativeCloneNode = 
+	browser.msie === 8 ?
+		_testElement["cloneNode"] :
+		browser.msie < 8 ?
+			nodeProto["cloneNode"] : void 0;
 
 if(browser.msie && browser.msie < 9) {
 	nodeProto["cloneNode"] = _cloneElement;

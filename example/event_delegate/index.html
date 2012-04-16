@@ -35,9 +35,9 @@ document.createElement("x");
 	<h class="header">
 		<h4>Event delegation</h4>
 	</h>
-	
-	<ul class="data">
-		<li class="controller" data-this-is-it="1">
+	 
+	<ul class="data controller" a=a>
+		<li class="controller data" a=a data-this-is-it="1">
 			<x style="margin:10px 0">Click me</x>
 		</li>
 	</ul>
@@ -49,8 +49,8 @@ document.createElement("x");
 
 <script>
 
-(function(e){"use strict";function d(b,a){if(!(this instanceof d))return new d(b,a);a.handleEvent&&(this.b=a,a=a.handleEvent);this.filter=b;this.a=a}d.prototype.handleEvent=function(b){var a=b.target,c=b.currentTarget,d;do 1===a.nodeType&&this.match(a,this.filter)&&(b.currentTarget=c,b.currentTarget!==c&&(delete b.currentTarget,b.currentTarget=c),b.target=a,b.currentTarget!==c&&(delete b.target,b.target=a),d=this.a.call(this.b||c,b));while(!1!==d&&a!=c&&(a=a.parentNode));return d};d.prototype.match=function(b,
-a){switch(typeof a){case "string":return b.matchesSelector(a);case "object":return Object.keys(a).every(function(c){return void 0!==a[c]?b.getAttribute(c)===a[c]:b.hasAttribute(c)});case "function":return a(b)}};e.DelegateListener=d})(this);
+;(function(g){"use strict";function h(b,a){switch(typeof a){case "string":return b.matchesSelector(a);case "object":var c=!0,f;for(f in a){var e;if(e=a.hasOwnProperty(f)){a:{c=f;e=a[f];var d=b;switch(typeof e){case "undefined":c=d.hasAttribute(c);break a;case "string":c=d.getAttribute(c)===e;break a;case "function":h(d,c)&&e.call(d,c);c=!0;break a}c=void 0}e=!c}if(e)break}return c;case "function":return a(b)}}function d(b,a){if(!(this instanceof d))return new d(b,a);a&&a.handleEvent&&(this.b=a,a=a.handleEvent);
+this.filter=b;this.a=a}d.prototype.handleEvent=function(b){var a=b.target,c=b.currentTarget,d;do 1===a.nodeType&&h(a,this.filter)&&(b.currentTarget=c,b.currentTarget!==c&&(delete b.currentTarget,b.currentTarget=c),b.target=a,b.target!==c&&(delete b.target,b.target=a),this.a&&(d=this.a.call(this.b||c,b)));while(!1!==d&&a!=c&&(a=a.parentNode));return d};"undefined"!==typeof module&&module.exports?module.exports=d:"undefined"!==typeof g&&(g.DelegateListener=d)})(this);
 
 function main() {
 	var container = document.getElementById("container"),
@@ -130,6 +130,18 @@ function main() {
 		e.returnValue = {a:11};
 		console.log("cloneNode", e.returnValue.a);
 	}, false);
+
+document.addEventListener("dblclick", DelegateListener({
+	"a" : "a",
+	".controller" : function(selector) {
+		console.log(this, selector);
+	},
+	".data" : function(selector) {
+		console.log(this, selector);
+	}
+}, function(e){
+	console.log(e, e.target, this)
+}));
 }
 
 window.addEventListener('DOMContentLoaded', main, false);

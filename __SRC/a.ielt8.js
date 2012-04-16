@@ -32,7 +32,7 @@ var /** @const*/
 
 var nodeProto = global.Node.prototype,//Note: for IE < 8 `Node` and `Node.prototype` is just an JS objects created in a.ie8.js
 	elementProto = global.Element.prototype,
-	browser = global.browser || {},
+	browser = global["browser"] || {},
 	noDocumentReadyState,
 	notSupportedTagNames = [
 		"script", "style",
@@ -48,7 +48,28 @@ var jj = ieltbehaviorRules.length;
 while(--jj >= 0)
 	ielt9BehaviorRule += (" url(\"" + ieltbehaviorRules[jj] + "\")");
 ielt9BehaviorRule += "}";
-	
+
+function createBehaviorStyle(styleId, tags, behaviorRule) {
+	var style = document.getElementById(styleId),
+		add = "";
+
+	if(style){
+		add = style.getAttribute("data-url") || "";
+		style.id = "";
+	}
+
+	if(add) {
+		behaviorRule.replace(" url(", " url(" + add + ") url(");
+	}
+
+	style = _call.call(originCreateElement, document, "style");
+	style.id = styleId;
+	style.type = 'text/css';
+	style.setAttribute("data-url", behaviorRule.replace("{behavior:", "").replace(")}", ")"));
+	style.styleSheet.cssText = tags + behaviorRule;
+	document.head.appendChild(style);
+}
+
 if(!document.readyState) {
 	noDocumentReadyState = true;
 	document.readyState = "uninitialized";
@@ -94,6 +115,7 @@ function queryOneSelector(selector, roots, result) {
 	
 	//TODO:: Не засовывать в result те элементы, которые уже были туда засованы
 	var /** @type {Object} */resultKeys = {},
+		/** @type {NodeList} */tempResult,
 		/** @type {HTMLElement} */child,
 		/** @type {Node} */root,
 
@@ -130,7 +152,6 @@ function queryOneSelector(selector, roots, result) {
 						if(id) {
 							child = document.getElementById(id);
 							if(!tag || child.tagName.toUpperCase() == tag)result.push(child);
-							id = "";
 						}
 						else {
 							/*if(mod === " ") {
@@ -138,15 +159,24 @@ function queryOneSelector(selector, roots, result) {
 							}*/
 
 							if(isClasses) {
-								result = result.concat.apply(result, root.getElementsByClassName(classes));
+								kr = -1;
+								tempResult = root.getElementsByClassName(classes);
+								while(rs = tempResult[++kr])result.push(rs);
 							}
 							else if(tag) {
-								result = result.concat.apply(result, (!tag && root.all) ? root.all : root.getElementsByTagName(tag || "*"));
+								kr = -1;
+								tempResult = (!tag && root.all) ? root.all : root.getElementsByTagName(tag || "*");
+								while(rs = tempResult[++kr])result.push(rs);
 							}
 						}
 					}
-					if(isClasses)isClasses = false;
-					else if(tag)tag = "";
+					if(id) {
+						id = "";
+					}
+					else {
+						if(isClasses)isClasses = false;
+						else if(tag)tag = "";
+					}
 				break;
 				case '+':
 					while(root = roots[++i]) {
@@ -512,10 +542,12 @@ var queryManySelector = function queryManySelector(selector) {
 				result.push(selElements);
 			break;
 			case '.':
-				result = result.concat.apply(result, root.getElementsByClassName(selector.slice(1)));
+				selElements = root.getElementsByClassName(selector.slice(1));
+				while(rt = selElements[i++])result.push(rt);
 			break;
 			default:
-				result = result.concat.apply(result, root.getElementsByTagName(selector));
+				selElements = root.getElementsByTagName(selector);
+				while(rt = selElements[i++])result.push(rt);
 			break;
 		}
 		return result;
@@ -587,6 +619,9 @@ function queryOneManySelector(selector) {
  * @return {boolean}
  */
 function _matchesSelector(selector) {
+	if(!selector)return false;
+	if(selector === "*")return true;
+
 	var thisObj = this,
 		isSimpleSelector = /^[\w#.]\w*$/.test(selector),
 		isEasySelector = !isSimpleSelector && !/([,>+~ ])/.test(selector),
@@ -603,7 +638,7 @@ function _matchesSelector(selector) {
 				return !!~(" " + thisObj.className + " ").indexOf(" " + selector.slice(1) + " ");
 			break;
 			default:
-				return thisObj.tagName === selector;
+				return thisObj.tagName && thisObj.tagName.toUpperCase() === selector.toUpperCase();
 			break;
 		}
 	}
@@ -744,45 +779,61 @@ if(!global.XMLHttpRequest)global.XMLHttpRequest = function() {
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Network  ======================================  */
 /*  =======================================================================================  */
 
-if(noDocumentReadyState) {
-	global.addEventListener('DOMContentLoaded', function DOMContentLoaded() {//Emulated method
-		document.readyState = "interactive";
-		global.removeEventListener('DOMContentLoaded', DOMContentLoaded, false);
-	}, false);
-	global.attachEvent('onload', function onload() {//Native method
-		document.readyState = "complete";
-		global.detachEvent('onload', onload);
-	});
+
+/*  ======================================================================================  */
+/*  ======================================  Window  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+
+var _emulate_scrollX_scrollY,
+	originalScrollTo = global.scrollTo;
+if(!("pageXOffset" in global) && global.attachEvent) {
+	global.pageXOffset = global.pageYOffset = 0;
+	_emulate_scrollX_scrollY = document.compatMode === "CSS1Compat" ?
+			function() { global.pageXOffset = document.body.parentNode.scrollLeft; global.pageYOffset = document.body.parentNode.scrollTop }
+			:
+			function() { global.pageXOffset = document.body.scrollLeft; global.pageYOffset = document.body.scrollTop };
+
+	global.attachEvent("onscroll", _emulate_scrollX_scrollY);
+
+	global.scrollTo = function(x, y) {
+		originalScrollTo(x, y);
+		global.pageXOffset = x;
+		global.pageYOffset = y;
+	}
 }
 
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Window  ======================================  */
+/*  ======================================================================================  */
+
+
+
+
+
+ 
+document.addEventListener('DOMContentLoaded', function _DOMContentLoaded() {//Emulated method
+	document.removeEventListener('DOMContentLoaded', _DOMContentLoaded, false);
+
+	if(noDocumentReadyState)document.readyState = "interactive";
+
+	//createBehaviorStyle("__HEAD_BEH_RULES", "head *",  ielt9BehaviorRule);
+	
+	if(_emulate_scrollX_scrollY)_emulate_scrollX_scrollY();
+}, false);
+ 
+global.attachEvent('onload', function _onload() {//Native method
+	global.detachEvent('onload', _onload);
+
+	if(noDocumentReadyState)document.readyState = "complete";
+
+	if(_emulate_scrollX_scrollY)_emulate_scrollX_scrollY();
+});
 
 
 
 
 
 
-
-
-
-
-var prevStyle = document.getElementById(__STYLE_ID),
-	add = "";
-
-if(prevStyle){
-	add = prevStyle.getAttribute("data-url") || "";
-	prevStyle.id = "";
-}
-
-if(add) {
-	ielt9BehaviorRule.replace(" url(", " url(" + add + ") url(");
-}
-
-var style = _call.call(originCreateElement, document, "style");
-style.id = __STYLE_ID;
-style.type = 'text/css';
-style.setAttribute("data-url", ielt9BehaviorRule.replace("{behavior:", "").replace(")}", ")"));
-style.styleSheet.cssText = __SUPPORTED__TAG_NAMES__ + ielt9BehaviorRule;
-document.head.appendChild(style);
+createBehaviorStyle(__STYLE_ID, __SUPPORTED__TAG_NAMES__, ielt9BehaviorRule);
 
 }
 })(window);
