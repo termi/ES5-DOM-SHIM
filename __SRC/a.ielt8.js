@@ -318,6 +318,9 @@ function queryOneSelector(selector, roots, result) {
 				while(match && (css3Attr_add = css3Attr[++kr])) {
 				
 					nodeAttrCurrent_value = child.getAttribute(css3Attr_add[1]);
+					if(child.nodeName.toUpperCase() === "A" && (b = css3Attr_add[1]) === "href") {
+						(b = child.attributes[b]) && (b = b.textContent) && (nodeAttrCurrent_value = b);
+					}
 					nodeAttrExpected_value = css3Attr_add[3];
 					
 					// TODO: Проверить, что все опреации ^=, !=, *= и т.д. работают или ввести nodeAttrCurrent_value = child.getattribute(); if(nodeAttrCurrent_value)nodeAttrCurrent_value = nodeAttrCurrent_value + ''
