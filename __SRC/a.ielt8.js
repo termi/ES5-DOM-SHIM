@@ -195,7 +195,7 @@ function queryOneSelector(selector, roots, result) {
 								tempResult = root.getElementsByClassName(classes);
 								while(child = tempResult[++kr])result.push(child);
 							}
-							else if(tag) {
+							else {
 								kr = -1;
 								tempResult = (!tag && root.all) ? root.all : root.getElementsByTagName(tag || "*");
 								while(child = tempResult[++kr])result.push(child);

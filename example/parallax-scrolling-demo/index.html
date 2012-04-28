@@ -46,7 +46,7 @@ function main() {
 			top : index === 0 ? 0 :
 				index === sectionNodes.length -1 ? node.offsetTop - ((document.documentElement.scrollHeight - node.offsetTop) / 2) :
 				node.offsetTop - (sectionNodes[index + 1].offsetTop - node.offsetTop) / 2,
-			navLink : node.id ? $$0("[href='#" + node.id + "']") : null,
+			navLink : node.id ? $$0("a[href='#" + node.id + "']") : null,
 			node : node/*,
 			refId : "#" + node.id*/
 		} });
