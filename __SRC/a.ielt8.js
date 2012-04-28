@@ -42,7 +42,11 @@ var nodeProto = global.Node.prototype,//Note: for IE < 8 `Node` and `Node.protot
 	ieltbehaviorRules = [__URL_TO_ELEMENT_BEHAVIOR__],
 	ielt9BehaviorRule = "{behavior:",
 	_call = Date.call,
-	__ielt8__wontfix = [];
+	__ielt8__wontfix = [],
+	//Cache original methods to avoid using shimed methods
+	_Array_splice = Array.prototype.splice,
+	_String_split = String.prototype.split,
+	_String_substr = String.prototype.substr;
 	
 var jj = ieltbehaviorRules.length;
 while(--jj >= 0)
@@ -128,12 +132,13 @@ global["__ielt8__wontfix"] = __ielt8__wontfix;
  *
  * @param {!string} selector CSS3-селектор
  * @param {Node|Array.<Node>} roots элемент в котором мы будем искать
- * @param {Array.<HTMLElement> = } result Pre-results
+ * @param {Array.<HTMLElement>=} result Pre-results
+ * @param {Object=} resultKeys Cache object for nore unique id (sourceIndex) for non-dublication
  * @return {Array.<HTMLElement>}
  * @version 3
  *  TODO:: Изучить код https://github.com/ded/qwery - может быть будет что-нибуть полезное
  */
-function queryOneSelector(selector, roots, result) {
+function queryOneSelector(selector, roots, result, resultKeys) {
 	//\.(.*?)(?=[:\[]|$) -> <.class1.class2>:focus or tag#id<.class1.class2>[attr*=value]
 	//TODO:: Реализовать концепцию isFirst ниже
 	if(!roots)roots = [document];
@@ -141,10 +146,9 @@ function queryOneSelector(selector, roots, result) {
 	
 	var isPreResult = !!result;
 	result = result || [];
+	resultKeys = resultKeys || {};
 	
-	//TODO:: Не засовывать в result те элементы, которые уже были туда засованы
-	var /** @type {Object} */resultKeys = {},
-		/** @type {NodeList} */tempResult,
+	var /** @type {NodeList} */tempResult,
 		/** @type {HTMLElement} */child,
 		/** @type {Node} */root,
 
@@ -183,7 +187,7 @@ function queryOneSelector(selector, roots, result) {
 					while(root = roots[++i]) {
 						if(id) {
 							child = document.getElementById(id);
-							if(!tag || child.tagName.toUpperCase() == tag)result.push(child);
+							if(!tag || child.tagName.toUpperCase() === tag)result.push(child);
 						}
 						else {
 							/*if(mod === " ") {
@@ -213,7 +217,7 @@ function queryOneSelector(selector, roots, result) {
 				case '+':
 					while(root = roots[++i]) {
 						while((child = root.nextSibling) && child.nodeType != 1){}
-						match = child && (!tag || child.tagName.toUpperCase() == tag) &&
+						match = child && (!tag || child.tagName.toUpperCase() === tag) &&
 							!(child.sourceIndex in resultKeys);
 							
 						if(match && isClasses) {
@@ -234,7 +238,7 @@ function queryOneSelector(selector, roots, result) {
 				case '~'://W3C: "an F element preceded by an E element"
 					while(root = roots[++i]) {
 						while (child = child.nextSibling) {//TODO:: Не засовывать в result те элементы, которые уже были туда засованы
-							match = child.nodeType == 1 && (!tag || child.tagName.toUpperCase() == tag) &&
+							match = child.nodeType == 1 && (!tag || child.tagName.toUpperCase() === tag) &&
 								!(child.sourceIndex in resultKeys);
 								
 							if(match && isClasses) {
@@ -257,7 +261,7 @@ function queryOneSelector(selector, roots, result) {
 					while(root = roots[++i]) {
 						a = -1;
 						while(child = root.childNodes[++a]) {
-							match = child.nodeType == 1 && (!tag || child.tagName.toUpperCase() == tag) &&
+							match = child.nodeType == 1 && (!tag || child.tagName.toUpperCase() === tag) &&
 								!(child.sourceIndex in resultKeys);
 								
 							if(match && isClasses) {
@@ -284,10 +288,11 @@ function queryOneSelector(selector, roots, result) {
 
 	if(result.length && (tag || isClasses || css3Attr || css3Pseudo || id || mod)) {
 		i = 0;
-		if(isClasses)classes = classes.slice(1).split(__querySelector__dottes);
+		if(isClasses)classes = _String_split.call(classes.slice(1), __querySelector__dottes);
 
 		while(child = result[i++]) {
 			match = !(id && child.id != id);
+			c = child.tagName.toUpperCase();
 			
 			if(match && isClasses) {
 				kr = -1;
@@ -296,21 +301,25 @@ function queryOneSelector(selector, roots, result) {
 					match = !!~_curClass.indexOf(classes[kr]);
 			}
 			if(match && tag) {
-				match = child.tagName.toUpperCase() == tag;
+				match = c === tag;
 			}
 			if(match && css3Attr) {
 				kr = -1;
 				
 				if(typeof css3Attr == 'string') {//Check, if we not analys css3Attr yet
-					css3Attr = css3Attr.split("][");
+					css3Attr = _String_split.call(css3Attr, "][");
 					while(css3Attr_add = css3Attr[++kr]) {
 						css3Attr_add = css3Attr[kr] = css3Attr_add.replace(__querySelector__arrtSpaceSeparated_fromSafe, "~=").match(__queryOneSelector__attrMatcher);
 						
 						b = css3Attr_add[1];
-						if((a = b.charAt(0)) === "\'" || a === "\""  && b.substr(-1) === a)b = css3Attr_add[1] = b.substr(1, b.length - 2);
+						if((a = b.charAt(0)) === "\'" || a === "\""  && b.substr(-1) === a) {//Note: original IE substr not allowed negative value as first param
+							b = css3Attr_add[1] = _String_substr.call(b, 1, b.length - 2);
+						}
 						if(b == "class" && "all" in document)css3Attr_add[1] = "className";//IE
 						b = css3Attr_add[3];
-						if(b && ((a = b.charAt(0)) === "\'" || a === "\""  && b.substr(-1) === a))b = css3Attr_add[3] = b.substr(1, b.length - 2);
+						if(b && ((a = b.charAt(0)) === "\'" || a === "\""  && b.substr(-1) === a)) {
+							b = css3Attr_add[3] = _String_substr.call(b, 1, b.length - 2);
+						}
 					}
 					kr = -1;
 				}
@@ -318,8 +327,8 @@ function queryOneSelector(selector, roots, result) {
 				while(match && (css3Attr_add = css3Attr[++kr])) {
 				
 					nodeAttrCurrent_value = child.getAttribute(css3Attr_add[1]);
-					if(child.nodeName.toUpperCase() === "A" && (b = css3Attr_add[1]) === "href") {
-						(b = child.attributes[b]) && (b = b.textContent) && (nodeAttrCurrent_value = b);
+					if(c/*child.tagName*/ === "A" && css3Attr_add[1] === "href") {
+						nodeAttrCurrent_value = nodeAttrCurrent_value.replace(location.protocol + "//" + location.host + location.pathname, "");
 					}
 					nodeAttrExpected_value = css3Attr_add[3];
 					
@@ -421,7 +430,7 @@ function queryOneSelector(selector, roots, result) {
 					break;
 				/* W3C: "an E element, root of the document" */
 					case 'root':
-						match = child.nodeName.toLowerCase() == 'html';
+						match = c/*child.tagName*/ == "HTML";
 					break;
 				/* W3C: "an E element, the n-th child of its parent" */
 					case 'nth-child':
@@ -549,7 +558,7 @@ function queryOneSelector(selector, roots, result) {
 				
 			}
 		
-			if(!match)result.splice(--i, 1);
+			if(!match)_Array_splice.call(result, --i, 1);
 		}
 	}
 	
@@ -576,7 +585,8 @@ var queryManySelector = function queryManySelector(selector) {
 		selElements,
 		hightRoot = root,
 		rt,
-		k;
+		k,
+		resultKeys;
 
 	if(__selector__easySelector1.test(selector) || __selector__easySelector2.test(selector)) {//quick return or generic call
 		switch (selector.charAt(0)) {
@@ -608,6 +618,7 @@ var queryManySelector = function queryManySelector(selector) {
 		.replace(__querySelector__arrtSpaceSeparated_toSafe, "|-|")
 		.match(__queryManySelector__selectorsMatcher);
 	selElements = [];
+	resultKeys = {};
 		
 	while((rule = rules[i++])) {
 		if(rule.charAt(0) == ',') {//Если первая буква серектора - запятая
@@ -620,7 +631,7 @@ var queryManySelector = function queryManySelector(selector) {
 			root = selElements;
 		}
 		if(selElements) {
-			selElements = queryOneSelector(rule, root);
+			selElements = queryOneSelector(rule, root, null, resultKeys);
 		}
 		if(selElements && !selElements.length)selElements = null;
 		//Если selElements == null и не равно "," - значит мы ничего не нашли на пред. шаге
@@ -690,7 +701,7 @@ function _matchesSelector(selector) {
 			case '.':
 				match = true;
 				i = -1;
-				tmp = selector.slice(1).split(".");
+				tmp = _String_split.call(selector.slice(1), ".");
 				str = " " + thisObj.className + " ";
 				while(tmp[++i] && match) {
 					match = !!~str.indexOf(" " + tmp[i] + " ");
@@ -704,15 +715,12 @@ function _matchesSelector(selector) {
 	}
 	else if(isEasySelector) {
 		tmp = queryOneSelector(selector, null, [thisObj]);
-		if(DEBUG) {
-			if(tmp.length !== 1)console.error("matchesSelector error 1");
-			if(tmp[0] !== thisObj)console.error("matchesSelector error 2");
-		}
+		
 		return tmp[0] === thisObj;
 	}
 	else {
-		tmp = thisObj.ownerDocument;
-		tmp = tmp.querySelectorAll(selector);
+		tmp = queryManySelector.call(thisObj.ownerDocument, selector);
+
 		for ( i in tmp ) if(Object.prototype.hasOwnProperty.call(tmp, i)) {
 	        match = tmp[i] === thisObj;
 	        if(match)return true;
@@ -878,8 +886,6 @@ function _DOMContentLoaded() {
 	document.removeEventListener('DOMContentLoaded', _DOMContentLoaded, false);
 
 	if(noDocumentReadyState)document.readyState = "interactive";
-
-	//createBehaviorStyle("__HEAD_BEH_RULES", "head *",  ielt9BehaviorRule);
 	
 	if(_emulate_scrollX_scrollY)_emulate_scrollX_scrollY();
 }
