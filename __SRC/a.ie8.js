@@ -8,8 +8,6 @@
 /**
  * ES5 and DOM shim for IE < 9
  * @version 3
- * required:
- *  - Object.append
  */
  
 //GCC DEFINES START
@@ -29,7 +27,10 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
 	_ = global["_"] = {
 		"ielt9shims" : [],
 		"orig_" : orig_
-	}["ielt9shims"];
+	}["ielt9shims"],
+	
+	document_createDocumentFragment = document.createDocumentFragment,
+	document_createElement = document.createElement;
 
 
 
@@ -80,6 +81,17 @@ var _throwDOMException = function(errStr) {
 				obj[key] = extension[key];
 		
 		return obj;
+	},
+	_append = function(obj, ravArgs) {
+		for(var i = 1; i < arguments.length; i++) {
+			var extension = arguments[i];
+			for(var key in extension)
+				if(_hasOwnProperty(extension, key) &&
+				   (overwrite || !_hasOwnProperty(obj, key))
+				  )obj[key] = extension[key];
+		}
+
+		return obj;
 	};
 	
 
@@ -90,7 +102,7 @@ document.defaultView || (document.defaultView = global);
 
 if(DEBUG) {
 	//test DOMElement is an ActiveXObject
-	if(!(document.createElement("div") instanceof ActiveXObject))
+	if(!(_call(document_createElement, document, "div") instanceof ActiveXObject))
 		console.error("DOMElement is not an ActiveXObject. Probably you in IE > 8 'compatible mode'. <element> instanceof [Node|Element|HTMLElement] wouldn't work");
 }
 
@@ -772,7 +784,7 @@ if (document.doctype === null && browser.msie > 7)//TODO:: this fix for IE < 8
 		Object.defineProperty(documentShim_doctype, "nodeType", {
 			get: function () { return 10 } 
 		});
-	    Object.defineProperty(document, "doctype", documentShim_doctype);
+	    Object.defineProperty(document, "doctype", {configurable : true, enumerable : false, get : function () { return documentShim_doctype } });
 	});
 
 // IE8 hates you and your f*ing text nodes
@@ -1098,6 +1110,7 @@ if(!(attr in _testElement))document[attr] = elementProto[attr] = function(clas) 
 		nodes,
 		i = -1,
 		node;
+
 	if(arguments.length) {
 		clas = (clas + "").trim().split(" ");
 		nodes = root.getElementsByTagName('*');
@@ -1162,126 +1175,185 @@ var filter = elem.style['filter'];
 	}
 }
 
-var html5_elements = 'abbr article aside audio canvas command datalist details figure figcaption footer header hgroup keygen mark meter nav output progress section source summary time video',
-	html5_elements_array = html5_elements.split(' ');
 
+//Исправляем для IE<9 создание DocumentFragment, для того, чтобы функция работала с HTML5
+if(browser.msie && browser.msie < 9) {
+	document.createDocumentFragment = function() {
+		var df = 
+				_call(document_createDocumentFragment, this);
+		
+		if(global["DocumentFragment"] === global["Document"]) {
+			//TODO:: if DocumentFragment is a fake DocumentFragment -> append each instance with Document methods
+			_append(df, global["DocumentFragment"].prototype);//TODO: tests
+		}
+		
+		return html5_document(df);
+	};
+}
+
+var html5_elements_array = 'abbr article aside audio canvas command datalist details figure figcaption footer header hgroup keygen mark meter nav output progress section source summary time video'.split(' '),
+	
+	/** Not all elements can be cloned in IE (this list can be shortend) **/
+	ielt9_elements = /^<|^(?:a|b|button|code|div|fieldset|form|h1|h2|h3|h4|h5|h6|i|iframe|img|input|label|li|link|ol|option|p|param|q|script|select|span|strong|style|table|tbody|td|textarea|tfoot|th|thead|tr|ul)$/i,
+	
+	// feature detection: whether the browser supports unknown elements
+	supportsUnknownElements = (function (a) {
+		a.innerHTML = '<x-x></x-x>';
+
+		return a.childNodes.length === 1;
+	})(_testElement),
+	
+	safeFragment,
+	
+	timestamp = +(new Date),
+	
+	cacheNodes = {},
+	cacheStamp,
+	
+	__ielt8_Node_behavior_apply = nodeProto["__ielt8_Node_behavior_apply"];;
+
+function shivedCreateElement(nodeName) {
+	if (cacheStamp !== timestamp) {
+		cacheNodes = {};
+		cacheStamp = timestamp;
+	}
+
+	var nodeCached = cacheNodes[nodeName],
+		node = nodeCached ? nodeCached.cloneNode(false) : this["__orig__createElement__"](nodeName);
+
+	// shiv only non-cached supported elements (supporting children, not namespaced)
+	if (!nodeCached && node.canHaveChildren && !(node.xmlns || node.tagUrn)) {
+		if(!~("|<>|" + html5_elements_array.join("|<>|") + "|<>|").indexOf("|<>|" + nodeName + "|<>|")) {
+			html5_elements_array.push(nodeName);
+			timestamp = +(new Date);
+		}
+		html5_document(node.document, nodeName);
+		cacheNodes[nodeName] = node;
+	}
+	
+	//FIX IE lt 8 Element.prototype
+	if(__ielt8_Node_behavior_apply)__ielt8_Node_behavior_apply(node);
+
+	return node;	
+}
+	
 /** Example of making a document HTML5 element safe
  * Функция "включает" в IE < 9 HTML5 элементы
  * Используется, если никакая другая аналогичная функция не используется
  */
-function html5_document(doc) { // pass in a document as an argument
+function html5_document(doc, nodeName) { // pass in a document as an argument
 	// create an array of elements IE does not support
 	var a = -1;
 
-	while (++a < html5_elements_array.length) { // loop through array
-		if(doc.createElement)doc.createElement(html5_elements_array[a]); // pass html5 element into createElement method on document
+	if(doc.createElement) {
+		if(nodeName) {
+			doc.createElement(nodeName);
+		}
+		else while (++a < html5_elements_array.length) { // loop through array
+			doc.createElement(html5_elements_array[a]); // pass html5 element into createElement method on document
+		}
+		
+		if(doc.createElement !== shivedCreateElement) {
+			doc["__orig__createElement__"] = doc.createElement;
+			doc.createElement = shivedCreateElement;
+		}
 	}
 
 	return doc; // return document, great for safeDocumentFragment = html5_document(document.createDocumentFragment());
 } // critique: array could exist outside the function for improved performance?
 
-
-//Исправляем для IE<9 создание DocumentFragment, для того, чтобы функция работала с HTML5
-if(browser.msie && browser.msie < 9) {
-	var msie_CreateDocumentFragment = function() {
-		var df = 
-				msie_CreateDocumentFragment.orig();
-		
-		if(global["DocumentFragment"] === global["Document"]) {
-			//if DocumentFragment is a fake DocumentFragment -> append each instance with Document methods
-			Object["append"](df, global["DocumentFragment"].prototype);//TODO: tests
-		}
-		
-		return html5_document(df);
-	};
-	msie_CreateDocumentFragment.orig = document.createDocumentFragment;
-	
-	document.createDocumentFragment = msie_CreateDocumentFragment;
-}
-
-
-/**
- * Issue: <HTML5_elements> become <:HTML5_elements> when element is cloneNode'd
- * Solution: use an alternate cloneNode function, the default is broken and should not be used in IE anyway (for example: it should not clone events)
- * В Internet Explorer'е функция <HTMLElement>.cloneNode "ломает" теги HTML5 при клонировании,
- *  поэтому нужно использовать альтернативный способ клонирования
- *
- * Больше по теме: http://pastie.org/935834
- *
- * Функция клонирует DOM-элемент
- * Альтернатива <Node>.cloneNode в IE < 9
- * @param {boolean=} include_all [false] Клонировать ли все дочерние элементы? По-умолчанию, false
- * @this {Node} element Элемент для клонирования
- * @version 4
- */
-var _cloneElement = function(include_all) {//Экспортируем cloneElement для совместимости и для вызова напрямую	
-	// Обновляем функцию _cloneElement
-	if(document.createDocumentFragment !== _cloneElement.oldCreateDocumentFragment && _cloneElement.safeElement != false)
-		_cloneElement.safeElement = 
-			(!!browser.msie && browser.msie < 9)
-			?
-			(_cloneElement.oldCreateDocumentFragment = document.createDocumentFragment).call(document).appendChild(document.createElement("div"))
-			:
-			false;
-	
-	var element = this,
-		result,
-		nativeCloneNode;
-	
-	//Следующий вариант не работает с HTML5
-	//if(_cloneElement.safeDocumentFragment) {
-		//result = _cloneElement.safeDocumentFragment.appendChild(document.createElement("div"));//Создаём новый элемент
-		
-	if(_cloneElement.safeElement &&//IE < 9?
-	   ~(" " + html5_elements + " ").indexOf(" " + element.tagName + " ")//HTML5 element?
-	   ) {//Мы присваеваем _cloneElement.safeDocumentFragment только если браузер - IE < 9
-		_cloneElement.safeElement.innerHTML = "";//Очистим от предыдущих элементов
-		
-		if(include_all && /td|tr/gi.test(element.tagName)) {//Только для элементов td и tr
-			//Хак для IE < 9, для нормального копирования ячеек таблицы
-			if(element.tagName.toUpperCase() == "TR") {
-				_cloneElement.safeElement.innerHTML = "<table><tbody>" + element.outerHTML + "</tbody></table>";
-				result = _cloneElement.safeElement.firstChild.firstChild.firstChild;
-			}
-			else if(element.tagName.toUpperCase() == "TD") {
-				_cloneElement.safeElement.innerHTML = "<table><tbody><tr>" + element.outerHTML + "</tr></tbody></table>";
-				result = _cloneElement.safeElement.firstChild.firstChild.firstChild.firstChild;
-			}
-		}		
-		else {
-			if(include_all)_cloneElement.safeElement.innerHTML = element.outerHTML; // set HTML5-safe element's innerHTML as input element's outerHTML
-			else _cloneElement.safeElement.innerHTML = element.outerHTML.replace(element.innerHTML, "");
-		
-			result = _cloneElement.safeElement.firstChild; // return HTML5-safe element's first child, which is an outerHTML clone of the input element
-			
-			//FIX IE lt 8 Element.prototype
-			//if(nodeProto["ielt8"])Object["append"](el, nodeProto);
-		}
-	}
-	else {
-		nativeCloneNode =
-			element["_"] && element["_"]["nativeCloneNode"] ||
-			_cloneElement.nativeCloneNode;
-
-		result = _call(nativeCloneNode, element, include_all);
-	}
-	
-	return result;
+safeFragment = html5_document(_call(document_createDocumentFragment, document));
+safeFragment["_"] = {
+	safeTags : {}
 };
-_cloneElement.nativeCloneNode = 
-	browser.msie === 8 ?
-		_testElement["cloneNode"] :
-		browser.msie < 8 ?
-			nodeProto["cloneNode"] : void 0;
+[].concat(html5_elements_array)
 
-if(browser.msie && browser.msie < 9) {
-	nodeProto["cloneNode"] = _cloneElement;
+if(!supportsUnknownElements) {
+	 html5_document(document);
 }
+
+//Test for broken 'cloneNode'
+if(_call(document_createElement, document, "x-x").cloneNode().outerHTML.indexOf("<:x-x>") === 0) {
+	var _cloneElement,
+		safeElement,
+		_nativeCloneNode = 
+		browser.msie === 8 ?
+			_testElement["cloneNode"] :
+			browser.msie < 8 ?
+				nodeProto["cloneNode"] : void 0;
+	
+	/**
+	 * Issue: <HTML5_elements> become <:HTML5_elements> when element is cloneNode'd
+	 * Solution: use an alternate cloneNode function, the default is broken and should not be used in IE anyway (for example: it should not clone events)
+	 * В Internet Explorer'е функция <HTMLElement>.cloneNode "ломает" теги HTML5 при клонировании,
+	 *  поэтому нужно использовать альтернативный способ клонирования
+	 *
+	 * Больше по теме: http://pastie.org/935834
+	 *
+	 * Альтернатива <Node>.cloneNode в IE < 9
+	 * @param {boolean=} include_all [false] Клонировать ли все дочерние элементы? По-умолчанию, false
+	 * @this {Node} element Элемент для клонирования
+	 * @version 4
+	 */
+	var _cloneElement = function(include_all) {//Экспортируем cloneElement для совместимости и для вызова напрямую	
+		if (!safeElement || cacheStamp !== timestamp) {
+			cacheNodes = {};
+			cacheStamp = timestamp;
+			if(safeElement)safeFragment.removeChild(safeFragment);
+			safeElement = safeFragment.appendChild(safeFragment.createElement("div"));
+		}
+		
+		var element = this,
+			result;
+		
+		//Следующий вариант не работает с HTML5
+		//if(_cloneElement.safeDocumentFragment) {
+			//result = _cloneElement.safeDocumentFragment.appendChild(document.createElement("div"));//Создаём новый элемент
+		
+		if(ielt9_elements.test(element.nodeName)) {//HTML4 element?
+			result = _call(element["_"] && element["_"]["nativeCloneNode"] || _nativeCloneNode, element, include_all);
+		}
+		else {//HTML5 element?
+			safeElement.innerHTML = "";//Очистим от предыдущих элементов
+			
+			if(include_all)safeElement.innerHTML = element.outerHTML; // set HTML5-safe element's innerHTML as input element's outerHTML
+			else safeElement.innerHTML = element.outerHTML.replace(element.innerHTML, "");
+		
+			result = safeElement.firstChild; // return HTML5-safe element's first child, which is an outerHTML clone of the input element
+		}
+		
+		//FIX IE lt 8 Element.prototype
+		if(__ielt8_Node_behavior_apply)__ielt8_Node_behavior_apply(result);
+		
+		return result;
+	};
+
+	nodeProto["cloneNode"] = _cloneElement;
+
+}
+
+
+/*  =======================================================================================  */
+/*  ================================  NodeList.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+//Inherit NodeList from Array
+var nodeList_methods_fromArray = ["every", "filter", "forEach", "indexOf", "join", "lastIndexOf", "map", "reduce", "reduceRight", "reverse", "slice", "some", "toString"];
+function extendNodeListPrototype(nodeListProto) {
+	if(nodeListProto && nodeListProto !== Array.prototype) {
+		for(var key in nodeList_methods_fromArray)if(_hasOwnProperty(key, nodeList_methods_fromArray)) {
+			if(!nodeListProto[key])nodeListProto[key] = function() {
+				_applyFunction(Array.prototype[key], Array["from"](this), arguments);
+			}
+		}
+	}
+}
+if(document.querySelectorAll)extendNodeListPrototype(document.querySelectorAll("#z").constructor.prototype);
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  NodeList.prototype  ==================================  */
+/*  ======================================================================================  */
 
 
 /*  ======================================================================================  */
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  DOM  =======================================  */
-
 
 
 

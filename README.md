@@ -65,11 +65,9 @@ INCLUDE_EXTRAS:
 	1. browser
 	2. Utils.Dom.DOMStringCollection
 	3. XHR from https://github.com/Raynos/xhr with customisations
-	4. $A(iterable, start, end, forse) - alias for Array.from with Array|Object|String|number support eg: $A({a:1, b:2}) == [1,2]
-	5. $K(iterable, forse) - alias for Object.keys with Arguments|Array|Object|String|number support eg: $A({a:1, b:2}) == ['a','b']
-	6. $(selector, root) alias for root.querySelector(selector) (with ">[any selector]" support)
-	7. $$(selector, root) alias for root.querySelectorAll(selector) (with ">[any selector]" support)
-	8. $$0 alias for $
+	4. $(selector, root) alias for root.querySelector(selector) (with ">[any selector]" support)
+	5. $$(selector, root) alias for root.querySelectorAll(selector) (with ">[any selector]" support)
+	6. $$0 alias for $
  - Extending objects
 	1. Object.append(object, donor, [donor2, ...])
 	2. Object.extend(object, donor, [donor2, ...]) (Object.append with overwrite exists properties)

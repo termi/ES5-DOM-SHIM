@@ -1,4 +1,4 @@
-﻿// ==ClosureCompiler==
+// ==ClosureCompiler==
 // @compilation_level SIMPLE_OPTIMIZATIONS
 // @output_file_name a.ielt8.js
 // ==/ClosureCompiler==
@@ -48,6 +48,35 @@ var jj = ieltbehaviorRules.length;
 while(--jj >= 0)
 	ielt9BehaviorRule += (" url(\"" + ieltbehaviorRules[jj] + "\")");
 ielt9BehaviorRule += "}";
+
+
+var /** @type {RegExpt} @const */
+	__selector__easySelector1 = /^[\w#\.][\w-]*$/,
+	/** @type {RegExpt} @const */
+	__selector__easySelector2 = /^(\.[\w-]*)+$/,
+	/** @type {RegExpt} @const */
+	__queryManySelector__doubleSpaces = /\s*([,>+~ ])\s*/g,
+	/** @type {RegExpt} @const */
+	__querySelector__arrtSpaceSeparated_toSafe = /\~\=/g,
+	/** @type {RegExpt} @const */
+	__querySelector__arrtSpaceSeparated_fromSafe = /\|\-\|\=/g,
+	/** @type {RegExpt} @const */
+	__queryManySelector__selectorsMatcher = /(^[+> ~]?|,|\>|\+|~| ).*?(?=[,>+~ ]|$)/g,
+	/** @type {RegExpt} @const */
+	__querySelector__dottes = /\./g,
+	/** @type {RegExpt} @const */
+	__queryOneSelector__spaces = /\s/g
+	/** @type {RegExpt} @const */
+	__queryOneSelector__attrMatcher = /^\[?(.*?)(?:([\*~&\^\$\|!]?=)(.*?))?\]?$/,
+	/** @type {RegExpt} @const */
+	__queryOneSelector__selectorMatch = /^([,>+~ ])?(\w*)(?:|\*)\#?([\w\-]*)((?:\.?[\w\-])*)(\[.*?\])?\:?([\w\-\+\%\(\)]*)$/,
+	/** @type {RegExpt} @const */
+	__queryOneSelector__pseudoMatcher = /^([^(]+)(?:\(([^)]+)\))?$/,/* regexpt from jass 0.3.9 (http://yass.webo.in/) rev. 371 line 166 from right */
+	/** @type {RegExpt} @const */
+	__queryOneSelector__pseudoNthChildPlus = /\((\dn)\+(\d)\)/,
+	/** @type {RegExpt} @const */
+	__queryOneSelector__pseudoNthChildMatcher = /(?:([-]?\d*)n)?(?:(%|-)(\d*))?//* regexpt from jass 0.3.9 (http://yass.webo.in/) rev. 371 line 181 ( mod === 'nth-last-child' ?...) */
+	;
 
 function createBehaviorStyle(styleId, tags, behaviorRule) {
 	var style = document.getElementById(styleId),
@@ -119,18 +148,19 @@ function queryOneSelector(selector, roots, result) {
 		/** @type {HTMLElement} */child,
 		/** @type {Node} */root,
 
-		/** @type {Array.<string>} */selectorArr = selector.match(/^([,>+~ ])?(\w*)(?:|\*)\#?([\w-]*)((?:\.?[\w-])*)(\[.*?\])?\:?([\w\-\+\%\(\)]*)$/),
+		/** @type {Array.<string>} */selectorArr = selector.match(__queryOneSelector__selectorMatch),
 		/** @type {string} */mod = selectorArr[1],
 		/** @type {string} */tag = selectorArr[2].toUpperCase(),
 		/** @type {string} */id = selectorArr[3],
 		/** @type {(string|Array.<string>)} */classes = selectorArr[4],
 		/** @type {boolean} */isClasses = !!classes,
-		/** @type {(string|Array.<string>)} */css3Attr = selectorArr[5],//css3Attr Пример: [attr*=value]
+		/** @type {(string|Array.<string>)} */css3Attr = selectorArr[5],//css3Attr Пример: [attr1*=value1][attr2*=value2]
+		/** @type {Array.<string>} */css3Attr_add,//css3Attr Пример: [attr*=value]->["attr*=value", "attr", "*=", "value"]
 		/** @type {string} */_curClass,
 		/** @type {number} */kr = -1,
 
-		/** @type {(string|Array.<string>)} */css3Mod = selectorArr[6],//css3Mod Пример: :nls-child(2n-0)
-		/** @type {(Array.<Array>)} */css3Mod_add,//Pseudo-classes
+		/** @type {(string|Array.<string>)} */css3Pseudo = selectorArr[6],//css3Pseudo Пример: :nls-child(2n-0)
+		/** @type {(Array.<Array>)} */css3Pseudo_add,//Pseudo-classes
 
 		/** @type {(Array.<number>)} */ind,
 		/** @type {number} */a,
@@ -139,10 +169,12 @@ function queryOneSelector(selector, roots, result) {
 		/** @type {Node} */brother,
 
 		/** @type {number} */i = -1,
-		/** @type {Node} */rs,
-		/** @type {boolean} */match;
+		/** @type {boolean} */match,
+
+		/** @type {string} */nodeAttrCurrent_value,
+		/** @type {string} */nodeAttrExpected_value;
 	
-	if(isClasses)classes = classes.replace(/\./g, " ");
+	if(isClasses)classes = classes.replace(__querySelector__dottes, " ");
 		
 	if(!isPreResult) {// ! matchesSelector
 		
@@ -161,12 +193,12 @@ function queryOneSelector(selector, roots, result) {
 							if(isClasses) {
 								kr = -1;
 								tempResult = root.getElementsByClassName(classes);
-								while(rs = tempResult[++kr])result.push(rs);
+								while(child = tempResult[++kr])result.push(child);
 							}
 							else if(tag) {
 								kr = -1;
 								tempResult = (!tag && root.all) ? root.all : root.getElementsByTagName(tag || "*");
-								while(rs = tempResult[++kr])result.push(rs);
+								while(child = tempResult[++kr])result.push(child);
 							}
 						}
 					}
@@ -180,19 +212,20 @@ function queryOneSelector(selector, roots, result) {
 				break;
 				case '+':
 					while(root = roots[++i]) {
-						while((root = root.nextSibling) && root.nodeType != 1){}
-						match = root && (!tag || root.tagName.toUpperCase() == tag) &&
-							!(root.sourceIndex in resultKeys);
+						while((child = root.nextSibling) && child.nodeType != 1){}
+						match = child && (!tag || child.tagName.toUpperCase() == tag) &&
+							!(child.sourceIndex in resultKeys);
+							
 						if(match && isClasses) {
 							kr = -1;
-							_curClass = ' ' + root.className + ' ';
+							_curClass = ' ' + child.className + ' ';
 							while(classes[++kr] && match)
 								match = !!~_curClass.indexOf(classes[kr]);
 						}
 						if(match) {
-							result.push(root);
-							if(!root.sourceIndex)root.sourceIndex = UUID++;
-							resultKeys[root.sourceIndex] = true;
+							result.push(child);
+							if(!child.sourceIndex)child.sourceIndex = UUID++;
+							resultKeys[child.sourceIndex] = true;
 						}
 					}
 					isClasses = false;
@@ -200,19 +233,20 @@ function queryOneSelector(selector, roots, result) {
 				break;
 				case '~'://W3C: "an F element preceded by an E element"
 					while(root = roots[++i]) {
-						while (root = root.nextSibling) {//TODO:: Не засовывать в result те элементы, которые уже были туда засованы
-							match = root.nodeType == 1 && (!tag || root.tagName.toUpperCase() == tag) &&
-								!(root.sourceIndex in resultKeys);
+						while (child = child.nextSibling) {//TODO:: Не засовывать в result те элементы, которые уже были туда засованы
+							match = child.nodeType == 1 && (!tag || child.tagName.toUpperCase() == tag) &&
+								!(child.sourceIndex in resultKeys);
+								
 							if(match && isClasses) {
 								kr = -1;
-								_curClass = ' ' + root.className + ' ';
+								_curClass = ' ' + child.className + ' ';
 								while(classes[++kr] && match)
 									match = !!~_curClass.indexOf(classes[kr]);
 							}
 							if(match) {
-								result.push(root);
-								if(!root.sourceIndex)root.sourceIndex = UUID++;
-								resultKeys[root.sourceIndex] = true;
+								result.push(child);
+								if(!child.sourceIndex)child.sourceIndex = UUID++;
+								resultKeys[child.sourceIndex] = true;
 							}
 						}
 					}
@@ -224,17 +258,18 @@ function queryOneSelector(selector, roots, result) {
 						a = -1;
 						while(child = root.childNodes[++a]) {
 							match = child.nodeType == 1 && (!tag || child.tagName.toUpperCase() == tag) &&
-								!(root.sourceIndex in resultKeys);
+								!(child.sourceIndex in resultKeys);
+								
 							if(match && isClasses) {
 								kr = -1;
-								_curClass = ' ' + root.className + ' ';
+								_curClass = ' ' + child.className + ' ';
 								while(classes[++kr] && match)
 									match = !!~_curClass.indexOf(classes[kr]);
 							}
 							if(match) {
-								result.push(root);
-								if(!root.sourceIndex)root.sourceIndex = UUID++;
-								resultKeys[root.sourceIndex] = true;
+								result.push(child);
+								if(!child.sourceIndex)child.sourceIndex = UUID++;
+								resultKeys[child.sourceIndex] = true;
 							}
 						}
 					}
@@ -246,108 +281,119 @@ function queryOneSelector(selector, roots, result) {
 		
 		mod = "";
 	}
-	
-	
 
-	if(result.length && (tag || isClasses || css3Attr || css3Mod || id || mod)) {
+	if(result.length && (tag || isClasses || css3Attr || css3Pseudo || id || mod)) {
 		i = 0;
-		if(isClasses)classes = (" " + classes.slice(1).replace(/\./g, " | ") + " ").split("|");
+		if(isClasses)classes = classes.slice(1).split(__querySelector__dottes);
 
-		while(rs = result[i++]) {
-			match = !(id && rs.id != id);
+		while(child = result[i++]) {
+			match = !(id && child.id != id);
 			
 			if(match && isClasses) {
 				kr = -1;
-				_curClass = ' ' + rs.className + ' ';
+				_curClass = ' ' + child.className + ' ';
 				while(classes[++kr] && match)
 					match = !!~_curClass.indexOf(classes[kr]);
 			}
 			if(match && tag) {
-				match = rs.tagName.toUpperCase() == tag;
+				match = child.tagName.toUpperCase() == tag;
 			}
 			if(match && css3Attr) {
-				//TODO:: [attrName1][attrName2]
+				kr = -1;
+				
 				if(typeof css3Attr == 'string') {//Check, if we not analys css3Attr yet
-					css3Attr = css3Attr.match(/^\[(.*?)(?:([\*~&\^\$\|!]?=)(.*?))?\]$/);
-					if(css3Attr[1] == "class" && document.all)css3Attr[1] = "className";//IE
+					css3Attr = css3Attr.split("][");
+					while(css3Attr_add = css3Attr[++kr]) {
+						css3Attr_add = css3Attr[kr] = css3Attr_add.replace(__querySelector__arrtSpaceSeparated_fromSafe, "~=").match(__queryOneSelector__attrMatcher);
+						
+						b = css3Attr_add[1];
+						if((a = b.charAt(0)) === "\'" || a === "\""  && b.substr(-1) === a)b = css3Attr_add[1] = b.substr(1, b.length - 2);
+						if(b == "class" && "all" in document)css3Attr_add[1] = "className";//IE
+						b = css3Attr_add[3];
+						if(b && ((a = b.charAt(0)) === "\'" || a === "\""  && b.substr(-1) === a))b = css3Attr_add[3] = b.substr(1, b.length - 2);
+					}
+					kr = -1;
 				}
-				
-				var value1 = rs.getAttribute(css3Attr[1]), 
-					value2 = css3Attr[3];
-				
-				// TODO: Проверить, что все опреации ^=, !=, *= и т.д. работают или ввести value1 = rs.getattribute(); if(value1)value1 = value1 + ''
-				/* from yass 0.3.9 http://yass.webo.in/
-				   and edited by me :) */
-				/* function calls for CSS2/3 attributes selectors */
-				switch(css3Attr[2]) {
-				/* W3C "an E element with a "value1" attribute" */
-					default://css3Attr[2] == ''
-						match = !!value1 || value1 === "";
-					break;
-				/*
-				W3C "an E element whose "value1" attribute value2 is
-				exactly equal to "value2"
-				*/
-					case '=':
-						match = value1 && value1 === value2;
-					break;
-				/*
-				from w3.prg "an E element whose "value1" attribute value2 is
-				a list of space-separated value2s, one of which is exactly
-				equal to "value2"
-				*/
-					case '&=':
-						match = value1 && (new RegExp('(^| +)' + value2 + '($| +)').test(value1));
-					break;
-				/*
-				from w3.prg "an E element whose "value1" attribute value2
-				begins exactly with the string "value2"
-				*/
-					case '^=':
-						match = value1 && !value1.indexOf(value2);
-					break;
-				/*
-				W3C "an E element whose "value1" attribute value2
-				ends exactly with the string "value2"
-				*/
-					case '$=':
-						match = (value1 && value1.indexOf(value2) == value1.length - value2.length);
-					break;
-				/*
-				W3C "an E element whose "value1" attribute value2
-				contains the substring "value2"
-				*/
-					case '*=':
-						match = (value1 && ~value1.indexOf(value2));
-					break;
-				/*
-				W3C "an E element whose "value1" attribute has
-				a hyphen-separated list of value2s beginning (from the
-				left) with "value2"
-				*/
-					case '|=':
-						match = (value1 && (value1 === value2 || !!value1.indexOf(value2 + '-')));
-					break;
-				/* value1 doesn't contain given value2 */
-					case '!=':
-						match = (!value1 || !(new RegExp('(^| +)' + value2 + '($| +)').test(value1)));
-					break;
 
-					case '~='://TODO::
+				while(match && (css3Attr_add = css3Attr[++kr])) {
+				
+					nodeAttrCurrent_value = child.getAttribute(css3Attr_add[1]);
+					nodeAttrExpected_value = css3Attr_add[3];
+					
+					// TODO: Проверить, что все опреации ^=, !=, *= и т.д. работают или ввести nodeAttrCurrent_value = child.getattribute(); if(nodeAttrCurrent_value)nodeAttrCurrent_value = nodeAttrCurrent_value + ''
+					/* from yass 0.3.9 http://yass.webo.in/
+					   and edited by me :) */
+					/* function calls for CSS2/3 attributes selectors */
+					switch(css3Attr_add[2]) {
+					/* W3C "an E element with a "nodeAttrCurrent_value" attribute" */
+						default://css3Attr[2] == ''
+							match = !!nodeAttrCurrent_value || nodeAttrCurrent_value === "";
+						break;
+					/*
+					W3C "an E element whose "nodeAttrCurrent_value" attribute nodeAttrExpected_value is
+					exactly equal to "nodeAttrExpected_value"
+					*/
+						case '=':
+							match = nodeAttrCurrent_value && nodeAttrCurrent_value === nodeAttrExpected_value;
+						break;
+					/*
+					from w3.prg "an E element whose "nodeAttrCurrent_value" attribute nodeAttrExpected_value is
+					a list of space-separated nodeAttrExpected_value's, one of which is exactly
+					equal to "nodeAttrExpected_value"
+					*/
+						case '&=':
+							match = nodeAttrCurrent_value && (new RegExp('(^| +)' + nodeAttrExpected_value + '($| +)').test(nodeAttrCurrent_value));
+						break;
+					/*
+					from w3.prg "an E element whose "nodeAttrCurrent_value" attribute nodeAttrExpected_value
+					begins exactly with the string "nodeAttrExpected_value"
+					*/
+						case '^=':
+							match = nodeAttrCurrent_value && !nodeAttrCurrent_value.indexOf(nodeAttrExpected_value);
+						break;
+					/*
+					W3C "an E element whose "nodeAttrCurrent_value" attribute nodeAttrExpected_value
+					ends exactly with the string "nodeAttrExpected_value"
+					*/
+						case '$=':
+							match = (nodeAttrCurrent_value && nodeAttrCurrent_value.indexOf(nodeAttrExpected_value) == nodeAttrCurrent_value.length - nodeAttrExpected_value.length);
+						break;
+					/*
+					W3C "an E element whose "nodeAttrCurrent_value" attribute nodeAttrExpected_value
+					contains the substring "nodeAttrExpected_value"
+					*/
+						case '*=':
+							match = (nodeAttrCurrent_value && ~nodeAttrCurrent_value.indexOf(nodeAttrExpected_value));
+						break;
+					/*
+					W3C "an E element whose "nodeAttrCurrent_value" attribute has
+					a hyphen-separated list of nodeAttrExpected_value's beginning (from the
+					left) with "nodeAttrExpected_value"
+					*/
+						case '|=':
+							match = (nodeAttrCurrent_value && (nodeAttrCurrent_value === nodeAttrExpected_value || !!nodeAttrCurrent_value.indexOf(nodeAttrExpected_value + '-')));
+						break;
+					/* nodeAttrCurrent_value doesn't contain given nodeAttrExpected_value */
+						case '!=':
+							match = (!nodeAttrCurrent_value || !(new RegExp('(^| +)' + nodeAttrExpected_value + '($| +)').test(nodeAttrCurrent_value)));
+						break;
 
-					break;
+						case '~=':
+							match = nodeAttrCurrent_value && !!~(" " + nodeAttrCurrent_value.replace(__queryOneSelector__spaces, " ") + " ").indexOf(" " + nodeAttrExpected_value + " ");
+						break;
+					}
 				}
 			}
-			if(match && css3Mod) {
-				//In this block we lose "rs" value
-				if(typeof css3Mod == 'string') {
-					css3Mod = css3Mod.match(/^([^(]+)(?:\(([^)]+)\))?$/);/* regexpt from jass 0.3.9 (http://yass.webo.in/) rev. 371 line 166 from right */
+			if(match && css3Pseudo) {
+				//In this block we lose "child" value
+				if(typeof css3Pseudo == 'string') {
+					css3Pseudo = css3Pseudo.match(__queryOneSelector__pseudoMatcher);
 					//TODO:: Не работает nth-child и nth-last-child - путаница с nodeIndex
-					if(css3Mod[2]) {
-						if(!/\D/.test(css3Mod[2]))css3Mod_add = [null, 0, '%', css3Mod[2]];
-						else if(css3Mod[2] === 'even')css3Mod_add = [null, 2];
-						else if(css3Mod[2] === 'odd')css3Mod_add = [null, 2, '%', 1];
-						else css3Mod_add = /(?:(-?\d*)n)?(?:(%|-)(\d*))?/.exec(css3Mod[2]);/* regexpt from jass 0.3.9 (http://yass.webo.in/) rev. 371 line 181 ( mod === 'nth-last-child' ?...) */
+					if(css3Pseudo[2]) {
+						if(!/\D/.test(css3Pseudo[2]))css3Pseudo_add = [null, 0, '%', css3Pseudo[2]];
+						else if(css3Pseudo[2] === 'even')css3Pseudo_add = [null, 2];
+						else if(css3Pseudo[2] === 'odd')css3Pseudo_add = [null, 2, '%', 1];
+						else css3Pseudo_add = css3Pseudo[2].replace(__queryOneSelector__pseudoNthChildPlus, "\($1%$2\)").match(__queryOneSelector__pseudoNthChildMatcher);
 					}
 				}
 				//TODO:: Не работает nth-child и nth-last-child - путаница с nodeIndex
@@ -357,27 +403,27 @@ function queryOneSelector(selector, roots, result) {
 				http://www.w3.org/TR/2005/WD-css3-selectors-20051215/
 				on success return negative result.
 				*/
-				switch(css3Mod[1]) {
+				switch(css3Pseudo[1]) {
 				/* W3C: "an E element, first rs of its parent" */
 					case 'first-child':
 				/* implementation was taken from jQuery.1.2.6, line 1394 */
-						match = rs.parentNode.getElementsByTagName('*')[0] == rs;
+						match = child.parentNode.getElementsByTagName('*')[0] == child;
 					break;
 				/* W3C: "an E element, last rs of its parent" */
 					case 'last-child'://In this block we lose "rs" value
 				/* loop in lastrss while nodeType isn't element */
-						while ((rs = rs.nextSibling) && rs.nodeType != 1) {}
+						while ((child = child.nextSibling) && child.nodeType != 1) {}
 				/* Check for node's existence */
-						match = !rs;
+						match = !child;
 					break;
 				/* W3C: "an E element, root of the document" */
 					case 'root':
-						match = rs.nodeName.toLowerCase() == 'html';
+						match = child.nodeName.toLowerCase() == 'html';
 					break;
-				/* W3C: "an E element, the n-th rs of its parent" */
+				/* W3C: "an E element, the n-th child of its parent" */
 					case 'nth-child':
-						ind = css3Mod_add;
-						c = rs.nodeIndex || 0;
+						ind = css3Pseudo_add;
+						c = child.nodeIndex || 0;
 						a = ind[3] ? (ind[2] === '%' ? -1 : 1) * ind[3] : 0;
 						b = ind[1];
 				/* check if we have already looked into siblings, using exando - very bad */
@@ -387,11 +433,11 @@ function queryOneSelector(selector, roots, result) {
 						else {
 							match = false;
 				/* in the other case just reverse logic for n and loop siblings */
-							brother = rs.parentNode.firstChild;
+							brother = child.parentNode.firstChild;
 				/* looping in child to find if nth expression is correct */
 							do {
 				/* nodeIndex expando used from Peppy / Sizzle/ jQuery */
-								if (brother.nodeType == 1 && (brother.nodeIndex = ++c) && rs === brother && (!b ? !(c + a) : !((c + a) % b))) {
+								if (brother.nodeType == 1 && (brother.nodeIndex = ++c) && child === brother && (!b ? !(c + a) : !((c + a) % b))) {
 									match = true;
 								}
 							} while (!match && (brother = brother.nextSibling));
@@ -403,8 +449,8 @@ function queryOneSelector(selector, roots, result) {
 				*/
 					case 'nth-last-child':
 				/* almost the same as the previous one */
-						ind = css3Mod_add;
-						c = rs.nodeIndexLast || 0;
+						ind = css3Pseudo_add;
+						c = child.nodeIndexLast || 0;
 						a = ind[3] ? (ind[2] === '%' ? -1 : 1) * ind[3] : 0;
 						b = ind[1];
 						if (c) {
@@ -412,9 +458,9 @@ function queryOneSelector(selector, roots, result) {
 						}
 						else {
 							match = false;
-							brother = rs.parentNode.lastChild;
+							brother = child.parentNode.lastChild;
 							do {
-								if (brother.nodeType == 1 && (brother.nodeLastIndex = ++c) && rs === brother && (!b ? !(c + a) : !((c + a) % b))) {
+								if (brother.nodeType == 1 && (brother.nodeLastIndex = ++c) && child === brother && (!b ? !(c + a) : !((c + a) % b))) {
 									match = true;
 								}
 							} while (!match && (brother = brother.previousSibling));
@@ -425,8 +471,8 @@ function queryOneSelector(selector, roots, result) {
 					/*case 'nth-child':
 					case 'nth-last-child':
 						//In this moment "match" MUST be true
-						var isLast = css3Mod[1] != 'nth-child',
-							ind = css3Mod[2],
+						var isLast = css3Pseudo[1] != 'nth-child',
+							ind = css3Pseudo[2],
 							i = isLast ? child.nodeIndexLast : child.nodeIndex || 0,
 							a = ind[3] ? (ind[2] === '%' ? -1 : 1) * ind[3] : 0,
 							b = ind[1];
@@ -440,7 +486,7 @@ function queryOneSelector(selector, roots, result) {
 								//nodeIndex expando used from Peppy / Sizzle/ jQuery
 								if (brother.nodeType == 1 &&
 									isLast ? (brother.nodeLastIndex = i++) : (brother.nodeIndex = ++i) &&
-									rs === brother && ((i + a) % b)) {
+									child === brother && ((i + a) % b)) {
 									match = false;
 								}
 							} while (match && brother = isLast ? brother.previousSibling : brother.nextSibling);
@@ -452,33 +498,33 @@ function queryOneSelector(selector, roots, result) {
 				Thx to John, from Sizzle, 2008-12-05, line 416
 				*/
 					case 'empty':
-						match = !rs.firstChild;
+						match = !child.firstChild;
 					break;
-				/* W3C: "an E element, only rs of its parent" */
+				/* W3C: "an E element, only child of its parent" */
 					case 'only-child':
-						match = rs.parentNode.getElementsByTagName('*').length == 1;
+						match = child.parentNode.getElementsByTagName('*').length == 1;
 					break;
 				/*
 				W3C: "a user interface element E which is checked
 				(for instance a radio-button or checkbox)"
 				*/
 					case 'checked':
-						match = !!rs.checked;
+						match = !!child.checked;
 					break;
 				/*
 				W3C: "an element of type E in language "fr"
 				(the document language specifies how language is determined)"
 				*/
 					case 'lang':
-						match = (rs.lang == css3Mod_add || document.documentElement.lang == css3Mod_add);
+						match = (child.lang == css3Pseudo_add || document.documentElement.lang == css3Pseudo_add);
 					break;
 				/* thx to John, from Sizzle, 2008-12-05, line 398 */
 					case 'enabled':
-						match = !rs.disabled && rs.type !== 'hidden';
+						match = !child.disabled && child.type !== 'hidden';
 					break;
 				/* thx to John, from Sizzle, 2008-12-05, line 401 */
 					case 'disabled':
-						match = !!rs.disabled;
+						match = !!child.disabled;
 					break;
 				/* thx to John, from Sizzle, 2008-12-05, line 407 */
 					case 'selected':
@@ -487,15 +533,15 @@ function queryOneSelector(selector, roots, result) {
 				options in Safari work properly.
 				*/
 						//TODO: Проверить новый алгоритм
-						//Старый: rs.parentNode.selectedIndex;//NOTE:: Add this string manual to compile by Closure Compiler script/Добавить это строчку в откомпилированый скрипт
-						//        match = !!rs.selected;
-						match = rs.parentNode.selectedIndex && !!rs.selected;//Тут уже Closure Compiler не удаляет нужный вызов
+						//Старый: child.parentNode.selectedIndex;//NOTE:: Add this string manual to compile by Closure Compiler script/Добавить это строчку в откомпилированый скрипт
+						//        match = !!child.selected;
+						match = child.parentNode.selectedIndex && !!child.selected;//Тут уже Closure Compiler не удаляет нужный вызов
 				    break;
 					/*TODO::
 					default:
 						//Non-standart pseudo-classes
-						var f = $$N.nonStandartPseudoClasses[css3Mod[1]];
-						if(f)match = f(rs);*/
+						var f = $$N.nonStandartPseudoClasses[css3Pseudo[1]];
+						if(f)match = f(child);*/
 				}
 				
 			}
@@ -506,6 +552,8 @@ function queryOneSelector(selector, roots, result) {
 	
 	return result;
 };
+
+
 
 /**
  * Получение эллементов по классам и тэгам
@@ -525,10 +573,9 @@ var queryManySelector = function queryManySelector(selector) {
 		selElements,
 		hightRoot = root,
 		rt,
-		k,
-		isSimpleSelector = /^[\w#.]\w*$/.test(selector);//quick return or generic call, missed ~ in attributes selector;
+		k;
 
-	if(isSimpleSelector) {
+	if(__selector__easySelector1.test(selector) || __selector__easySelector2.test(selector)) {//quick return or generic call
 		switch (selector.charAt(0)) {
 			case '#':
 				rule = selector.slice(1);
@@ -536,13 +583,13 @@ var queryManySelector = function queryManySelector(selector) {
 				//workaround with IE bug about returning element by name not by ID.
 				//Solution completely changed, thx to deerua.
 				//Get all matching elements with this id
-				if (browser.msie < 9 && selElements.id !== rule) {
+				if (selElements && browser.msie < 9 && selElements.id !== rule) {
 					selElements = selElements.ownerDocument.all[rule];
 				}
 				result.push(selElements);
 			break;
 			case '.':
-				selElements = root.getElementsByClassName(selector.slice(1));
+				selElements = root.getElementsByClassName(selector.slice(1).replace(__querySelector__dottes, " "));
 				while(rt = selElements[i++])result.push(rt);
 			break;
 			default:
@@ -553,7 +600,10 @@ var queryManySelector = function queryManySelector(selector) {
 		return result;
 	}
 	
-	rules = (selector + ",").replace(/ *([,>+~ ]) */g, "$1").replace(/\((\dn)\+(\d)\)/, "\($1%$2\)").match(/(^[+> ~]?|,|\>|\+|~| ).*?(?=[,>+~ ]|$)/g);
+	rules = (selector + ",")
+		.replace(__queryManySelector__doubleSpaces, "$1")
+		.replace(__querySelector__arrtSpaceSeparated_toSafe, "|-|")
+		.match(__queryManySelector__selectorsMatcher);
 	selElements = [];
 		
 	while((rule = rules[i++])) {
@@ -584,11 +634,10 @@ var queryManySelector = function queryManySelector(selector) {
  */
 function queryOneManySelector(selector) {
 	var thisObj = this,
-		isSimpleSelector = /^[\w#.]\w*$/.test(selector),//quick return or generic call, missed ~ in attributes selector;
 		tmp,
 		node;
 
-	if(isSimpleSelector) {
+	if(__selector__easySelector1.test(selector) || __selector__easySelector2.test(selector)) {//quick return or generic call
 		switch (selector.charAt(0)) {
 			case '#':
 				tmp = selector.slice(1);
@@ -596,13 +645,13 @@ function queryOneManySelector(selector) {
 				//workaround with IE bug about returning element by name not by ID.
 				//Solution completely changed, thx to deerua.
 				//Get all matching elements with this id
-				if (browser.msie < 9 && node.id !== tmp) {
+				if (node && browser.msie < 9 && node.id !== tmp) {
 					node = node.ownerDocument.all[tmp];
 				}
 				return node;
 			break;
 			case '.':
-				return thisObj.getElementsByClassName(selector.slice(1))[0];
+				return thisObj.getElementsByClassName(selector.slice(1).replace(__querySelector__dottes, " "))[0];
 			break;
 			default:
 				return thisObj.getElementsByTagName(selector)[0];
@@ -623,11 +672,12 @@ function _matchesSelector(selector) {
 	if(selector === "*")return true;
 
 	var thisObj = this,
-		isSimpleSelector = /^[\w#.]\w*$/.test(selector),
+		isSimpleSelector = __selector__easySelector1.test(selector) || __selector__easySelector2.test(selector),
 		isEasySelector = !isSimpleSelector && !/([,>+~ ])/.test(selector),
 		tmp,
-		match,
-		e;
+		match = false,
+		i,
+		str;
 
 	if(isSimpleSelector) {
 		switch (selector.charAt(0)) {
@@ -635,7 +685,14 @@ function _matchesSelector(selector) {
 				return thisObj.id === selector.slice(1);
 			break;
 			case '.':
-				return !!~(" " + thisObj.className + " ").indexOf(" " + selector.slice(1) + " ");
+				match = true;
+				i = -1;
+				tmp = selector.slice(1).split(".");
+				str = " " + thisObj.className + " ";
+				while(tmp[++i] && match) {
+					match = !!~str.indexOf(" " + tmp[i] + " ");
+				}
+				return match;
 			break;
 			default:
 				return thisObj.tagName && thisObj.tagName.toUpperCase() === selector.toUpperCase();
@@ -653,8 +710,8 @@ function _matchesSelector(selector) {
 	else {
 		tmp = thisObj.ownerDocument;
 		tmp = tmp.querySelectorAll(selector);
-		for ( e in tmp ) if(Object.prototype.hasOwnProperty.call(tmp, e)) {
-	        match = tmp[e] === thisObj;
+		for ( i in tmp ) if(Object.prototype.hasOwnProperty.call(tmp, i)) {
+	        match = tmp[i] === thisObj;
 	        if(match)return true;
 	    }
 	    return false;
@@ -738,14 +795,16 @@ var origCloneNode = nodeProto["cloneNode"];
 nodeProto["cloneNode"] = function(deep) {
 	var el = _call.call(origCloneNode, this, deep);
 	
-	var jj = ieltbehaviorRules.length;
-	while(--jj >= 0)
-		el.addBehavior(ieltbehaviorRules[jj]);
-	
+	__ielt8_Node_behavior_apply(el);
 	
 	return el;
 }
 
+nodeProto["__ielt8_Node_behavior_apply"] = function __ielt8_Node_behavior_apply(el) {
+	var jj = ieltbehaviorRules.length;
+	while(--jj >= 0)
+		el.addBehavior(ieltbehaviorRules[jj]);
+}
 
 /*  ======================================================================================  */
 /*  ================================  Document  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
@@ -785,7 +844,8 @@ if(!global.XMLHttpRequest)global.XMLHttpRequest = function() {
 
 
 var _emulate_scrollX_scrollY,
-	originalScrollTo = global.scrollTo;
+	originalScrollTo = global.scrollTo,
+	originalScrollBy = global.scrollBy;
 if(!("pageXOffset" in global) && global.attachEvent) {
 	global.pageXOffset = global.pageYOffset = 0;
 	_emulate_scrollX_scrollY = document.compatMode === "CSS1Compat" ?
@@ -794,11 +854,14 @@ if(!("pageXOffset" in global) && global.attachEvent) {
 			function() { global.pageXOffset = document.body.scrollLeft; global.pageYOffset = document.body.scrollTop };
 
 	global.attachEvent("onscroll", _emulate_scrollX_scrollY);
-
-	global.scrollTo = function(x, y) {
+	
+	global.scroll = global.scrollTo = function(x, y) {
 		originalScrollTo(x, y);
-		global.pageXOffset = x;
-		global.pageYOffset = y;
+		_emulate_scrollX_scrollY();
+	}
+	global.scrollBy = function(x, y) {
+		originalScrollBy(x, y);
+		_emulate_scrollX_scrollY();
 	}
 }
 
@@ -808,9 +871,7 @@ if(!("pageXOffset" in global) && global.attachEvent) {
 
 
 
-
- 
-document.addEventListener('DOMContentLoaded', function _DOMContentLoaded() {//Emulated method
+function _DOMContentLoaded() {
 	document.removeEventListener('DOMContentLoaded', _DOMContentLoaded, false);
 
 	if(noDocumentReadyState)document.readyState = "interactive";
@@ -818,15 +879,17 @@ document.addEventListener('DOMContentLoaded', function _DOMContentLoaded() {//Em
 	//createBehaviorStyle("__HEAD_BEH_RULES", "head *",  ielt9BehaviorRule);
 	
 	if(_emulate_scrollX_scrollY)_emulate_scrollX_scrollY();
-}, false);
- 
-global.attachEvent('onload', function _onload() {//Native method
+}
+function _onload() {
 	global.detachEvent('onload', _onload);
 
 	if(noDocumentReadyState)document.readyState = "complete";
 
 	if(_emulate_scrollX_scrollY)_emulate_scrollX_scrollY();
-});
+}
+
+document.addEventListener('DOMContentLoaded', _DOMContentLoaded, false);//Emulated method
+global.attachEvent('onload', _onload);//Native method
 
 
 

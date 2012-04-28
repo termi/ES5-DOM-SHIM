@@ -1,9 +1,9 @@
 
 ;(function(global) {
 
-//EXPORT
-	global.URL = _URL;
-
+	//Mini alternative https://gist.github.com/2428561
+	
+	//Uses
 	//https://gist.github.com/1384398
 	//https://gist.github.com/1235332
 
@@ -29,7 +29,7 @@
 	}
 
 	function _URL(url, base) {
-		if(this === window && this === null)
+		if(this === global && this === null)
 			throw new TypeError();
 			//throw new TypeError("DOM object constructor cannot be called as a function");
 
@@ -125,7 +125,7 @@
 		}
 	};
 
-	var oldURL = window.URL || window.webkitURL || window.mozURL;
+	var oldURL = global.URL || global.webkitURL || global.mozURL;
 
 	_URL.createObjectURL = function(blob) {
 		return oldURL.createObjectURL.apply(oldURL, arguments);
@@ -144,4 +144,8 @@
   Object.defineProperty(_URL, 'createObjectURL', {enumerable: false});
   Object.defineProperty(_URL, 'revokeObjectURL', {enumerable: false});*/
 
+ 
+//EXPORT
+	global.URL = _URL;
+  
 })(window);

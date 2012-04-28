@@ -14,12 +14,18 @@
 
 //GCC DEFINES START
 /** @define {boolean} */
-var IS_DEBUG = false;
+var IS_DEBUG = true;
 /** @define {boolean} */
 var INCLUDE_EXTRAS = true;
 /** @define {boolean} */
-var INCLUDE_EXTEND_POLYFILLS = false;
+var INCLUDE_EXTEND_POLYFILLS = true;
 //GCC DEFINES END
+
+/*
+IS_DEBUG == true
+0. Some errors in console
+1. Fix console From https://github.com/theshock/console-cap/blob/master/console.js
+*/
 
 /*
 IF INCLUDE_EXTRAS == false ->
@@ -30,23 +36,22 @@ Exporting these objects to global (window)
  1. browser
  2. Utils.Dom.DOMStringCollection
  3. XHR from https://github.com/Raynos/xhr with customisations
- 4. $A(iterable, start, end, forse) - alias for Array.from with Array|Object|String|number support eg: $A({a:1, b:2}) == [1,2]
- 5. $K(iterable, forse) - alias for Object.keys with Arguments|Array|Object|String|number support eg: $A({a:1, b:2}) == ['a','b']
- 6. $(selector, root) alias for root.querySelector(selector) (with ">[any selector]" support)
- 7. $$(selector, root) alias for root.querySelectorAll(selector) (with ">[any selector]" support)
- 8. $$0 alias for $
+ 4. $(selector, root) alias for root.querySelector(selector) (with ">[any selector]" support)
+ 5. $$(selector, root) alias for root.querySelectorAll(selector) (with ">[any selector]" support)
+ 6. $$0 alias for $
 Extending objects
  1. Object.append(object, donor, [donor2, ...])
  2. Object.extend(object, donor, [donor2, ...]) (Object.append with overwrite exists properties)
  3. Object.inherit(Child, Parent)
  4. Array.prototype.unique()
  5. String.random(length)
-Fix console From https://github.com/theshock/console-cap/blob/master/console.js
 */
 
 /*
 INCLUDE_EXTEND_POLYFILLS:
  1. 'reversed' for <ol> with DOM API
+ 2. HTML*Element.labels
+ 3. HTMLLabelElement.control
 */
 
 ;(
@@ -117,8 +122,8 @@ if(INCLUDE_EXTRAS) {
 	 * @const */
 	browser.ipad = browser["ipad"];
 
-	/* @type {string}
-	 * @const 
+	/* @ type {string}
+	 * @ const 
 	browser["cssPrefix"] =
 		browser.mozilla ? "Moz" :
 		browser.webkit || browser.safari ? "Webkit" ://and iPad, iPhone, iPod
@@ -133,6 +138,8 @@ else {
 	browser.msie = browser["msie"];
 
 }//if(INCLUDE_EXTRAS)
+
+//ieVersion = /MSIE (\d+)/.exec(navigator.userAgent)[1];
 
 if(browser.msie)for(var i = 6 ; i < 11 ; i++)//IE from 6 to 10
 	if(new RegExp('msie ' + i).test(browser.agent)) {
@@ -274,23 +281,23 @@ var
 			}
 		}
 	}
+  , objectAppend;
 ;
 
+var /** @type {RegExp} @const */
+	__matchSelector__easySelector1 = /^[\w#\.][\w-]*$/,
+	/** @type {RegExp} @const */
+	__matchSelector__easySelector2 = /^(\.[\w-]*)+$/;
 
 if(!global["HTMLDocument"])global["HTMLDocument"] = global["Document"];//For IE9
 if(!global["Document"])global["Document"] = global["HTMLDocument"];//For IE8
 //TODO:: for IE < 8 :: if(!global["Document"] && !global["HTMLDocument"])global["Document"] = global["HTMLDocument"] = ??;//for IE < 8
 
-var createExtendFunction;
-if(INCLUDE_EXTRAS) {
-/*  =======================================================================================  */
-/*  ======================================  Classes  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
-
 /**
  * @param {boolean=} overwrite
  * @return {function(this:Object, Object, ...[*]): Object}
  */
-createExtendFunction = function(overwrite) {
+function createExtendFunction(overwrite) {
 	/**
 	 * @param {Object} obj
 	 * @param {...} ravArgs
@@ -307,6 +314,18 @@ createExtendFunction = function(overwrite) {
 		return obj;
 	}
 }
+/**
+ * Merge the contents of two or more objects together into the first object.
+ * This function does not overwrite existing properties
+ * @param {Object} obj Object to extend
+ * @param {...} ravArgs extentions
+ * @return {Object} the same object as `obj`
+ */
+objectAppend = createExtendFunction();
+if(INCLUDE_EXTRAS) {
+/*  =======================================================================================  */
+/*  ======================================  Classes  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
 
 /**
  * Merge the contents of two or more objects together into the first object.
@@ -315,7 +334,7 @@ createExtendFunction = function(overwrite) {
  * @param {...} ravArgs extentions
  * @return {Object} the same object as `obj`
  */
-Object["append"] = createExtendFunction();
+Object["append"] = objectAppend;
 
 /**
  * Merge the contents of two or more objects together into the first object.
@@ -991,15 +1010,20 @@ var _forEach = _unSafeBind(Function.prototype.call, Array.prototype.forEach);
 if(!Array.prototype.indexOf)Array.prototype.indexOf = function(searchElement, fromIndex) {
 	var thisArray = _toObject(this),
 		length = thisArray.length >>> 0,
-		i = fromIndex || 0;
+		i;
 	
 	if(!length)return -1;
+	
+	i = fromIndex || 0;
 	
 	// handle negative indices
     i = i >= 0 ? i : Math.max(0, length + i);
 	
-	for( ; i < length ; i++)
-		if(i in thisArray && thisArray[i] === searchElement)return i;
+	for( ; i < length ; i++) {
+		if(i in thisArray && thisArray[i] === searchElement) {
+			return i;
+		}
+	}
 	
 	return -1;
 };
@@ -1011,20 +1035,21 @@ if(!Array.prototype.indexOf)Array.prototype.indexOf = function(searchElement, fr
  * @param {number} fromIndex The index at which to start searching backwards. Defaults to the array's length, i.e. the whole array will be searched. If the index is greater than or equal to the length of the array, the whole array will be searched. If negative, it is taken as the offset from the end of the array. Note that even when the index is negative, the array is still searched from back to front. If the calculated index is less than 0, -1 is returned, i.e. the array will not be searched.
  * @return {number}
  */
-if(!Array.prototype.lastIndexOf)Array.prototype.lastIndexOf = function lastIndexOf(searchElement, fromIndex) {
+if(!Array.prototype.lastIndexOf)Array.prototype.lastIndexOf = function(searchElement, fromIndex) {
 	var thisArray = _toObject(this),
-		length = thisArray.length >>> 0;
+		length = thisArray.length >>> 0,
+		i;
 
 	if(!length)return -1;
 
-	var i = length - 1;
+	i = length - 1;
 	if(fromIndex !== void 0)i = Math.min(i, fromIndex);
 	
 	// handle negative indices
 	i = i >= 0 ? i : length - Math.abs(i);
 	
 	for (; i >= 0; i--) {
-		if (i in thisArray && searchElement === thisArray[i]) {
+		if (i in thisArray && thisArray[i] === searchElement) {
 			return i;
 		}
 	}
@@ -1076,11 +1101,12 @@ if(!Array.prototype.filter)Array.prototype.filter = function(callback, thisObjec
 
 	var thisArray = _toObject(this),
 		len = this.length >>> 0,
-		result = [];
+		result = [],
+		val;
 
 	for (var i = 0; i < len; i++)
 		if (i in thisArray) {
-			var val = thisArray[i];// in case callback mutates this
+			val = thisArray[i];// in case callback mutates this
 			if(_call(callback, thisObject, val, i, thisArray))result.push(val);
 		}
 
@@ -1097,13 +1123,13 @@ if(!Array.prototype.filter)Array.prototype.filter = function(callback, thisObjec
  */
 if (!Array.prototype.map)Array.prototype.map = function(callback, thisArg) {
 	var thisArray = _toObject(this),
-		result = [],
-		mappedValue;
+		len = this.length >>> 0,
+		result = [];
 
-	_forEach(this, function(v, k, obj) {
-		mappedValue = _call(callback, thisArg, v, k, obj);
-		result[k] = mappedValue;
-	}, this);
+	for (var i = 0; i < len; i++)
+		if (i in thisArray) {
+			result[i] = _call(callback, thisArg, thisArray[i], i, this);
+		}
 
     return result;
 };
@@ -1125,6 +1151,30 @@ if(!Array.isArray)Array.isArray = function(obj) {
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Array.prototype  ==================================  */
 /*  ======================================================================================  */
 
+/*  ============================================================================  */
+/*  ================================  String  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+/**
+ * Random string
+ * @param {!number} length Length of result string
+ * @return {string}
+ */
+if(!String["random"])String["random"] = function String_random(length) {
+	if(!length || length < 0)return "";
+	
+	var count1 = ~~(length / 10),//fast Math.floor
+		count2 = length % 10,
+		str = "";
+		
+	while(count1 > 0)count1--, str += (String_random(5) + String_random(5));
+	if(count2)str += (Math.round(Math.random() * parseInt("z".repeat(count2), 36))).toString(36);//36 - 0-9a-z
+		
+    return str + String_random(length - str.length);
+};
+
+
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  String  ==================================  */
+/*  =============================================================================  */
+
 /*  ======================================================================================  */
 /*  ================================  String.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
@@ -1139,13 +1189,16 @@ if(!Array.isArray)Array.isArray = function(obj) {
  */
 var whitespace = "\x09\x0A\x0B\x0C\x0D\x20\xA0\u1680\u180E\u2000\u2001\u2002\u2003" +
     "\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u202F\u205F\u3000\u2028" +
-    "\u2029\uFEFF";
+    "\u2029\uFEFF",
+	trimBeginRegexp,
+	trimEndRegexp;
 if (!String.prototype.trim || whitespace.trim()) {
     // http://blog.stevenlevithan.com/archives/faster-trim-javascript
     // http://perfectionkills.com/whitespace-deviations/
     whitespace = "[" + whitespace + "]";
-    var trimBeginRegexp = new RegExp("^" + whitespace + whitespace + "*"),
-        trimEndRegexp = new RegExp(whitespace + whitespace + "*$");
+    trimBeginRegexp = new RegExp("^" + whitespace + whitespace + "*");
+    trimEndRegexp = new RegExp(whitespace + whitespace + "*$");
+	
     String.prototype.trim = function trim() {
         return String(this).replace(trimBeginRegexp, "").replace(trimEndRegexp, "");
     };
@@ -1241,7 +1294,7 @@ if(!Number["toInteger"])Number["toInteger"] = function(value) {
 	var number = +value;
 	if (Number["isNaN"](number)) return +0;
 	if (number === 0 || !Number["isFinite"](number)) return number;
-	return Math.sign(number) * Math.floor(Math.abs(number));
+	return ((number < 0) ? -1 : 1) * Math.floor(Math.abs(number));
 }
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Number  ==================================  */
 /*  ======================================================================================  */
@@ -1546,6 +1599,7 @@ if(!("contains" in _testElement))
 	};
 
 
+//http://html5.org/specs/dom-parsing.html#insertadjacenthtml()
 //https://developer.mozilla.org/En/DOM/Element.insertAdjacentHTML
 /*https://gist.github.com/1276030 by https://gist.github.com/eligrey*/
 if(!("insertAdjacentHTML" in _testElement)) {
@@ -1559,42 +1613,27 @@ if(!("insertAdjacentHTML" in _testElement)) {
  *  Note: The beforebegin and afterend positions work only if the node is in a tree and has an element parent.
  * @param {string} html is the string to be parsed as HTML or XML and inserted into the tree.
  */
-	HTMLElement.prototype.insertAdjacentHTML = function(position, html) {
+	global["HTMLElement"].prototype.insertAdjacentHTML = function(position, html) {
 		var	ref = this,
 			container = ref.ownerDocument.createElement("_"),
-			ref_parent = ref.parentNode,
-			node,
-			first_child,
-			next_sibling;
+			nodes,
+			translate = {
+				"beforebegin" : "before",
+				"afterbegin" : "preppend",
+				"beforeend" : "append",
+				"afterend" : "after"
+			}
+			func;
 
 		container.innerHTML = html;
+		nodes = container.childNodes;
 
-		switch (position.toLowerCase()) {
-			case "beforebegin":
-				while ((node = container.firstChild)) {
-					ref_parent.insertBefore(node, ref);
-				}
-				break;
-			case "afterbegin":
-				first_child = ref.firstChild;
-				while ((node = container.lastChild)) {
-					first_child = ref.insertBefore(node, first_child);
-				}
-				break;
-			case "beforeend":
-				while ((node = container.firstChild)) {
-					ref.appendChild(node);
-				}
-				break;
-			case "afterend":
-				next_sibling = ref.nextSibling;
-				while ((node = container.lastChild)) {
-					next_sibling = ref_parent.insertBefore(node, next_sibling);
-				}
-				break;
+		if(nodes && nodes.length && 
+			(func = ref[translate[position]])) {
+			func(nodes)
 		}
 
-		container = null;
+		nodes = container = null;
 	};
 }
 
@@ -1738,31 +1777,41 @@ if(!elementProto.matchesSelector) {
 			if(selector === "*")return true;
 
 			var thisObj = this,
-				isSimpleSelector = /^[\w#.]\w*$/.test(selector);
-			if(isSimpleSelector) {
+				parent,
+				i,
+				str,
+				tmp,
+				match = false;
+
+			if(__matchSelector__easySelector1.test(selector) || __matchSelector__easySelector2.test(selector)) {
 				switch (selector.charAt(0)) {
 					case '#':
 						return thisObj.id === selector.slice(1);
 					break;
 					case '.':
-						return !!~(" " + thisObj.className + " ").indexOf(" " + selector.slice(1) + " ");
+						match = true;
+						i = -1;
+						tmp = selector.slice(1).split(".");
+						str = " " + thisObj.className + " ";
+						while(tmp[++i] && match) {
+							match = !!~str.indexOf(" " + tmp[i] + " ");
+						}
+						return match;
 					break;
 					default:
 						return thisObj.tagName && thisObj.tagName.toUpperCase() === selector.toUpperCase();
 				}
 			}
-			var parent = thisObj.parentNode,
-				tmp,
-				match = false;
+			parent = thisObj.parentNode;
 			
-			if(parent) {
+			if(parent && parent.querySelector) {
 				match = parent.querySelector(selector) === thisObj;
 			}
 
 			if(!match && (parent = thisObj.ownerDocument)) {
 				tmp = parent.querySelectorAll(selector);
-			    for (var e in tmp ) if(_hasOwnProperty(tmp, e)) {
-			        match = tmp[e] === thisObj;
+			    for (i in tmp ) if(_hasOwnProperty(tmp, i)) {
+			        match = tmp[i] === thisObj;
 			        if(match)return true;
 			    }
 			}
@@ -1784,70 +1833,75 @@ if(!elementProto.matchesSelector) {
 /*  ================================  HTMLTextAreaElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 /*  ================================  HTMLSelectElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-var labelableElements = "INPUT0BUTTON0KEYGEN0METER0OUTPUT0PROGRESS0TEXTAREA0SELECT".split("0");
-/*
-Implement HTML*Element.labels
-https://developer.mozilla.org/en/DOM/HTMLInputElement
-http://www.w3.org/TR/html5/forms.html#dom-lfe-labels
-*/
-if(!("labels" in document.createElement("input")))
-	Object.defineProperty(elementProto, "labels", {
-		enumerable: true,
-		"get" : function() {
-			if(!~labelableElements.indexOf(this.nodeName.toUpperCase()))
-				return void 0;
+var labelableElements;
+if(INCLUDE_EXTEND_POLYFILLS) {
+	labelableElements = "INPUT0BUTTON0KEYGEN0METER0OUTPUT0PROGRESS0TEXTAREA0SELECT".split("0");
+	/*
+	Implement HTML*Element.labels
+	https://developer.mozilla.org/en/DOM/HTMLInputElement
+	http://www.w3.org/TR/html5/forms.html#dom-lfe-labels
+	*/
+	if(!("labels" in document.createElement("input")))
+		Object.defineProperty(elementProto, "labels", {
+			enumerable: true,
+			"get" : function() {
+				if(!~labelableElements.indexOf(this.nodeName.toUpperCase()))
+					return void 0;
 
-			var node = this,
-				/**
-				 * represents the list of label elements, in [!]tree order[!]
-				 * @type {Array}
-				 */
-				result = this.id ?
-					_arrayFrom(document.querySelectorAll("label[for='" + this.id + "']")) :
-					[],
-				_lastInTreeOrder_index = result.length - 1;
+				var node = this,
+					/**
+					 * represents the list of label elements, in [!]tree order[!]
+					 * @type {Array}
+					 */
+					result = this.id ?
+						_arrayFrom(document.querySelectorAll("label[for='" + this.id + "']")) :
+						[],
+					_lastInTreeOrder_index = result.length - 1;
 
-			while((node = node.parentNode) && (!node.control || node.control === this))
-				if(node.nodeName.toUpperCase() === "LABEL") {
+				while((node = node.parentNode) && (!node.control || node.control === this))
+					if(node.nodeName.toUpperCase() === "LABEL") {
 
-					while(result[_lastInTreeOrder_index] &&
-						result[_lastInTreeOrder_index].compareDocumentPosition(node) & 2)//DOCUMENT_POSITION_PRECEDING
-						_lastInTreeOrder_index--;
-					result.splice(_lastInTreeOrder_index + 1, 0, node)
-				}
+						while(result[_lastInTreeOrder_index] &&
+							result[_lastInTreeOrder_index].compareDocumentPosition(node) & 2)//DOCUMENT_POSITION_PRECEDING
+							_lastInTreeOrder_index--;
+						result.splice(_lastInTreeOrder_index + 1, 0, node)
+					}
 
-			return result;
-		}
-	});
+				return result;
+			}
+		});
+}//INCLUDE_EXTEND_POLYFILLS
 
 /*  ======================================================================================  */
 
 /*  ======================================================================================  */
 /*  ================================  HTMLLabelElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-/*
-Implement HTMLLabelElement.control
-https://developer.mozilla.org/en/DOM/HTMLLabelElement
-http://www.w3.org/TR/html5/forms.html#dom-label-control
-*/
-if(!("control" in document.createElement("label")))
-	Object.defineProperty(global["HTMLLabelElement"] && global["HTMLLabelElement"].prototype || elementProto, "control", {
-		enumerable: true,
-		"get" : function() {
-			if(this.nodeName.toUpperCase() !== "LABEL")
-				return void 0;
+if(INCLUDE_EXTEND_POLYFILLS) {
+	/*
+	Implement HTMLLabelElement.control
+	https://developer.mozilla.org/en/DOM/HTMLLabelElement
+	http://www.w3.org/TR/html5/forms.html#dom-label-control
+	*/
+	if(!("control" in document.createElement("label")))
+		Object.defineProperty(global["HTMLLabelElement"] && global["HTMLLabelElement"].prototype || elementProto, "control", {
+			enumerable: true,
+			"get" : function() {
+				if(this.nodeName.toUpperCase() !== "LABEL")
+					return void 0;
 
-			if(this.hasAttribute("for"))
-				return document.getElementById(this.htmlFor);
+				if(this.hasAttribute("for"))
+					return document.getElementById(this.htmlFor);
 
-			return _recursivelyWalk(this.childNodes,
-					function(el) {
-						if(~labelableElements.indexOf(el.nodeName.toUpperCase()))
-							return el
-					}
-				) || null;
-		}
-	});
+				return _recursivelyWalk(this.childNodes,
+						function(el) {
+							if(~labelableElements.indexOf(el.nodeName.toUpperCase()))
+								return el
+						}
+					) || null;
+			}
+		});
+}//INCLUDE_EXTEND_POLYFILLS
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  HTMLLabelElement.prototype  ==================================  */
 /*  ======================================================================================  */
@@ -1874,7 +1928,8 @@ if(!("control" in document.createElement("label")))
  */
 //In strict mode code, functions can only be declared at top level or immediately within another function
 var removeAttributeChildValue,
-	reversedShim;
+	reversedShim,
+	autoInitFunction;
 if(INCLUDE_EXTEND_POLYFILLS && !('reversed' in document.createElement("ol"))) {
 	removeAttributeChildValue = function(child) {
 		child.removeAttribute("value");
@@ -1939,11 +1994,31 @@ if(INCLUDE_EXTEND_POLYFILLS && !('reversed' in document.createElement("ol"))) {
 	});
 
 	//Auto init
-	global.addEventListener('DOMContentLoaded', function() {
+	autoInitFunction = function() {
+		document.removeEventListener('DOMContentLoaded', autoInitFunction, false);
 		_forEach(document.getElementsByTagName("ol"), reversedShim);
-	}, false);
+	};
+	document.addEventListener('DOMContentLoaded', autoInitFunction, false);
 }
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  HTMLLabelElement.prototype  ==================================  */
+/*  ======================================================================================  */
+
+/*  =======================================================================================  */
+/*  ================================  NodeList.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+//Inherit NodeList from Array
+var nodeList_methods_fromArray = ["every", "filter", "forEach", "indexOf", "join", "lastIndexOf", "map", "reduce", "reduceRight", "reverse", "slice", "some", "toString"];
+function extendNodeListPrototype(nodeListProto) {
+	if(nodeListProto && nodeListProto !== Array.prototype) {
+		nodeList_methods_fromArray.forEach(function(key) {
+			if(!nodeListProto[key])nodeListProto[key] = Array.prototype[key];
+		})
+	}
+}
+if(document.getElementsByClassName)extendNodeListPrototype(document.getElementsByClassName("").constructor.prototype);
+if(document.querySelectorAll)extendNodeListPrototype(document.querySelectorAll("#z").constructor.prototype);
+
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  NodeList.prototype  ==================================  */
 /*  ======================================================================================  */
 
 /*  =======================================================================================  */
@@ -2004,124 +2079,6 @@ XHR.defaults = {
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Network  ======================================  */
 /*  =======================================================================================  */
-
-/*  ======================================================================================  */
-/*  =======================================  Utils  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
-
-if(INCLUDE_EXTRAS) {
-/**
- * Random string
- * !!! ВНИМАНИЕ !!! Результирующая строка ~ в 5% случаев будет длинной length - 1
- * @param {!number} length Размер строки
- * @return {string}
- * TODO:: Поддержка length > 10. Сейчас получается хрень: String.random(14) == "l.5lqc17jlpzt(e+13)"
- */
-if(!String.random)String.random = function(length) {
-    return (Math.round(Math.random() * parseInt("z".repeat(++length), 36))).toString(36);//36 - 0-9a-z
-};
-
-/**
- * toArray function for Array-like collection, number and string
- * RUS: Преобразует 'Array-like коллекцию с числовыми ключами'/число/строку в массив.
- * Можно задать выборку через start и end. Трактовка start и end аналогичная функции Array::slice
- *  Если start отрицателен, то он будет трактоваться как arrayObj.length+start (т.е. start'ый элемент с конца массива).
- *  Если end отрицателен, то он будет трактоваться как arrayObj.length+end (т.е. end'ый элемент с конца массива).
- *  Если второй параметр не указан, то экстракция продолжится до конца массива. Если end < start, то будет создан пустой массив.
- * @param {Object|Array|number|string|NodeList} iterable Любой Array-like объект, любой объект, число или строка
- * @param {number=} start Индекс элемента в массиве, с которого будет начинаться новый массив.
- * @param {number=} end Индекс элемента в массиве, на котором новый массив завершится.
- * @param {boolean=} forse Для typeof iterable == "object" смотреть свойства в цепочки прототипов объекта
- * @return {Array}
- * @example $A(iterable) -> actualArray
- */
-var $A = global["$A"] = function(iterable, start, end, forse) {
-	if(!iterable || start + end === 0)return [];
-	if(start == end == void 0) {
-		if(Array.isArray(iterable))return iterable;
-		return _arrayFrom(iterable);
-	}
-	start = start || 0;//Default value
-
-	var type = typeof iterable, results,
-		//args потому, что IE не понимает, когда в функцию Array::slice передают undefined вместо start и/или end
-		args = [start];
-	if(end)args.push(end);
-
-	if(type == "number") {
-		iterable += "";
-		type = "string";
-	}
-
-	iterable = _toObject(iterable);
-
-	if(typeof iterable.length == "number") {
-
-		var _length = iterable.length,
-			_start = start < 0 && (start = (_length + start), start) < 0 ? 0 : start,
-			_end = (end == null ? _length : end < 0 && (end = (_length + end), end) < 0 ? 0 : end);
-
-		_length = _end - _start;
-
-		try {//Попробуем применить Array.prototype.slice на наш объект
- 			results = _arraySlice.apply(iterable, args);//An idea from https://github.com/Quby/Fn.js/blob/master/fn.js::_.toArray
-			//Match result length of elements with initial length of elements
-			if(results.length === _length)return results;//Проверка !!!
-		}
-		catch(e) {//IE throw error with iterable == "[object NodeList]"
-			//не получилось! -> выполняем обычную переборку
-		}
-
-		results = [];
-		for( ; _start < _end ; ++_start)results.push(iterable[_start]);
-
-		return results;
-	}
-
-	results = [];
-
-	if(type == "object") {
-		for(var i in iterable)if(forse || _hasOwnProperty(iterable, i))results.push(iterable[i]);
-		return !start && !end && results || results.slice.apply(results, args);
-	}
-
-	return results;
-};
-
-/**
- * Object.keys-like function for Array-like collection, number and string
- * @param {Object|Array|number|string} iterable
- * @param {boolean=} forse Для typeof iterable == "object" смотреть свойства в цепочки прототипов объекта
- */
-var $K = global["$K"] = function(iterable, forse) {
-	var type = typeof iterable,
-		length,
-		results,
-		i;
-
-	if(type == "object") {
-		if(browser.msie && iterable.length && !(iterable instanceof Array))iterable = _arrayFrom(iterable);//Если Arguments
-		if(forse) {
-			results = [];
-			for(i in iterable)results.push(i);
-			return results
-		}
-		return Object.keys(iterable);
-	}
-
-	if(type == "number" || type == "string")length = (iterable + "").length;
-	else if(typeof iterable.length == "number")length = iterable.length;
-	else throw new TypeError('$K:non-iterable');
-
-	results = [];
-	if(length != void 0)for(i = 0 ; i < length ; ++i)results.push(i);
-	return results;
-};
-
-}//if(INCLUDE_EXTRAS)
-
-
-/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Utils  ======================================  */
-/*  ======================================================================================  */
 
 /*  ======================================================================================  */
 
@@ -2475,7 +2432,7 @@ if(!INCLUDE_EXTRAS) {
 /*  =======================================================================================  */
 /*  ========================================  DEBUG  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-if(INCLUDE_EXTRAS) {
+if(DEBUG) {
 // friendly console
 // http://habrahabr.ru/blogs/javascript/116852/
 // https://github.com/theshock/console-cap/blob/master/console.js
@@ -2538,7 +2495,7 @@ if (console && !DEBUG) {
 
 })( typeof console === 'undefined' ? null : console );
 
-}//if(INCLUDE_EXTRAS)
+}//if(DEBUG)
 
 /*  ======================================================================================  */
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  DEBUG  =====================================  */
