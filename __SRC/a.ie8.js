@@ -30,7 +30,9 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
 	}["ielt9shims"],
 	
 	document_createDocumentFragment = document.createDocumentFragment,
-	document_createElement = document.createElement;
+	document_createElement = document.createElement,
+
+	RE_cloneElement_tagMatcher = /^\<([\w\:\-]*)[\>\ ]/i;
 
 
 
@@ -92,7 +94,17 @@ var _throwDOMException = function(errStr) {
 		}
 
 		return obj;
-	};
+	},
+	RE_space = /\s/,
+	RE__String_trim_spaces = /^\s\s*/,
+    _String_trim = String.prototype.trim || function () {//Cache origin trim function
+		var	str = this.replace(RE__String_trim_spaces, ''),
+			ws = RE_space,
+			i = str.length;
+		while (ws.test(str.charAt(--i)));
+		return str.slice(0, i + 1);
+	},
+	_String_split = String.prototype.split;
 	
 
 //Emulating HEAD for ie < 9
@@ -161,7 +173,7 @@ var _arraySlice = Array.prototype.slice,
 	},
 	/** @type {Node}
 	 * @const */
-	_testElement = document.createElement('_'),
+	_testElement = document.createElement('p'),
 	nodeProto = global["Node"].prototype,
 	elementProto = global["Element"].prototype,
 
@@ -202,8 +214,7 @@ if("ab".substr(-1) !== "b") {
 	}
 }
 
-var _origStringSplit,
-	_compliantExecNpcg;
+var _compliantExecNpcg;
 /*
 [BUGFIX, IE lt 9, old safari] http://blog.stevenlevithan.com/archives/cross-browser-split
 More better solution:: http://xregexp.com/
@@ -211,7 +222,6 @@ More better solution:: http://xregexp.com/
 if('te'.split(/(s)*/)[1] != void 0 ||
    '1_1'.split(/(_)/).length != 3) {
    _compliantExecNpcg = /()??/.exec("")[1] === undefined; // NPCG: nonparticipating capturing group
-   _origStringSplit = String.prototype.split;
    
 	String.prototype.split = function (separator, limit) {
 		var str = this;
@@ -221,7 +231,7 @@ if('te'.split(/(s)*/)[1] != void 0 ||
 			//If separator is undefined, then the result array contains just one String, which is the this value (converted to a String). If limit is not undefined, then the output array is truncated so that it contains no more than limit elements.
 			if(separator === void 0 && limit === 0)return [];
 			
-			return _origStringSplit.call(str, separator, limit);
+			return _String_split.call(str, separator, limit);
 		}
 
 		var output = [],
@@ -423,7 +433,7 @@ function fixEvent(event) {
 	// событие DOMAttrModified
 	//  TODO:: недоделано
 	// TODO:: Привести event во всех случаях (для всех браузеров) в одинаковый вид с newValue, prevValue, propName и т.д.
-	if(!event.attrName && event.propertyName)event.attrName = event.propertyName.split('.')[0];//IE При изменении style.width в propertyName передаст именно style.width, а не style, как нам надо
+	if(!event.attrName && event.propertyName)event.attrName = _String_split.call(event.propertyName, '.')[0];//IE При изменении style.width в propertyName передаст именно style.width, а не style, как нам надо
 
 	return event
 }
@@ -1092,37 +1102,39 @@ if(!document.importNode) {
 	document.importNode["shim"] = true;
 }
 
-function isCssClass(element, classes) {
-	if(!element.className || !classes.length || classes.length === 1 && !classes[0])return false;
-	var elementClass = " " + element.className + " ",
-		match = true,
-		k = -1;
-	while(match && ++k < classes.length) {
-		match = !!~(elementClass).indexOf(" " + classes[k] + " ");
-	}
-	return match;
-}
-
 var attr = "getElementsByClassName";
 if(!(attr in _testElement))document[attr] = elementProto[attr] = function(clas) {
 	var root = this,
-		ar = [],
+		result = [],
 		nodes,
 		i = -1,
-		node;
+		node,
+		elementClass,
+		match,
+		k;
 
 	if(arguments.length) {
-		clas = (clas + "").trim().split(" ");
+		clas = _String_split.call(_String_trim.call(clas + ""), " ");
+		if(!clas[0])return result;
+
 		nodes = root.getElementsByTagName('*');
 
 		while (node = nodes[++i]) {
-			if (isCssClass(node, clas)) {
-				ar.push(node);
+			match = node.className
+				&& (k = -1)
+				&& (elementClass = " " + node.className + " ");
+			
+			while(match && ++k < clas.length) {
+				match = !!~(elementClass).indexOf(" " + clas[k] + " ");
+			}
+
+			if (match) {
+				result.push(node);
 			}
 		}
 	}
 	else throw new Error('WRONG_ARGUMENTS_ERR');
-	return ar;	
+	return result;	
 };
 
 
@@ -1191,11 +1203,12 @@ if(browser.msie && browser.msie < 9) {
 	};
 }
 
-var html5_elements_array = 'abbr article aside audio canvas command datalist details figure figcaption footer header hgroup keygen mark meter nav output progress section source summary time video'.split(' '),
+var html5_elements = 'abbr article aside audio canvas command datalist details figure figcaption footer header hgroup keygen mark meter nav output progress section source summary time video',
+	html5_elements_array = _String_split.call(html5_elements, ' '),
 	
 	/** Not all elements can be cloned in IE (this list can be shortend) **/
-	ielt9_elements = /^<|^(?:a|b|button|code|div|fieldset|form|h1|h2|h3|h4|h5|h6|i|iframe|img|input|label|li|link|ol|option|p|param|q|script|select|span|strong|style|table|tbody|td|textarea|tfoot|th|thead|tr|ul)$/i,
-	
+	ielt9_elements = /^<|^(?:a|b|button|code|div|fieldset|form|map|h1|h2|h3|h4|h5|h6|i|object|iframe|img|input|label|li|link|ol|option|p|param|q|script|select|span|strong|style|table|tbody|td|textarea|tfoot|th|thead|tr|ul|optgroup)$/i,
+
 	// feature detection: whether the browser supports unknown elements
 	supportsUnknownElements = (function (a) {
 		a.innerHTML = '<x-x></x-x>';
@@ -1203,53 +1216,38 @@ var html5_elements_array = 'abbr article aside audio canvas command datalist det
 		return a.childNodes.length === 1;
 	})(_testElement),
 	
-	safeFragment,
-	
-	timestamp = +(new Date),
-	
-	cacheNodes = {},
-	cacheStamp,
-	
-	__ielt8_Node_behavior_apply = nodeProto["__ielt8_Node_behavior_apply"];;
+	safeFragment;
+
+html5_elements = " " + html5_elements + " ";
 
 function shivedCreateElement(nodeName) {
-	if (cacheStamp !== timestamp) {
-		cacheNodes = {};
-		cacheStamp = timestamp;
-	}
+	var node = this["__orig__createElement__"](nodeName);
 
-	var nodeCached = cacheNodes[nodeName],
-		node = nodeCached ? nodeCached.cloneNode(false) : this["__orig__createElement__"](nodeName);
+	if(ielt9_elements.test(nodeName))return node;
 
 	// shiv only non-cached supported elements (supporting children, not namespaced)
-	if (!nodeCached && node.canHaveChildren && !(node.xmlns || node.tagUrn)) {
-		if(!~("|<>|" + html5_elements_array.join("|<>|") + "|<>|").indexOf("|<>|" + nodeName + "|<>|")) {
+	if (node.canHaveChildren && !(node.xmlns || node.tagUrn)) {
+		if(!~html5_elements.indexOf(" " + nodeName + " ")) {
 			html5_elements_array.push(nodeName);
-			timestamp = +(new Date);
+			html5_elements += (nodeName + " ");
+			(safeFragment["__orig__createElement__"] || safeFragment.createElement)(nodeName);
+			//node.document.createElement(nodeName);
 		}
-		html5_document(node.document, nodeName);
-		cacheNodes[nodeName] = node;
 	}
 	
-	//FIX IE lt 8 Element.prototype
-	if(__ielt8_Node_behavior_apply)__ielt8_Node_behavior_apply(node);
-
-	return node;	
+	return safeFragment.appendChild(node);
 }
-	
-/** Example of making a document HTML5 element safe
+
+/** Making a document HTML5 element safe
  * Функция "включает" в IE < 9 HTML5 элементы
- * Используется, если никакая другая аналогичная функция не используется
+ * @param {Document} doc
  */
-function html5_document(doc, nodeName) { // pass in a document as an argument
+function html5_document(doc) { // pass in a document as an argument
 	// create an array of elements IE does not support
 	var a = -1;
 
 	if(doc.createElement) {
-		if(nodeName) {
-			doc.createElement(nodeName);
-		}
-		else while (++a < html5_elements_array.length) { // loop through array
+		while (++a < html5_elements_array.length) { // loop through array
 			doc.createElement(html5_elements_array[a]); // pass html5 element into createElement method on document
 		}
 		
@@ -1266,7 +1264,6 @@ safeFragment = html5_document(_call(document_createDocumentFragment, document));
 safeFragment["_"] = {
 	safeTags : {}
 };
-[].concat(html5_elements_array)
 
 if(!supportsUnknownElements) {
 	 html5_document(document);
@@ -1275,7 +1272,7 @@ if(!supportsUnknownElements) {
 //Test for broken 'cloneNode'
 if(_call(document_createElement, document, "x-x").cloneNode().outerHTML.indexOf("<:x-x>") === 0) {
 	var _cloneElement,
-		safeElement,
+		safeElement = safeFragment.appendChild(safeFragment.createElement("div")),
 		_nativeCloneNode = 
 		browser.msie === 8 ?
 			_testElement["cloneNode"] :
@@ -1296,36 +1293,40 @@ if(_call(document_createElement, document, "x-x").cloneNode().outerHTML.indexOf(
 	 * @version 4
 	 */
 	var _cloneElement = function(include_all) {//Экспортируем cloneElement для совместимости и для вызова напрямую	
-		if (!safeElement || cacheStamp !== timestamp) {
-			cacheNodes = {};
-			cacheStamp = timestamp;
-			if(safeElement)safeFragment.removeChild(safeFragment);
-			safeElement = safeFragment.appendChild(safeFragment.createElement("div"));
-		}
-		
 		var element = this,
-			result;
-		
+			result,
+			nodeBody;
 		//Следующий вариант не работает с HTML5
 		//if(_cloneElement.safeDocumentFragment) {
 			//result = _cloneElement.safeDocumentFragment.appendChild(document.createElement("div"));//Создаём новый элемент
 		
 		if(ielt9_elements.test(element.nodeName)) {//HTML4 element?
-			result = _call(element["_"] && element["_"]["nativeCloneNode"] || _nativeCloneNode, element, include_all);
+			result = _call(element["__nativeCloneNode__"] || _nativeCloneNode, element, include_all);
 		}
 		else {//HTML5 element?
 			safeElement.innerHTML = "";//Очистим от предыдущих элементов
-			
-			if(include_all)safeElement.innerHTML = element.outerHTML; // set HTML5-safe element's innerHTML as input element's outerHTML
-			else safeElement.innerHTML = element.outerHTML.replace(element.innerHTML, "");
+
+			// set HTML5-safe element's innerHTML as input element's outerHTML
+			if(include_all)nodeBody = element.outerHTML;
+			else nodeBody = element.outerHTML.replace(element.innerHTML, "");
 		
+			safeElement.innerHTML = nodeBody.replace(/^\<\:/, "<").replace(/\<\/\:([\w\-]*\>)$/, "<$1");
+
 			result = safeElement.firstChild; // return HTML5-safe element's first child, which is an outerHTML clone of the input element
+
+			if(!result && !include_all) {//IE < 9 fail to create unknown tag
+				//if(!result && include_all)->sinensy faild due can't write a solution
+				nodeBody = nodeBody.match(RE_cloneElement_tagMatcher);
+				if(nodeBody)nodeBody = nodeBody[1];
+				if(nodeBody) {
+					safeFragment.createElement(nodeBody);
+					safeElement.innerHTML = nodeBody;
+					result = safeElement.firstChild;
+				}
+			}
 		}
-		
-		//FIX IE lt 8 Element.prototype
-		if(__ielt8_Node_behavior_apply)__ielt8_Node_behavior_apply(result);
-		
-		return result;
+			
+		return safeFragment.appendChild(result);
 	};
 
 	nodeProto["cloneNode"] = _cloneElement;

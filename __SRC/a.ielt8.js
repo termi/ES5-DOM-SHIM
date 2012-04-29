@@ -30,7 +30,30 @@ var /** @const*/
 	__SUPPORTED__TAG_NAMES__ = "*";
 //CONFIG END
 
-var nodeProto = global.Node.prototype,//Note: for IE < 8 `Node` and `Node.prototype` is just an JS objects created in a.ie8.js
+var _arraySlice = Array.prototype.slice,
+	
+	/**
+	 * Call _function
+	 * @param {Function} _function function to call
+	 * @param {...} var_args
+	 * @return {*} mixed
+	 * @version 2
+	 */
+    _applyFunction = Function.prototype.apply,
+	
+	/** Unsafe bind for service and performance needs
+	 * @param {Function} __method
+	 * @param {Object} object
+	 * @param {...} var_args
+	 * @return {Function} */
+    _unSafeBind = function(__method, object, var_args) {
+		var args = _arraySlice.call(arguments, 2);
+		return function () {
+			return _applyFunction.call(__method, object, args.concat(_arraySlice.call(arguments)));
+		}
+	},
+
+	nodeProto = global.Node.prototype,//Note: for IE < 8 `Node` and `Node.prototype` is just an JS objects created in a.ie8.js
 	elementProto = global.Element.prototype,
 	browser = global["browser"] || {},
 	noDocumentReadyState,
@@ -46,7 +69,33 @@ var nodeProto = global.Node.prototype,//Note: for IE < 8 `Node` and `Node.protot
 	//Cache original methods to avoid using shimed methods
 	_Array_splice = Array.prototype.splice,
 	_String_split = String.prototype.split,
-	_String_substr = String.prototype.substr;
+	_String_substr = String.prototype.substr,
+    _String_trim = String.prototype.trim || function () {//Cache faster trim function
+		var	str = this.replace(/^\s\s*/, ''),
+			ws = /\s/,
+			i = str.length;
+		while (ws.test(str.charAt(--i)));
+		return str.slice(0, i + 1);
+	},
+	_throwDOMException = function(errStr) {
+		var ex = Object.create(DOMException.prototype);
+		ex.code = DOMException[errStr];
+		ex.message = errStr +': DOM Exception ' + ex.code;
+		throw ex;
+	},
+	/**
+	 * Call _function
+	 * @param {Function} _function function to call
+	 * @param {...} var_args
+	 * @return {*} mixed
+	 * @version 2
+	 */
+    _applyFunction = Function.prototype.apply,
+
+    UUID = 1,
+
+	document_createElement = _unSafeBind(document["__orig__createElement__"] || document.createElement, document);
+;
 	
 var jj = ieltbehaviorRules.length;
 while(--jj >= 0)
@@ -55,11 +104,11 @@ ielt9BehaviorRule += "}";
 
 
 var /** @type {RegExpt} @const */
-	__selector__easySelector1 = /^[\w#\.][\w-]*$/,
+	RE__selector__easySelector1 = /^\ ?[\w#\.][\w-]*$/,
 	/** @type {RegExpt} @const */
-	__selector__easySelector2 = /^(\.[\w-]*)+$/,
+	RE__selector__easySelector2 = /^\ ?(\.[\w-]*)+$/,
 	/** @type {RegExpt} @const */
-	__queryManySelector__doubleSpaces = /\s*([,>+~ ])\s*/g,
+	__queryManySelector__doubleSpaces = /\s*([,>+~ ])\s*/g,//Note: Use with "$1"
 	/** @type {RegExpt} @const */
 	__querySelector__arrtSpaceSeparated_toSafe = /\~\=/g,
 	/** @type {RegExpt} @const */
@@ -95,7 +144,7 @@ function createBehaviorStyle(styleId, tags, behaviorRule) {
 		behaviorRule.replace(" url(", " url(" + add + ") url(");
 	}
 
-	style = _call.call(originCreateElement, document, "style");
+	style = document_createElement("style");
 	style.id = styleId;
 	style.type = 'text/css';
 	style.setAttribute("data-url", behaviorRule.replace("{behavior:", "").replace(")}", ")"));
@@ -133,26 +182,29 @@ global["__ielt8__wontfix"] = __ielt8__wontfix;
  * @param {!string} selector CSS3-селектор
  * @param {Node|Array.<Node>} roots элемент в котором мы будем искать
  * @param {Array.<HTMLElement>=} result Pre-results
- * @param {Object=} resultKeys Cache object for nore unique id (sourceIndex) for non-dublication
  * @return {Array.<HTMLElement>}
  * @version 3
  *  TODO:: Изучить код https://github.com/ded/qwery - может быть будет что-нибуть полезное
  */
-function queryOneSelector(selector, roots, result, resultKeys) {
+function queryOneSelector(selector, roots, result) {
 	//\.(.*?)(?=[:\[]|$) -> <.class1.class2>:focus or tag#id<.class1.class2>[attr*=value]
 	//TODO:: Реализовать концепцию isFirst ниже
 	if(!roots)roots = [document];
 	else if(!Array.isArray(roots))roots = [roots];
 	
-	var isPreResult = !!result;
+	var /** @type {boolean} */isPreResult = !!result,
+		/** @type {Array.<string>} */selectorArr = selector.match(__queryOneSelector__selectorMatch);
+
+	if(selector === "," || !selectorArr)_throwDOMException("SYNTAX_ERR");
+
+
 	result = result || [];
-	resultKeys = resultKeys || {};
-	
-	var /** @type {NodeList} */tempResult,
+
+	var /** @type {Object} Cache object for nore unique id (sourceIndex) for non-dublication */resultKeys = {},
+		/** @type {NodeList} */tempResult,
 		/** @type {HTMLElement} */child,
 		/** @type {Node} */root,
 
-		/** @type {Array.<string>} */selectorArr = selector.match(__queryOneSelector__selectorMatch),
 		/** @type {string} */mod = selectorArr[1],
 		/** @type {string} */tag = selectorArr[2].toUpperCase(),
 		/** @type {string} */id = selectorArr[3],
@@ -571,70 +623,115 @@ function queryOneSelector(selector, roots, result, resultKeys) {
  * Получение эллементов по классам и тэгам
  * HINT: Пользоватся такой функцией можно только после загрузки страницы (addLoadEvent)
  * @param {!string} selector Строка с CSS3-селектором
+ * @param {boolean=} onlyFirst 
  * @this {Document|HTMLElement|Node} root элемент в котором мы будем искать
  * @return {Array.<HTMLElement>} Список найденных элементов
  * @version 4.0
  */
-var queryManySelector = function queryManySelector(selector) {
+var queryManySelector = function queryManySelector(selector, onlyFirst) {
 	//var rules = selector.replace(/ *([,>+~. ]) */g, "$1").match(/[^,]\w*/g),
-	var root = this,
-		result = [],
-		rule,
-		rules,
-		i = 0,
-		selElements,
-		hightRoot = root,
-		rt,
-		k,
-		resultKeys;
 
-	if(__selector__easySelector1.test(selector) || __selector__easySelector2.test(selector)) {//quick return or generic call
+	var root = this,
+		rt;
+
+	selector = _String_trim.call(selector.replace(__queryManySelector__doubleSpaces, "$1"));
+
+	if(RE__selector__easySelector1.test(selector) || RE__selector__easySelector2.test(selector)) {//quick result
 		switch (selector.charAt(0)) {
 			case '#':
-				rule = selector.slice(1);
-				selElements = root.getElementById(rule);
+				selector = selector.slice(1);
+				rt = root.getElementById(selector);
 				//workaround with IE bug about returning element by name not by ID.
 				//Solution completely changed, thx to deerua.
 				//Get all matching elements with this id
-				if (selElements && browser.msie < 9 && selElements.id !== rule) {
-					selElements = selElements.ownerDocument.all[rule];
+				if (rt && browser.msie < 9 && rt.id !== selector) {
+					rt = root.ownerDocument.all[selector];
 				}
-				result.push(selElements);
+				return rt && [rt] || [];
 			break;
 			case '.':
-				selElements = root.getElementsByClassName(selector.slice(1).replace(__querySelector__dottes, " "));
-				while(rt = selElements[i++])result.push(rt);
+				return root.getElementsByClassName(selector.slice(1).replace(__querySelector__dottes, " "));
 			break;
 			default:
-				selElements = root.getElementsByTagName(selector);
-				while(rt = selElements[i++])result.push(rt);
-			break;
+				return Array["from"](root.getElementsByTagName(selector));
 		}
-		return result;
 	}
-	
-	rules = (selector + ",")
-		.replace(__queryManySelector__doubleSpaces, "$1")
-		.replace(__querySelector__arrtSpaceSeparated_toSafe, "|-|")
-		.match(__queryManySelector__selectorsMatcher);
-	selElements = [];
-	resultKeys = {};
-		
-	while((rule = rules[i++])) {
-		if(rule.charAt(0) == ',') {//Если первая буква серектора - запятая
-			if(selElements && selElements.length > 0)result = result.concat(selElements);
-			selElements = [];
+
+	var result = [],
+		rules = (selector + ",")
+			.replace(__querySelector__arrtSpaceSeparated_toSafe, "|-|")
+			.match(__queryManySelector__selectorsMatcher),
+		rule,
+		i = -1,
+		k,
+		j,
+		selElements = [root],
+		hightRoot = root,
+		k,
+		resultKeys = {},
+		tmp,
+		tmp2;
+			
+	while((rule = rules[++i])) {
+
+		if(rule.charAt(0) == ',') {//If next selector
+			if(selElements) {//Save result
+				k = -1;
+				while(rt = selElements[++k]) {
+					if(!rt.sourceIndex || !(rt.sourceIndex in resultKeys)) {
+						if(!rt.sourceIndex)rt.sourceIndex = UUID++;
+						resultKeys[rt.sourceIndex] = true;
+						result.push(rt);
+						if(onlyFirst)break;
+					}
+				}
+			}
 			root = hightRoot;
-			if(rule.length == 1)continue;//Если правило - это только запятая
+			if(rule.length == 1)break;//If no any selectors
 		}
-		else if(selElements && selElements.length > 0)	{
-			root = selElements;
+		else if(selElements) {
+			if(selElements.length === 0)selElements = null;
+			else root = selElements;
 		}
-		if(selElements) {
-			selElements = queryOneSelector(rule, root, null, resultKeys);
-		}
-		if(selElements && !selElements.length)selElements = null;
+
 		//Если selElements == null и не равно "," - значит мы ничего не нашли на пред. шаге
+		if(!selElements)continue;
+
+
+		if(RE__selector__easySelector1.test(rule) || RE__selector__easySelector2.test(rule)) {//quick result
+			k = -1;
+			selElements = [];
+			rule = _String_trim.call(rule);
+			while(rt = root[++k]) {
+				switch (rule.charAt(0)) {
+					case '#':
+						rule = rule.slice(1);
+						tmp = rt.getElementById(rule);
+						//workaround with IE bug about returning element by name not by ID.
+						//Solution completely changed, thx to deerua.
+						//Get all matching elements with this id
+						if (tmp && browser.msie < 9 && tmp.id !== rule) {
+							tmp = tmp.ownerDocument.all[rule];
+						}
+						selElements.push(tmp);
+					break;
+					case '.':
+						tmp = rt.getElementsByClassName(rule.slice(1).replace(__querySelector__dottes, " "));
+						j = -1;
+						while(tmp2 = tmp[++j])selElements.push(tmp2);
+					break;
+					default:
+						tmp = rt.getElementsByTagName(rule);
+						j = -1;
+						while(tmp2 = tmp[++j])selElements.push(tmp2);
+				}
+			}
+			continue;
+		}
+
+
+		selElements = queryOneSelector(rule, root, null);
+		
 	}
 	
 	return result;
@@ -647,33 +744,7 @@ var queryManySelector = function queryManySelector(selector) {
  * @return {HTMLElement|Node}
  */
 function queryOneManySelector(selector) {
-	var thisObj = this,
-		tmp,
-		node;
-
-	if(__selector__easySelector1.test(selector) || __selector__easySelector2.test(selector)) {//quick return or generic call
-		switch (selector.charAt(0)) {
-			case '#':
-				tmp = selector.slice(1);
-				node = thisObj.getElementById(tmp);
-				//workaround with IE bug about returning element by name not by ID.
-				//Solution completely changed, thx to deerua.
-				//Get all matching elements with this id
-				if (node && browser.msie < 9 && node.id !== tmp) {
-					node = node.ownerDocument.all[tmp];
-				}
-				return node;
-			break;
-			case '.':
-				return thisObj.getElementsByClassName(selector.slice(1).replace(__querySelector__dottes, " "))[0];
-			break;
-			default:
-				return thisObj.getElementsByTagName(selector)[0];
-			break;
-		}
-	}
-
-	return thisObj.querySelectorAll(selector)[0] || null;
+	return queryManySelector.call(this, selector, true)[0] || null;
 }
 
 /**
@@ -685,8 +756,10 @@ function _matchesSelector(selector) {
 	if(!selector)return false;
 	if(selector === "*")return true;
 
+	selector = _String_trim.call(selector.replace(__queryManySelector__doubleSpaces, "$1"));
+
 	var thisObj = this,
-		isSimpleSelector = __selector__easySelector1.test(selector) || __selector__easySelector2.test(selector),
+		isSimpleSelector = RE__selector__easySelector1.test(selector) || RE__selector__easySelector2.test(selector),
 		isEasySelector = !isSimpleSelector && !/([,>+~ ])/.test(selector),
 		tmp,
 		match = false,
@@ -694,6 +767,8 @@ function _matchesSelector(selector) {
 		str;
 
 	if(isSimpleSelector) {
+		selector = _String_trim.call(selector);
+
 		switch (selector.charAt(0)) {
 			case '#':
 				return thisObj.id === selector.slice(1);
@@ -787,52 +862,54 @@ nodeProto["__ielt8__element_init__"] = function __ielt8__element_init__(thisObj)
 
 	//Unsafe (with "OBJECT" tag, for example) set's
 	try {
-		
-		if(!thisObj["_"])thisObj["_"] = {};
-		if(thisObj.cloneNode !== elementProto.cloneNode) {
-			thisObj["_"]["nativeCloneNode"] = thisObj.cloneNode;
-			thisObj.cloneNode = elementProto.cloneNode;
+		if(thisObj.cloneNode !== nodeProto.cloneNode) {
+			thisObj["__nativeCloneNode__"] = thisObj.cloneNode;
+			thisObj.cloneNode = nodeProto.cloneNode;
 		}
 		if(nodeProto.contains)thisObj.contains = nodeProto.contains;
 	}
 	catch(e) {
 		//console.error(e.message)
 	}
-	if(!thisObj["_"])__ielt8__wontfix.push(thisObj);
+	if(thisObj.cloneNode !== nodeProto.cloneNode)__ielt8__wontfix.push(thisObj);
 }
 //__ielt8__element_init__["plugins"] = [];
 
+
+
+var __ielt8_Node_behavior_apply = nodeProto["__ielt8_Node_behavior_apply"] = function (el) {
+	var jj = ieltbehaviorRules.length;
+
+	while(--jj >= 0)
+		el.addBehavior(ieltbehaviorRules[jj]);
+}
+
+//If we already oweride cloneNode -> safe it
 var origCloneNode = nodeProto["cloneNode"];
+
 nodeProto["cloneNode"] = function(deep) {
-	var el = _call.call(origCloneNode, this, deep);
+	var el = _call.call(origCloneNode || this["__nativeCloneNode__"], this, deep);
 	
 	__ielt8_Node_behavior_apply(el);
 	
 	return el;
 }
 
-nodeProto["__ielt8_Node_behavior_apply"] = function __ielt8_Node_behavior_apply(el) {
-	var jj = ieltbehaviorRules.length;
-	while(--jj >= 0)
-		el.addBehavior(ieltbehaviorRules[jj]);
-}
-
 /*  ======================================================================================  */
 /*  ================================  Document  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-var originCreateElement = document.createElement;
+var prevCreateElement = document.createElement;
 document.createElement = function(tagName) {
-	var el = _call.call(originCreateElement, document, tagName);
+
+	var el = _call.call(prevCreateElement, document, tagName);
 	
-	if(tagName !== "_") {
-		var jj = ieltbehaviorRules.length;
-		while(--jj >= 0)
-			el.addBehavior(ieltbehaviorRules[jj]);
-	}
+	var jj = ieltbehaviorRules.length;
+	while(--jj >= 0)
+		el.addBehavior(ieltbehaviorRules[jj]);
 	
 	return el;
 };
-document.createElement.orig = originCreateElement;
+document.createElement.orig = prevCreateElement;
 
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Document  ==================================  */

@@ -14,7 +14,6 @@
 <!--[if lt IE 9]>
 <script src="http://ie7-js.googlecode.com/svn/version/2.1(beta4)/IE9.js"></script>
 <![endif]-->
-		<script src="js/modernizr.custom.37797.js"></script> 
 <!--[if lt IE 9]>
 <script src="../../__SRC/a.ie8.js?1"></script>
 <![endif]-->
@@ -35,7 +34,7 @@ var $$ = Function.prototype.bind.call(document.querySelectorAll, document);
 var $$0 = Function.prototype.bind.call(document.querySelector, document);
 
 //https://gist.github.com/2369790
-function delegate(a,b,c,d){return function(e){d=e.target;do if(d.matchesSelector(a)){try{e.target=d}catch(r){};if(e.target!=d){
+function delegate(a,b,c,d){return function(e){d=e.target;do if(d.matchesSelector&&d.matchesSelector(a)){try{e.target=d}catch(r){};if(e.target!=d){
 try{delete e.target}catch(r){};e.target=d};c=b.call(this,e)}while(c!==false&&d!=this&&(d=d.parentNode));return c}};
 
 function main() {
@@ -95,15 +94,22 @@ function main() {
 		};
 	
 	/* Click menu event handler */
-	$$0("#primary").addEventListener("click", delegate("a", function(e) {
-		doAnimateScroll(
-			0,
-			window.pageYOffset,
-			$$0(e.target.getAttribute("href").replace(url, "")).offsetTop - window.pageYOffset
-		);
-		
-		e.preventDefault();
-    	return false;
+	document.addEventListener("click", delegate("a", function(e) {
+		var href = e.target.getAttribute("href").replace(url, ""),
+			referedSection = href.startsWith("#") ?
+				$$0(href) :
+				null;
+	
+		if(referedSection) {
+			doAnimateScroll(
+				0,
+				window.pageYOffset,
+				referedSection.offsetTop - window.pageYOffset
+			);
+			
+			e.preventDefault();
+			return false;
+		}
 	}));
 }
 

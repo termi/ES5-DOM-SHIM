@@ -221,13 +221,6 @@ var
         return _applyFunction.call(_function, context, _arraySlice.call(arguments, 2))
 	}
 
-  , /** @type {Element|*}
-	 * @const */
-	_testElement =
-		document.createElement["orig"] ?
-			_call(document.createElement["orig"], document, '_') : //[ielt8]
-			document.createElement('_')
-
 	//Fixed `toObject` to work for strings in IE8 and Rhino. Added test spec for `forEach`.
 	//https://github.com/kriskowal/es5-shim/pull/94
   , need_prepareString = (function(strObj) {
@@ -281,13 +274,18 @@ var
 			}
 		}
 	}
-  , objectAppend;
+  , objectAppend
+  , document_createElement = _unSafeBind(document["__orig__createElement__"] || document.createElement, document)
+
+  , /** @type {Element|*}
+	 * @const */
+	_testElement = document_createElement('p');
 ;
 
 var /** @type {RegExp} @const */
-	__matchSelector__easySelector1 = /^[\w#\.][\w-]*$/,
+	RE__matchSelector__easySelector1 = /^\ ?[\w#\.][\w-]*$/,
 	/** @type {RegExp} @const */
-	__matchSelector__easySelector2 = /^(\.[\w-]*)+$/;
+	RE__matchSelector__easySelector2 = /^\ ?(\.[\w-]*)+$/;
 
 if(!global["HTMLDocument"])global["HTMLDocument"] = global["Document"];//For IE9
 if(!global["Document"])global["Document"] = global["HTMLDocument"];//For IE8
@@ -867,9 +865,19 @@ Array["from"] || (Array["from"] = function(iterable) {
 	if(iterable.toArray)return iterable.toArray();
 
 	var object = _toObject(iterable, true),
-		result = [];
+		length = object.length >>> 0,
+		result;
 
-	for(var key = 0, length = object.length >>> 0; key < length; key++) {
+	try {
+		result = _arraySlice.call(object);
+	}
+	catch(e) { }
+
+	if(result && result.length === length)return result;
+
+	result = [];
+
+	for(var key = 0 ; key < length ; key++) {
 		if(key in object)
 			result[key] = object[key];
 	}
@@ -1783,7 +1791,9 @@ if(!elementProto.matchesSelector) {
 				tmp,
 				match = false;
 
-			if(__matchSelector__easySelector1.test(selector) || __matchSelector__easySelector2.test(selector)) {
+			selector.replace(__queryManySelector__doubleSpaces, "$1").trim();
+
+			if(RE__matchSelector__easySelector1.test(selector) || RE__matchSelector__easySelector2.test(selector)) {
 				switch (selector.charAt(0)) {
 					case '#':
 						return thisObj.id === selector.slice(1);
@@ -1841,7 +1851,7 @@ if(INCLUDE_EXTEND_POLYFILLS) {
 	https://developer.mozilla.org/en/DOM/HTMLInputElement
 	http://www.w3.org/TR/html5/forms.html#dom-lfe-labels
 	*/
-	if(!("labels" in document.createElement("input")))
+	if(!("labels" in document_createElement("input")))
 		Object.defineProperty(elementProto, "labels", {
 			enumerable: true,
 			"get" : function() {
@@ -1883,7 +1893,7 @@ if(INCLUDE_EXTEND_POLYFILLS) {
 	https://developer.mozilla.org/en/DOM/HTMLLabelElement
 	http://www.w3.org/TR/html5/forms.html#dom-label-control
 	*/
-	if(!("control" in document.createElement("label")))
+	if(!("control" in document_createElement("label")))
 		Object.defineProperty(global["HTMLLabelElement"] && global["HTMLLabelElement"].prototype || elementProto, "control", {
 			enumerable: true,
 			"get" : function() {
@@ -1930,7 +1940,7 @@ if(INCLUDE_EXTEND_POLYFILLS) {
 var removeAttributeChildValue,
 	reversedShim,
 	autoInitFunction;
-if(INCLUDE_EXTEND_POLYFILLS && !('reversed' in document.createElement("ol"))) {
+if(INCLUDE_EXTEND_POLYFILLS && !('reversed' in document_createElement("ol"))) {
 	removeAttributeChildValue = function(child) {
 		child.removeAttribute("value");
 	};
@@ -2452,7 +2462,7 @@ var i,
 
 for (i = methods.length; i--;) empty[methods[i]] = functionReturnFirstParam;
 
-if (console && !DEBUG) {
+if (console) {
 
 	if (!console.time) {
 		console.timeCounters = timeCounters = {};
