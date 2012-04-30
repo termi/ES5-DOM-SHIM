@@ -163,24 +163,38 @@ nav.next-prev {
 	}
 	a.prev,
 	a.next {
+		text-align: center;
 		display: block;
-		width: 15px;
 		height: 11px;
-		text-indent: -9999px;
+		padding: 4px 0;
+		font-size: 0;
 		}
-	a.prev {
-		margin: 0 auto 5px auto;
-		background: transparent url('../img/scroll-arrow-up.png') 0 0 no-repeat;
+		a.prev span,
+		a.next span {
+			text-indent: -9999px;
+			display:inline-block;
+			width:0px;
+			height:0px;
+			border-left:8px solid transparent;
+			border-right:8px solid transparent;
+
+
+			*text-indent: 0;
+			_overflow:hidden;
+			*zoom:1;
+			*display:inline;	
 		}
-		a.prev:hover {
-			background: transparent url('../img/scroll-arrow-up.png') 0 -11px no-repeat;
+	a.prev span {
+		border-bottom: 8px solid #21A97E;
+		}
+		a.prev:hover span {
+			border-bottom-color: black;
 			}
-	a.next {
-		margin: 5px auto 0 auto;
-		background: transparent url('../img/scroll-arrow-down.png') -1px 0 no-repeat;
+	a.next span {
+		border-top: 8px solid #21A97E;
 		}
-		a.next:hover {
-			background: transparent url('../img/scroll-arrow-down.png') -1px -11px no-repeat;
+		a.next:hover span {
+			border-top-color: black;
 			}
 
 /* Parallax
@@ -188,7 +202,7 @@ nav.next-prev {
 
 /* content */
 #content {
-	z-index: 4;
+	z-index: 99;
 	position: relative;
 	max-width: 940px;
 	padding: 0 10px;

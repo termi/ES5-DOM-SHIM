@@ -155,39 +155,6 @@ browser["msie"] = browser.msie;
 
 
 
-/*  ======================================================================================  */
-/*  ==================================  Function prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
-
-/**
- * From prototypejs (prototypejs.org)
- * Wraps the function in another, locking its execution scope to an object specified by thisObj.
- * @param {Object} object
- * @param {...} var_args
- * @return {Function}
- * @version 3
- */
-if(!Function.prototype.bind)Function.prototype.bind = function (object, var_args) {
-	//If IsCallable(Target) is false, throw a TypeError exception.
-	if (typeof this != "function" && !browser.msie && (this+"").trim().indexOf("function") !== 0) {
-		throw new TypeError("Function.prototype.bind called on incompatible " + this);
-	}
-	var __method = this, args = _arraySlice.call(arguments, 1),
-		_result = function () {
-			return __method.apply(
-				this instanceof _result ?
-					this ://The `object` value is ignored if the bound function is constructed using the new operator.
-					object,
-				args.concat(_arraySlice.call(arguments)));
-	};
-	if(__method.prototype) {
-		_result.prototype = Object.create(__method.prototype);
-		//_result.constructor = __method;
-	}
-	return _result;
-};
-/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Function prototype  ==================================  */
-/*  =======================================================================================  */
-
 var
     _arraySlice = Array.prototype.slice
 
@@ -240,7 +207,7 @@ var
 		// If the implementation doesn't support by-index access of
 		// string characters (ex. IE < 9), split the string
 		if (need_prepareString && typeof obj == "string" && obj)
-			return obj.split("");
+			return _String_split.call(obj, "");
 
 		return Object(obj);
 	}
@@ -279,17 +246,70 @@ var
 
   , /** @type {Element|*}
 	 * @const */
-	_testElement = document_createElement('p');
+	_testElement = document_createElement('p')
+
+  , _String_split = String.prototype.split
+
+  , _String_trim = String.prototype.trim
+
+
+	/** @type {RegExp} @const */
+  , RE__matchSelector__easySelector1 = /^\ ?[\w#\.][\w-]*$/
+	/** @type {RegExp} @const */
+  , RE__matchSelector__easySelector2 = /^\ ?(\.[\w-]*)+$/
+	/** @type {RegExp} @const */
+  , RE_DOMSettableTokenList_lastSpaces = /\\s+$/g
+	/** @type {RegExp} @const */
+  , RE_DOMSettableTokenList_spaces = /\\s+/g
+	/** @type {RegExpt} @const */
+  , RE__matchSelector__doubleSpaces = /\s*([,>+~ ])\s*/g//Note: Use with "$1";
+
 ;
 
-var /** @type {RegExp} @const */
-	RE__matchSelector__easySelector1 = /^\ ?[\w#\.][\w-]*$/,
-	/** @type {RegExp} @const */
-	RE__matchSelector__easySelector2 = /^\ ?(\.[\w-]*)+$/;
+
 
 if(!global["HTMLDocument"])global["HTMLDocument"] = global["Document"];//For IE9
 if(!global["Document"])global["Document"] = global["HTMLDocument"];//For IE8
 //TODO:: for IE < 8 :: if(!global["Document"] && !global["HTMLDocument"])global["Document"] = global["HTMLDocument"] = ??;//for IE < 8
+
+
+
+
+/*  ======================================================================================  */
+/*  ==================================  Function prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+/**
+ * From prototypejs (prototypejs.org)
+ * Wraps the function in another, locking its execution scope to an object specified by thisObj.
+ * @param {Object} object
+ * @param {...} var_args
+ * @return {Function}
+ * @version 3
+ */
+if(!Function.prototype.bind)Function.prototype.bind = function (object, var_args) {
+	//If IsCallable(Target) is false, throw a TypeError exception.
+	if (typeof this != "function" || !(browser.msie && _String_trim.call(this + "").indexOf("function") === 0)) {
+		throw new TypeError("Function.prototype.bind called on incompatible " + this);
+	}
+	var __method = this, args = _arraySlice.call(arguments, 1),
+		_result = function () {
+			return __method.apply(
+				this instanceof _result ?
+					this ://The `object` value is ignored if the bound function is constructed using the new operator.
+					object,
+				args.concat(_arraySlice.call(arguments)));
+	};
+	if(__method.prototype) {
+		_result.prototype = Object.create(__method.prototype);
+		//_result.constructor = __method;
+	}
+	return _result;
+};
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Function prototype  ==================================  */
+/*  =======================================================================================  */
+
+
+
 
 /**
  * @param {boolean=} overwrite
@@ -1218,10 +1238,9 @@ if (!String.prototype.trim || whitespace.trim()) {
 // If separator is undefined, then the result array contains just one String, which is the this value (converted to a String). If limit is not undefined, then the output array is truncated so that it contains no more than limit elements.
 // "0".split(undefined, 0) -> []
 if("0".split(void 0, 0).length) {
-	var oldSplit = String.prototype.split;
 	String.prototype.split = function(separator, limit) {
 		if(separator === void 0 && limit === 0)return [];
-		return oldSplit.apply(this, arguments);
+		return _String_split.call(this, separator, limit);
 	}
 }
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  bug fixing  ==================================  */
@@ -1270,7 +1289,7 @@ if(!String.prototype["contains"])String.prototype["contains"] = function(s) {
  * @return {Array}
  */
 if(!String.prototype["toArray"])String.prototype["toArray"] = function() {
-	return this.split('');
+	return _String_split.call(this, '');
 };
 
 
@@ -1452,98 +1471,99 @@ else if(DEBUG && !document.addEventListener) {
  * @constructor
  */
 var DOMStringCollection = function(string, onchange) {
-	/**
-	 * Event fired when any change apply to the object
-	 */
-	this._onchange = onchange;
-	this.length = 0;
-	this._container = [];
-	this.value = "";
+		/**
+		 * Event fired when any change apply to the object
+		 */
+		this._onchange = onchange;
+		this.length = 0;
+		this.value = "";
 
-	this.update(string);
-};
-
-var methods = {
-	checkToken: function(token) {
+		DOMStringCollection_init(this, string);
+	},
+	checkToken = function(token) {
 		if(token === "")_throwDOMException("SYNTAX_ERR");
 		if((token + "").indexOf(" ") > -1)_throwDOMException("INVALID_CHARACTER_ERR");
 	},
-	add: function(token, initialisation) {
-		this.checkToken(token);
+	/**
+	 * @param {DOMStringCollection} _DOMStringCollection
+	 * @param {string} _string
+	 */
+	DOMStringCollection_init = function(_DOMStringCollection, _string) {
+		var thisObj = _DOMStringCollection,
+			string = _string || "",//default value
+			isChange = !!thisObj.length;
 
+		if(isChange) {
+			while(thisObj.length > 0)
+				delete thisObj[--thisObj.length];
+
+			thisObj.value = "";
+		}
+
+		if(string) {
+			if(string = _String_trim.call(string)) {
+				_String_split.call(string, RE_DOMSettableTokenList_spaces).forEach(DOMStringCollection_init_add, thisObj);
+			}
+			thisObj.value = _string;//empty value should stringify to contain the attribute's whitespace
+		}			
+
+		if(isChange && thisObj._onchange)thisObj._onchange.call(thisObj);
+	},
+	/**
+	 * @param {string} token
+	 * @this {DOMStringCollection}
+	 */
+	DOMStringCollection_init_add = function(token) {
+		this[this.length++] = token;
+	};
+
+var methods = {
+	add: function(token) {
 		var thisObj = this, v = thisObj.value;
 
-		if(!initialisation && thisObj._container.indexOf(token) !== -1)return;
+		if(thisObj.contains(token)//checkToken(token) here
+			)return;
 
-		thisObj.value += ((v && !(new RegExp("\\s+$", "g")).test(v) ? " " : "") + token);
+		thisObj.value += ((v && !v.match(RE_DOMSettableTokenList_lastSpaces) ? " " : "") + token);
 
-		this._container.push(token);
-		this[(this.length = this._container.length) - 1] = token;
+		this[this.length++] = token;
 
-		if(!initialisation && thisObj._onchange)thisObj._onchange.call(thisObj);
+		if(thisObj._onchange)thisObj._onchange.call(thisObj);
 	},
 	remove: function(token) {
-		this.checkToken(token);
+		checkToken(token);
 
-		var i, l, thisObj = this;
-		while((i = thisObj._container.indexOf(token)) !== -1) {
-			delete thisObj._container[i];//[BUG*fix]prevente strange bug in FireFox 8 then after thisObj._splice(i, 1) this.length == 0 but this[0] return value O_0//DOTO:: проверить
-			thisObj._container.splice(i, 1);
-		}
-		for(i = 0, l = thisObj._container.length ; i < l ; ++i) {
-			thisObj[i] = thisObj._container[i];
-		}
-		for( ; i < thisObj.length ; ++i) {
-			delete thisObj[i];
-		}
-		this.length = this._container.length;
+		var i, itemsArray, thisObj = this;
 
-		thisObj.value = thisObj.value.replace(new RegExp("((?: +)?" + token + "(?: +)?)", "g"), function(find, p1, offset, string) {
+		thisObj.value = thisObj.value.replace(new RegExp("((?:\ +|^)" + token + "(?:\ +|$))", "g"), function(find, p1, offset, string) {
 			return offset && find.length + offset < string.length ? " " : "";
 		});
+
+		itemsArray = _String_split.call(thisObj.value, " ")
+
+		for(i = thisObj.length - 1 ; i > 0  ; --i) {
+			if(!(thisObj[i] = itemsArray[i])) {
+				thisObj.length--;
+				delete thisObj[i];
+			}
+		}
+
 		if(thisObj._onchange)thisObj._onchange.call(thisObj)
 	},
 	contains: function(token) {
-		this.checkToken(token);
+		checkToken(token);
 
-		return this._container.indexOf(token) != -1;
+		return (" " + this.value + " ").indexOf(" " + token + " ") !== -1;
 	},
 	item: function(index) {
 		return this[index] || null;
 	},
 	toggle: function(token) {
-		this.checkToken(token);
+		var result = thisObj.contains(token); //checkToken(token) here;
 
-		var result = this._container.indexOf(token) == -1;
 		this[result ? 'add' : 'remove'](token);
 
 		return result;
-	},
-	update: function(_string) {
-		var string = _string || "";//default value
-
-		var isChange = !!this.length;
-
-		if(isChange) {
-			for(var i = 0 ; i < this.length ; ++i)
-				delete this[i];
-			this.length = 0;
-			this._container = [];
-			this.value = "";
-		}
-
-		if(string) {
-			if(string = string.trim()) {
-				string.split((new RegExp("\\s+", "g"))).forEach(function(token){
-					this.add(token, true);
-				}, this);
-			}
-			else this.value = _string;//empty value should stringify to contain the attribute's whitespace
-		}			
-
-		if(isChange && this._onchange)this._onchange.call(this);
-
-		return this;
 	}
 };
 for(var key in methods)DOMStringCollection.prototype[key] = methods[key];
@@ -1791,7 +1811,7 @@ if(!elementProto.matchesSelector) {
 				tmp,
 				match = false;
 
-			selector.replace(__queryManySelector__doubleSpaces, "$1").trim();
+			_String_trim.call(selector.replace(RE__matchSelector__doubleSpaces, "$1"));
 
 			if(RE__matchSelector__easySelector1.test(selector) || RE__matchSelector__easySelector2.test(selector)) {
 				switch (selector.charAt(0)) {
@@ -2174,7 +2194,7 @@ var $$ = global["$$"] = function(selector, roots, isFirst) {
 	//if(browser.safary)//[termi 30.01.12]commented it due not actual for now
 	//	selector = selector.replace(/=([^\]]+)/, '="$1"');
 
-	selector = (selector || "").trim();
+	selector = _String_trim.call(selector || "");
 	if(!selector)return [];
 
 	var isSpecialMod = /[>\+\~]/.test(selector.charAt(0)) || /(\,>)|(\,\+)|(\,\~)/.test(selector),

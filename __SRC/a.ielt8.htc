@@ -59,8 +59,7 @@ var
 	getOffsetLeft=Element_proto.getoffsetLeft;
 
 if(this != window) {//Strange IE bug where thisObj === window
-	Node_proto.__ielt8__element_init__(this);
+	Node_proto.__ielt8__element_init__.call(this);
 }
-else console.log("askdjfh askjdhfakjsdhf askjdfhkashdlfkahskdjlfh")
 </SCRIPT>
 </PUBLIC:COMPONENT>

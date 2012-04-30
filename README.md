@@ -6,7 +6,7 @@ based on:
 - https://github.com/paulmillr/es6-shim
 - https://github.com/Raynos/DOM-shim
 
-__Status__: Beta Dev
+__Status__: Stable Beta
 [__Demo__](http://h123.ru/ES5-DOM-SHIM/simple/index.html) Try it in IE7 (or in IE6 ¬_¬)! And take a look at the source
 
 ## Goal
@@ -33,7 +33,7 @@ __Status__: Beta Dev
 			
   1. First[!] add `a.ie8.js` in `head` section
   
-            <!--[if lt IE 9]>
+            <!--[if IE 8]>
 			<script src="a.ie8.js"></script>
 			<![endif]-->
 			
@@ -41,18 +41,18 @@ __Status__: Beta Dev
   
             <script src="a.js"></script>
 
- - For IE6 and IE7 support:			
+ - For IE6 and IE7, and IE8 support:			
   1. Add `a.ie8.js` and `a.ielt8.js`, `a.js` in `head` section
   
-            <!--[if lt IE 9]>
-			<script src="a.ie8.js"></script>
-			<![endif]-->
 			<!--[if lt IE 8]>
 			<script src="a.ielt8.js"></script>
 			<![endif]-->
+            <!--[if IE 8]>
+			<script src="a.ie8.js"></script>
+			<![endif]-->
 			<script src="a.js"></script>
 			
-  2. Put `a.ielt8.htc` and `a.ie6.ielt8.htc` to the root of your site
+  2. Put `a.ielt8.htc` to the root of your site
  
 ## EXSTRAs
 

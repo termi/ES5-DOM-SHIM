@@ -11,16 +11,14 @@
 
 		<link rel="stylesheet" media="all" href="css/main.css" />
 
-<!--[if lt IE 9]>
-<script src="http://ie7-js.googlecode.com/svn/version/2.1(beta4)/IE9.js"></script>
-<![endif]-->
-<!--[if lt IE 9]>
-<script src="../../__SRC/a.ie8.js?1"></script>
-<![endif]-->
+
 <!--[if lt IE 8]>
-<script src="../../__SRC/a.ielt8.js"></script>
+<script src="../../__COMPILE/a.ielt8.js?3"></script>
 <![endif]-->
-<script src="../../__SRC/a.js?2"></script>
+<!--[if IE 8]>
+<script src="../../__COMPILE/a.ie8.js?3"></script>
+<![endif]-->
+<script src="../../__COMPILE/a.js?3"></script>
 
 
 <script>
@@ -34,8 +32,9 @@ var $$ = Function.prototype.bind.call(document.querySelectorAll, document);
 var $$0 = Function.prototype.bind.call(document.querySelector, document);
 
 //https://gist.github.com/2369790
-function delegate(a,b,c,d){return function(e){d=e.target;do if(d.matchesSelector&&d.matchesSelector(a)){try{e.target=d}catch(r){};if(e.target!=d){
-try{delete e.target}catch(r){};e.target=d};c=b.call(this,e)}while(c!==false&&d!=this&&(d=d.parentNode));return c}};
+function delegate(a,b,c,d){return function(e){c=1;d=e.target;
+if(Object.defineProperty){try{delete e.target}catch(x){}Object.defineProperty(e,"target",{writable:true})};
+do if(d.matchesSelector&&d.matchesSelector(a)){e.target=d;c=b.call(this,e)}while(c!==false&&d!=this&&(d=d.parentNode));return c}};
 
 function main() {
 	/* Set navigation dots to an active state as the user scrolls */
@@ -45,7 +44,7 @@ function main() {
 			top : index === 0 ? 0 :
 				index === sectionNodes.length -1 ? node.offsetTop - ((document.documentElement.scrollHeight - node.offsetTop) / 2) :
 				node.offsetTop - (sectionNodes[index + 1].offsetTop - node.offsetTop) / 2,
-			navLink : node.id ? $$0("a[href='#" + node.id + "']") : null,
+			navLink : node.id ? $$0("#primary a[href='#" + node.id + "']") : null,
 			node : node/*,
 			refId : "#" + node.id*/
 		} });
@@ -68,6 +67,7 @@ function main() {
 	/* Scroll the background layers */
 	var parallaxScroll = parallaxBgs.forEach.bind(parallaxBgs, function(node, index) {
 		node.style.top = (0 - (window.pageYOffset * (index + 1) / (parallaxBgs.length + 1))) + 'px';
+		//node.style.marginLeft = +node.style.left +lineanBezier.get((0 - (window.pageYOffset * (index + 1) / (parallaxBgs.length + 1))) + 'px';
 	});
 	
 	/* Scroll event handler */
@@ -111,6 +111,10 @@ function main() {
 			return false;
 		}
 	}));
+
+	document.addEventListener('mousewheel', function() {
+		scrollTimer && clearTimeout(scrollTimer), scrollTimer=null;
+	});
 }
 
 document.addEventListener('DOMContentLoaded', main);
@@ -160,7 +164,7 @@ document.addEventListener('DOMContentLoaded', main);
 					<p>The first clearly recorded instance of a balloon carrying passengers used hot air to generate buoyancy and was built by the brothers Joseph-Michel and Jacques-Etienne Montgolfier in Annonay, France. After experimenting with unmanned balloons and flights with animals, the first tethered balloon flight with humans on board took place on October 15, 1783.</p>
 					<nav class="next-prev">
 						<hr />
-						<a class="next frameless-parachute" href="#frameless-parachute">Next</a>
+						<a class="next frameless-parachute" href="#frameless-parachute"><span>Next</span></a>
 					</nav>
 				</article>
 				
@@ -170,9 +174,9 @@ document.addEventListener('DOMContentLoaded', main);
 					</header>
 					<p>André-Jacques Garnerin carried out the first jump with a silk parachute on October 22, 1797 at Parc Monceau, Paris. Garnerin's first parachute resembled a closed umbrella before he ascended; at a height of approximately 3,000 feet he severed the rope that connected his parachute to the balloon, and the basket fell to earth. Garnerin emerged uninjured.</p>
 					<nav class="next-prev">
-						<a class="prev manned-flight" href="#manned-flight">Prev</a>
+						<a class="prev manned-flight" href="#manned-flight"><span>Prev</span></a>
 						<hr />
-						<a class="next english-channel" href="#english-channel">Next</a>
+						<a class="next english-channel" href="#english-channel"><span>Next</span></a>
 					</nav>
 				</article>
 				
@@ -182,9 +186,9 @@ document.addEventListener('DOMContentLoaded', main);
 					</header>
 					<p>On January 7, 1785, Jean Pierre Blanchard and Dr. John Jeffries made the first flight over the English Channel, traveling from Dover to France. During the crossing the balloon lost altitude, so they began tossing everything in the gondola they possibly could, even their clothes. About two hours after take off, they crossed the French coast clad only in their underwear.</p>
 					<nav class="next-prev">
-						<a class="prev frameless-parachute" href="#frameless-parachute">Prev</a>
+						<a class="prev frameless-parachute" href="#frameless-parachute"><span>Prev</span></a>
 						<hr />
-						<a class="next about" href="#about">Next</a>
+						<a class="next about" href="#about"><span>Next</span></a>
 					</nav>
 				</article>
 				
@@ -194,7 +198,7 @@ document.addEventListener('DOMContentLoaded', main);
 					</header>
 					<p>This is a jQuery parallax scrolling experiment by Jonathan Nicol. <a href="http://f6design.com/journal/2011/08/06/build-a-parallel-scrolling-website-interface-with-jquery-and-css/">Read about it</a> on my blog.</p>
 					<nav class="next-prev">
-						<a class="prev english-channel" href="#english-channel">Prev</a>
+						<a class="prev english-channel" href="#english-channel"><span>Prev</span></a>
 						<hr />
 					</nav>
 				</article>

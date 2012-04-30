@@ -46,7 +46,7 @@ _g16=np.g16,
 b=ep.getoffsetTop,
 d=ep.getoffsetLeft;
 if(this!=window){
-np.__ielt8__element_init__(this);
+np.__ielt8__element_init__.call(this);
 }
 </SCRIPT>
 </PUBLIC:COMPONENT>
