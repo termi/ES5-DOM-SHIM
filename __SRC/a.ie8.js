@@ -25,7 +25,7 @@ var DEBUG = IS_DEBUG && !!(window && window.console);
 //Browser sniffing START
 /** @type {Object}
  * @const */
-var browser = global["browser"] = {
+var browser = {
 /** @type {string}
  * @const */
 	agent : navigator.userAgent.toLowerCase()
