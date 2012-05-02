@@ -6,7 +6,7 @@
 // @check_types
 // ==/ClosureCompiler==
 /**
- * ES5 and DOM shim for IE < 9
+ * ES5 and DOM shim for IE < 8
  * @version 4
  */
  
@@ -22,26 +22,10 @@ var IS_DEBUG = false;
 /** @const @type {boolean} */
 var DEBUG = IS_DEBUG && !!(window && window.console);
 
-//Browser sniffing START
-/** @type {Object}
- * @const */
-var browser = {
-/** @type {string}
- * @const */
-	agent : navigator.userAgent.toLowerCase()
-};
-browser.names = browser.agent.match(/(msie)/gi);
-if(browser.names && browser.names.length)browser[browser.names[0]] = true;
-/** @type {boolean}
- * @const */
-browser.msie = browser["msie"];
-if(browser.msie)for(var i = 6 ; i < 11 ; i++)//IE from 6 to 10
-	if(new RegExp('msie ' + i).test(browser.agent)) {
-		browser.msie = browser["msie"] = i;
-		
-		break;
-	}
-//Browser sniffing END
+/** Browser sniffing
+ * @type {boolean} */
+var _browser_msie;
+_browser_msie = (_browser_msie = /msie (\d+)/i.exec(navigator.userAgent)) && +_browser_msie[1] || void 0;
 
 
 
@@ -54,11 +38,20 @@ if(!global["Element"])((global["Element"] =
 if(!global["HTMLElement"])global["HTMLElement"] = global["Element"];//IE8
 if(!global["Node"])global["Node"] = global["Element"];//IE8
 
+
+
 var _temoObj;
 //Not sure if it wrong. TODO:: tests for this
-if(!global["DocumentFragment"])global["DocumentFragment"] = 
-	global["Document"] || global["HTMLDocument"] ||//For IE8
-	(_temoObj = {}, _temoObj.prototype = {}, _temoObj);//For IE < 8
+if(!global["DocumentFragment"]) {
+
+	global["DocumentFragment"] = 
+		global["Document"] || global["HTMLDocument"] ||//For IE8
+		(_temoObj = {}, _temoObj.prototype = {}, _temoObj);//For IE < 8
+
+}
+if(!global["Document"])global["Document"] = global["DocumentFragment"];
+
+
 
 
 
@@ -70,10 +63,18 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
 		"orig_" : orig_
 	}["ielt9shims"]
 	
+  , __temporary__DOMContentLoaded_container = {}
+
+	/** @const */
   , document_createDocumentFragment = document.createDocumentFragment
 
+	/** @const */
   , document_createElement = document.createElement
 
+	/** @const */
+  , document_createTextNode = document.createTextNode
+
+	/** @const */
   , _throwDOMException = function(errStr) {
 		var ex = Object.create(DOMException.prototype);
 		ex.code = DOMException[errStr];
@@ -81,6 +82,7 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
 		throw ex;
 	}
 
+	/** @const */
   , _recursivelyWalk = function (nodes, cb) {
 		for (var i = 0, len = nodes.length; i < len; i++) {
 			var node = nodes[i],
@@ -97,7 +99,8 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
 		}
 	}
 
-  , _util_extendFunction = function(obj, extension) {
+	/** @const */
+  , _append = function(obj, extension) {
 		for(var key in extension)
 			if(_hasOwnProperty(extension, key) && !_hasOwnProperty(obj, key))
 				obj[key] = extension[key];
@@ -105,19 +108,8 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
 		return obj;
 	}
 
-  , _append = function(obj, ravArgs) {
-		for(var i = 1; i < arguments.length; i++) {
-			var extension = arguments[i];
-			for(var key in extension)
-				if(_hasOwnProperty(extension, key) &&
-				   (overwrite || !_hasOwnProperty(obj, key))
-				  )obj[key] = extension[key];
-		}
-
-		return obj;
-	}
-
   	/**
+  	 *  @const
      * Use native and probably broken function or Quick, but non-full-standart
 	 * For system use only
 	 * More standart solution in a.js
@@ -130,21 +122,26 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
 		return str.slice(0, i + 1);
 	})
 	
+	/** @const */
   , _String_split = String.prototype.split
 
+	/** @const */
   , _String_substr = String.prototype.substr
-	
+
+	/** @const */
   , _Array_slice = Array.prototype.slice
 
+	/** @const */
   , _Array_splice = Array.prototype.splice
 
-  , _Node_contains
-	
+	/** @const */
   , _Function_apply = Function.prototype.apply
 
+	/** @const */
   , _Function_call = Function.prototype.call
 	
 	/** Unsafe bind for service and performance needs
+	 * @const
 	 * @param {Function} __method
 	 * @param {Object} object
 	 * @param {...} var_args
@@ -156,9 +153,11 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
 		}
 	}
 	
+	/** @const */
   , _hasOwnProperty = _unSafeBind(Function.prototype.call, Object.prototype.hasOwnProperty)
   
 	/**
+	 * @const
 	 * Call _function
 	 * @param {Function} _function function to call
 	 * @param {*} context
@@ -182,7 +181,11 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
 	
   , _Element_prototype = global["Element"].prototype
 
-  , nativeDate = Date
+	/** @const */
+  , _Node_contains = _Node_prototype.contains || _testElement.contains
+
+	/** @const */
+  , _Native_Date = Date
 
   , _DOMException
 
@@ -194,8 +197,6 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
 	
 	/** @const @type {RegExp} */
   , RE__String_trim_spaces = /^\s\s*/
-
-
 	
 	/** @type {boolean} */
   , boolean_tmp
@@ -206,20 +207,25 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
 	/** @type {number} */
   , number_tmp
 
+	/** @const */
   , nodeList_methods_fromArray = ["every", "filter", "forEach", "indexOf", "join", "lastIndexOf", "map", "reduce", "reduceRight", "reverse", "slice", "some", "toString"]
 
 	// ------------------------------ ==================  Events  ================== ------------------------------
-	/** @const @type {function} */
-  , _event_preventDefault_ = function(){this.returnValue = false}
+  , _event_eventHandlersContainer_by_sourceIndex = {}
 
-	/** @const @type {function} */
-  , _event_stopPropagation_ = function(){this.cancelBubble = true}
-
-	/** @const @type {function} */
-  , _event_stopImmediatePropagation_ = function() {
-		this["__stopNow"] = true;
-		this.stopPropagation()
+  , _fake_Event_prototype = {
+	  	/** @const @type {function} */
+	  	"preventDefault" : function(){this.returnValue = false} ,
+	  	/** @const @type {function} */
+	  	"stopPropagation" : function(){this.cancelBubble = true} ,
+	  	/** @const @type {function} */
+	  	"stopImmediatePropagation" : function() {
+			this["__stopNow"] = true;
+			this.stopPropagation()
+		}
 	}
+
+  , _Event_prototype
 
 	/** @const @type {string} */
   , _event_UUID_prop_name = "uuid"
@@ -272,7 +278,9 @@ if(DEBUG) {
 }
 
 
-
+if(!global["Event"])global["Event"] = {};
+_Event_prototype = global["Event"].prototype || (global["Event"].prototype = {});
+_append(_Event_prototype, _fake_Event_prototype);
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Function.prototype  ==================================  */
 /*  =======================================================================================  */
@@ -364,9 +372,7 @@ if('te'.split(/(s)*/)[1] != void 0 ||
 			if (!limit) {
 				return [];
 			}
-		}
-
-		
+		}		
 		
 		while (match = separator1.exec(str)) {
 			lastIndex = match.index + match[0].length; // `separator1.lastIndex` is not reliable cross-browser
@@ -493,10 +499,8 @@ function fixEvent(event) {
 	//indicates the current click count; the attribute value must be 1 when the user begins this action and increments by 1 for each click.
 	if(event.type === "click" && event.detail === void 0)event.detail = 1;
 	else if(event.type === "dblclick" && event.detail === void 0)event.detail = 2;
-	
-	event.preventDefault || (event.preventDefault = _event_preventDefault_);
-	event.stopPropagation || (event.stopPropagation = _event_stopPropagation_);
-	event["stopImmediatePropagation"] || (event["stopImmediatePropagation"] = _event_stopImmediatePropagation_);
+
+	_append(event, _fake_Event_prototype);
 
 	event.target || (event.target = event.srcElement || document);// добавить target для IE
 
@@ -517,7 +521,7 @@ function fixEvent(event) {
 	// записать нажатую кнопку мыши в which для IE. 1 == левая; 2 == средняя; 3 == правая
 	event.which || event.button && (event.which = event.button & 1 ? 1 : event.button & 2 ? 3 : event.button & 4 ? 2 : 0);
 
-	if(!event.timeStamp)event.timeStamp = +new nativeDate();
+	if(!event.timeStamp)event.timeStamp = +new _Native_Date();
 	
 	if(!event.eventPhase)event.eventPhase = (event.target == thisObj) ? 2 : 3; // "AT_TARGET" = 2, "BUBBLING_PHASE" = 3
 	
@@ -622,8 +626,8 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 
 		_useInteractive = true;
 		
-		if(!browser[_type]) {
-			browser[_type] = true;
+		if(!__temporary__DOMContentLoaded_container[_type]) {
+			__temporary__DOMContentLoaded_container[_type] = true;
 			var a = document.getElementById("__ie_onload");
 			if(!a) {
 				document.write("<script id=\"__ie_onload\" defer=\"defer\" src=\"javascript:void(0)\"><\/script>");
@@ -814,7 +818,7 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 		thisObj.isTrusted = false;
 		thisObj.target = null;
 
-		if(!thisObj.timeStamp)thisObj.timeStamp = +new Date();
+		if(!thisObj.timeStamp)thisObj.timeStamp = +new _Native_Date();
 	}
 	function _initCustomEvent(_type, _bubbles, _cancelable, _detail) {
 		//https://developer.mozilla.org/en/DOM/CustomEvent
@@ -866,11 +870,6 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 		return eventObject;
 	}
 }
-if(global.Event && global.Event.prototype) {
-	Event.prototype.stopPropagation = _event_stopPropagation_;
-    Event.prototype.preventDefault = _event_preventDefault_;
-    Event.prototype["stopImmediatePropagation"] = _event_stopImmediatePropagation_;
-}
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Events  ======================================  */
 /*  ======================================================================================  */
@@ -881,8 +880,28 @@ if(global.Event && global.Event.prototype) {
 
 /*  ================================ bug fixing  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
+
+// IE - contains fails if argument is textnode
+txtTextElement = _Function_call.call(document_createTextNode, document, "temp");
+_testElement.appendChild(txtTextElement);
+
+try {
+    _testElement.contains(txtTextElement);
+    boolean_tmp = false;
+} catch (e) {
+	boolean_tmp = true;
+	_Node_prototype.contains = function contains(other) {
+    	if(other.nodeType === 3) {
+		    return _recursivelyWalk(this.childNodes, function (node) {
+		         if (node === other) return true;
+		    }) || false;
+		}
+		else return _Function_call.call(_Node_contains, this, other);
+	};
+}
+
 // IE8 hurr durr doctype is null
-if (document.doctype === null && browser.msie > 7)//TODO:: this fix for IE < 8
+if (document.doctype === null && _browser_msie > 7)//TODO:: this fix for IE < 8
 	_.push(function() {
 		var documentShim_doctype = document.childNodes[0];
 		Object.defineProperty(documentShim_doctype, "nodeType", {
@@ -893,19 +912,29 @@ if (document.doctype === null && browser.msie > 7)//TODO:: this fix for IE < 8
 
 // IE8 hates you and your f*ing text nodes
 // I mean text node and document fragment and document no inherit from node
-// Extend Text.prototype and HTMLDocument.prototype with shims. Note that get/set/has/remove|Attributes would be set too
+// Extend Text.prototype and HTMLDocument.prototype with shims
 // TODO:: Do something with IE < 8
-if (!document.createTextNode().contains && global["Text"] && Text.prototype) {
-    _.push(_unSafeBind(_util_extendFunction, null, Text.prototype, _Node_prototype));
+if(!_Node_prototype.contains)_Node_prototype.contains = _Node_contains;
+if (!_Function_call.call(document_createTextNode, document).contains){
+	if(global["Text"] && global["Text"].prototype) {//IE8
+	    _.push(_unSafeBind(_append, null, Text.prototype, _Node_prototype));
+	}
+	else {//IE < 8 TODO:: tests
+		document.createTextNode = function(text) {
+			text = _Function_call.call(document_createTextNode, this, text);
+			text.contains = _Node_prototype.contains;
+			return text;
+		}
+	}
 }
-if (!document.createDocumentFragment().contains && global["HTMLDocument"] && HTMLDocument.prototype) {
-    _.push(_unSafeBind(_util_extendFunction, null, HTMLDocument.prototype, _Node_prototype));
+if (!_Function_call.call(document_createDocumentFragment, document).contains && global["HTMLDocument"] && global["HTMLDocument"].prototype) {
+    _.push(_unSafeBind(_append, null, global["HTMLDocument"].prototype, _Node_prototype));
 }
 
 
 //https://developer.mozilla.org/en/DOM/Element.children
 //[IE lt 9] Fix "children" property in IE < 9
-if(!("children" in _testElement) || browser.msie && browser.msie < 9)_.push(function() {
+if(!("children" in _testElement) || _browser_msie < 9)_.push(function() {
 	Object.defineProperty(_Element_prototype, "children", {"get" : function() {
 		var arr = [],
 			child = this.firstChild;
@@ -920,7 +949,7 @@ if(!("children" in _testElement) || browser.msie && browser.msie < 9)_.push(func
 })
 
 //[IE lt 9] Fix "offsetLeft" and "offsetTop" properties in IE < 9
-if(browser.msie < 9)_.push(function() {
+if(_browser_msie < 9)_.push(function() {
 	/**
 	 * @param {Node} elem
 	 * @param {boolean=} X_else_Y
@@ -1051,23 +1080,6 @@ try {
 	})
 }*/
 
-// IE - contains fails if argument is textnode
-txtTextElement = document.createTextNode("temp");
-_testElement.appendChild(txtTextElement);
-
-try {
-    _testElement.contains(txtTextElement);
-} catch (e) {
-	_Node_contains = _Node_prototype.contains || _testElement.contains;
-    _Node_prototype.contains = function contains(other) {
-    	if(other.nodeType === 3) {
-		    return _recursivelyWalk(this.childNodes, function (node) {
-		         if (node === other) return true;
-		    }) || false;
-		}
-		else return _Node_contains.call(this, other);
-	};
-}
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  bug fixing  ==================================  */
 
@@ -1092,14 +1104,14 @@ if(!document.ELEMENT_NODE) {
 		DOCUMENT_FRAGMENT_NODE : 11
 		//NOTATION_NODE : 12// historical
 	};
-	_util_extendFunction(document, _constantContainer);
-	_util_extendFunction(_Node_prototype, _constantContainer);
-	_util_extendFunction(global["Node"], _constantContainer);
+	_append(document, _constantContainer);
+	_append(_Node_prototype, _constantContainer);
+	_append(global["Node"], _constantContainer);
 }
 /*var __ielt8__element_init__ = _Node_prototype["__ielt8__element_init__"];
 if(__ielt8__element_init__) {//__ielt8__element_init__ in a.ielt8.js
 	__ielt8__element_init__["plugins"].push(function(el) {
-		_util_extendFunction(el, _constantContainer);
+		_append(el, _constantContainer);
 	})
 }*/
 
@@ -1306,7 +1318,7 @@ var filter = elem.style['filter'];
 
 
 //Исправляем для IE<9 создание DocumentFragment, для того, чтобы функция работала с HTML5
-if(browser.msie && browser.msie < 9) {
+if(_browser_msie < 9) {
 	document.createDocumentFragment = function() {
 		var df = 
 				_Function_call.call(document_createDocumentFragment, this);
@@ -1381,9 +1393,9 @@ if(!supportsUnknownElements) {
 if(_Function_call.call(document_createElement, document, "x-x").cloneNode().outerHTML.indexOf("<:x-x>") === 0) {
 	safeElement = safeFragment.appendChild(safeFragment.createElement("div"));
 	_nativeCloneNode = 
-		browser.msie === 8 ?
+		_browser_msie === 8 ?
 			_testElement["cloneNode"] :
-			browser.msie < 8 ?
+			_browser_msie < 8 ?
 				_Node_prototype["cloneNode"] : void 0;
 	
 	/**
@@ -2114,7 +2126,8 @@ var queryManySelector = function queryManySelector(selector, onlyOne) {
 		tmp,
 		tmp2,
 		nextRule,
-		lastRule;
+		lastRule,
+		firstRule = true;
 			
 	while((rule = rules[++i])) {
 		nextRule = rules[i + 1];
@@ -2153,12 +2166,16 @@ var queryManySelector = function queryManySelector(selector, onlyOne) {
 				}
 			}
 		}
+		else if(firstRule && rule === ":root") {
+			selElements = [document.documentElement];
+		}
 		else {//CSS3 selector
 			selElements = queryOneSelector(rule, root, null, onlyOne && lastRule);
 		}
 
 
-		if(lastRule) {//If last rule in this selector
+		//If last rule in this selector
+		if(firstRule = lastRule) {
 			if(selElements) {//Save result
 			
 				if(onlyOne && selElements.length)return selElements;
@@ -2204,6 +2221,8 @@ function queryOneManySelector(selector) {
 function _matchesSelector(selector) {
 	if(!selector)return false;
 	if(selector === "*")return true;
+	if(this === document.documentElement && selector === ":root")return true;
+	if(this === document.body && selector === "body")return true;
 
 	selector = _String_trim.call(selector.replace(RE__queryManySelector__doubleSpaces, "$1"));
 
@@ -2256,6 +2275,7 @@ function _matchesSelector(selector) {
 
 if(!document.querySelectorAll)document.querySelectorAll = queryManySelector;
 if(!document.querySelector)document.querySelector = queryOneManySelector;
+if(!document.documentElement.matchesSelector)document.documentElement.matchesSelector = _Element_prototype.matchesSelector;
 
 if(!_Node_prototype.hasAttribute)_Node_prototype.hasAttribute = function(name) {
 	return this.getAttribute(name) !== null;

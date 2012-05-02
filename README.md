@@ -20,6 +20,7 @@ __Status__: Stable Beta
 ## Caution !!!
 
  - This lib is not about performance in IE < 9
+ - The a.ielt8.htc requests should respond with the mime type "text/x-component"
  - That's all cautions
  
 ## Install
@@ -53,7 +54,7 @@ __Status__: Stable Beta
 			<script src="a.js"></script>
 			
   2. Put `a.ielt8.htc` to the root of your site
- 
+
 ## EXSTRAs
 
 IF INCLUDE_EXTRAS == false ->
@@ -65,7 +66,7 @@ INCLUDE_EXTRAS:
 	1. browser
 	2. Utils.Dom.DOMStringCollection
 	3. XHR from https://github.com/Raynos/xhr with customisations
-	4. $(selector, root) alias for root.querySelector(selector) (with ">[any selector]" support)
+	4. (If where is no any other) $(selector, root) alias for root.querySelector(selector) (with ">[any selector]" support)
 	5. $$(selector, root) alias for root.querySelectorAll(selector) (with ">[any selector]" support)
 	6. $$0 alias for $
  - Extending objects
@@ -74,6 +75,13 @@ INCLUDE_EXTRAS:
 	3. Object.inherit(Child, Parent)
 	4. Array.prototype.unique()
 	5. String.random(length)
+ - Extra polyfills
+	1. 'reversed' for <ol> with DOM API
+	2. HTML*Element.labels
+	3. HTMLLabelElement.control
+
+## DEBUG
+
  - Fix console From https://github.com/theshock/console-cap/blob/master/console.js
  
 ## Same-domain limitation

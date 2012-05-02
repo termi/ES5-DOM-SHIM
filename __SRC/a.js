@@ -6,7 +6,6 @@
 // @check_types
 // ==/ClosureCompiler==
 /**
- * module
  * @version 6
  * TODO:: eng comments
  *        dateTime prop for IE < 8
@@ -17,8 +16,6 @@
 var IS_DEBUG = true;
 /** @define {boolean} */
 var INCLUDE_EXTRAS = true;
-/** @define {boolean} */
-var INCLUDE_EXTEND_POLYFILLS = true;
 //GCC DEFINES END
 
 /*
@@ -45,10 +42,7 @@ Extending objects
  3. Object.inherit(Child, Parent)
  4. Array.prototype.unique()
  5. String.random(length)
-*/
-
-/*
-INCLUDE_EXTEND_POLYFILLS:
+Extra polyfills
  1. 'reversed' for <ol> with DOM API
  2. HTML*Element.labels
  3. HTMLLabelElement.control
@@ -72,124 +66,83 @@ if(_ && _["ielt9shims"]) {
 	_ = _["ielt9shims"];
 }
 
-var /** @const */funcType = "function";
 
 
-/** @type {Object}
- * @const */
-var browser = {
-/** @type {string}
- * @const */
-	agent : navigator.userAgent.toLowerCase()
-};
 
-if(INCLUDE_EXTRAS) {
-	global["browser"] = browser;//Export
+
+var _browser_msie
+
+	/** @const */
+  , _Function_apply = Function.prototype.apply
+
+	//Take Element.prototype or silently take a fake object
+	// IE < 8 support in a.ielt8.js and a.ielt8.htc
+  , _Element_prototype = global["Element"] && global["Element"].prototype || {}
+
+	/** @const */
+  , S_ELEMENT_CACHED_CLASSLIST_NAME = "_ccl_"
+
+  , _append
 	
-	//Browser sniffing :)
-	/** @type {Array}
-	 * @const */
-	browser.names = browser.agent.match(/(mozilla|compatible|chrome|webkit|safari|opera|msie|iphone|ipod|ipad)/gi);
+	/** @const */
+  , _Array_slice = Array.prototype.slice
+
+	/** @const */
+  , _String_split = String.prototype.split
+
+  , _Array_map
+
+  , _Array_from
+
+	/** @const */
+  , _Array_splice = Array.prototype.splice
+
+	/** @type {boolean} */
+  , boolean_tmp
+
+	/** @type {string} */
+  , string_tmp
+
 	/** @type {number} */
-	var len = browser.names && browser.names.length || 0;
-	while(len-- > 0)browser[browser.names[len]] = true;
-	//Alians'es
-	/** @type {boolean}
-	 * @const */
-	browser.webkit = browser["webkit"];
-	/** @type {boolean}
-	 * @const */
-	browser.mozilla = browser["mozilla"] = browser["mozilla"] && !browser["compatible"] && !browser.webkit;
-	/** @type {boolean}
-	 * @const */
-	browser.chrome = browser["chrome"];
-	/** @type {boolean}
-	 * @const */
-	browser.safari = browser["safari"] = browser["safari"] && !browser.chrome;
-	/* * @ type {boolean}
-	 * @ const */
-	//browser.opera = browser["opera"];//No need in this version of GCC
-	/** @type {boolean}
-	 * @const */
-	browser.msie = browser["msie"] = browser["msie"] && !browser.opera;
-	/** @type {boolean}
-	 * @const */
-	browser.iphone = browser["iphone"];
-	/** @type {boolean}
-	 * @const */
-	browser.ipod = browser["ipod"];
-	/** @type {boolean}
-	 * @const */
-	browser.ipad = browser["ipad"];
+  , number_tmp
 
-	/* @ type {string}
-	 * @ const 
-	browser["cssPrefix"] =
-		browser.mozilla ? "Moz" :
-		browser.webkit || browser.safari ? "Webkit" ://and iPad, iPhone, iPod
-		browser.opera ? "O" :
-		browser.msie ? "ms" :
-		"";*/
-}
-else {
-	browser.names = browser.agent.match(/(msie)/gi);
-	if(browser.names && browser.names.length)browser[browser.names[0]] = true;
-
-	browser.msie = browser["msie"];
-
-}//if(INCLUDE_EXTRAS)
-
-//ieVersion = /MSIE (\d+)/.exec(navigator.userAgent)[1];
-
-if(browser.msie)for(var i = 6 ; i < 11 ; i++)//IE from 6 to 10
-	if(new RegExp('msie ' + i).test(browser.agent)) {
-		browser.msie = browser["msie"] = i;
-
-		break;
-	}
-browser["msie"] = browser.msie;
-
-
-
-
-
-
-
-var
-    _arraySlice = Array.prototype.slice
-
-  , _applyFunction = Function.prototype.apply
+	/** @const */
+  , nodeList_methods_fromArray = ["every", "filter", "forEach", "indexOf", "join", "lastIndexOf", "map", "reduce", "reduceRight", "reverse", "slice", "some", "toString"]
   
 	/** Unsafe bind for service and performance needs
+	 * @const
 	 * @param {Function} __method
 	 * @param {Object} object
 	 * @param {...} var_args
 	 * @return {Function} */
   , _unSafeBind = function(__method, object, var_args) {
-		var args = _arraySlice.call(arguments, 2);
+		var args = _Array_slice.call(arguments, 2);
 		return function () {
-			return _applyFunction.call(__method, object, args.concat(_arraySlice.call(arguments)));
+			return _Function_apply.call(__method, object, args.concat(_Array_slice.call(arguments)));
 		}
 	}
 
+	/** @const */
   , _hasOwnProperty = _unSafeBind(Function.prototype.call, Object.prototype.hasOwnProperty)
 
-  , /**
+    /**
 	 * Call _function
+	 * @const
 	 * @param {Function} _function function to call
 	 * @param {*} context
 	 * @param {...} var_args
 	 * @return {*} mixed
 	 * @version 2
 	 */
-	_call = function(_function, context, var_args) {
+  , _call = function(_function, context, var_args) {
 		// If no callback function or if callback is not a callable function
 		// it will throw TypeError
-        return _applyFunction.call(_function, context, _arraySlice.call(arguments, 2))
+        return _Function_apply.call(_function, context, _Array_slice.call(arguments, 2))
 	}
 
 	//Fixed `toObject` to work for strings in IE8 and Rhino. Added test spec for `forEach`.
 	//https://github.com/kriskowal/es5-shim/pull/94
+	/** @const */
   , need_prepareString = (function(strObj) {
 		// Check failure of by-index access of string characters (IE < 9)
 		// and failure of `0 in strObj` (Rhino)
@@ -197,6 +150,7 @@ var
 	})(Object("a"))
 
 	/**
+	 * @const
 	 * @param {Object} obj
 	 * @param {boolean=} _allowNull
 	 */
@@ -211,21 +165,28 @@ var
 
 		return Object(obj);
 	}
+
+	/** @const */
   , _toString = Object.prototype.toString
 
+	/** @const */
   , _throwDOMException = function(errStr) {
 		var ex = Object.create(DOMException.prototype);
 		ex.code = DOMException[errStr];
 		ex.message = errStr +': DOM Exception ' + ex.code;
 		throw ex;
 	}
-	//Take Element.prototype or silently take a fake object
-	// IE < 8 support in a.ielt8.js and a.ielt8.htc
-  , elementProto = global["Element"] && global["Element"].prototype || {}
 
+	/** @const */
   , functionReturnFalse = function() { return false }
+
+	/** @const */
   , functionReturnFirstParam = function(param) { return param }
+
+	/** @const */
   , prototypeOfObject = Object.prototype
+
+	/** @const */
   , _recursivelyWalk = function (nodes, cb) {
 		for (var i = 0, len = nodes.length; i < len; i++) {
 			var node = nodes[i],
@@ -241,18 +202,38 @@ var
 			}
 		}
 	}
-  , objectAppend
+
+    /**
+	 * @const
+	 * @param {boolean=} overwrite
+	 * @return {function(this:Object, Object, ...[*]): Object}
+	 */
+  , createExtendFunction = function (overwrite) {
+		/**
+		 * @param {Object} obj
+		 * @param {...} ravArgs
+		 */
+		return function(obj, ravArgs) {
+			for(var i = 1; i < arguments.length; i++) {
+				var extension = arguments[i];
+				for(var key in extension)
+					if(_hasOwnProperty(extension, key) &&
+					   (overwrite || !_hasOwnProperty(obj, key))
+					  )obj[key] = extension[key];
+			}
+
+			return obj;
+		}
+	}
+
+	/** @const */
   , document_createElement = _unSafeBind(document["__orig__createElement__"] || document.createElement, document)
 
-  , /** @type {Element|*}
+    /** @type {Node}
 	 * @const */
-	_testElement = document_createElement('p')
+  , _testElement = document_createElement('p')
 
-  , _String_split = String.prototype.split
-
-  , _String_trim = String.prototype.trim
-
-
+  , _window_getComputedStyle
 	/** @type {RegExp} @const */
   , RE__matchSelector__easySelector1 = /^\ ?[\w#\.][\w-]*$/
 	/** @type {RegExp} @const */
@@ -261,10 +242,117 @@ var
   , RE_DOMSettableTokenList_lastSpaces = /\\s+$/g
 	/** @type {RegExp} @const */
   , RE_DOMSettableTokenList_spaces = /\\s+/g
-	/** @type {RegExpt} @const */
-  , RE__matchSelector__doubleSpaces = /\s*([,>+~ ])\s*/g//Note: Use with "$1";
+	/** @type {RegExp} @const */
+  , RE__matchSelector__doubleSpaces = /\s*([,>+~ ])\s*/g//Note: Use with "$1"
 
+  // ------------------------------ ==================  Events  ================== ------------------------------
+  , _Event
+
+  , _CustomEvent
+
+  , _Event_prototype
+
+  , _Custom_Event_prototype
+
+	// ------------------------------ ==================  Utils.Dom  ================== ------------------------------
+  , DOMStringCollection
+
+  , DOMStringCollection_checkToken
+
+  , DOMStringCollection_init
+
+  , DOMStringCollection_init_add
+
+  , DOMStringCollection_methods
+
+  , DOMStringCollection_setNodeClassName
+
+	// ------------------------------ ==================  es5-shim  ================== ------------------------------
+  , _shimed_Array_every
+
+  , _String_trim
+
+  , _String_trim_whitespace = "\x09\x0A\x0B\x0C\x0D\x20\xA0\u1680\u180E\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u202F\u205F\u3000\u2028\u2029\uFEFF"
+
+  , _String_trim_beginRegexp
+
+  , _String_trim_endRegexp
+
+  , definePropertyWorksOnObject
+
+  , definePropertyWorksOnDom
+
+  , definePropertyFallback
+
+  , definePropertiesFallback
+  
+  , ERR_NON_OBJECT_DESCRIPTOR
+  
+  , ERR_NON_OBJECT_TARGET
+  
+  , ERR_ACCESSORS_NOT_SUPPORTED
+  
+  , getOwnPropertyDescriptorWorksOnObject
+  
+  , getOwnPropertyDescriptorWorksOnDom
+  
+  , getOwnPropertyDescriptorFallback
+
+	// ------------------------------ ==================  Date  ================== ------------------------------
+	/** @const */
+  , _Native_Date = global["Date"]
+
+  , _Shimed_Date
+
+  , _Shimed_Date_isoDateExpression
+
+  , _Shimed_Date_monthes
+
+  , _Shimed_Date_leapYears
+
+	// ------------------------------ ==================  INCLUDE_EXTRAS  ================== ------------------------------
+  , browser
+
+  , $
+
+  , $$
+
+  	/** @type {Array} List of labelable element names */
+  , _labelable_elements
+
+  , OL_reversed_removeAttributeChildValue
+
+  , OL_reversed_Shim
+
+  , OL_reversed_autoInitFunction
+
+  , XHR
 ;
+
+
+//Browser sniffing :) START
+if(INCLUDE_EXTRAS) {
+	browser = {};
+	/** @type {Array}
+	 * @const */
+	browser["names"] = (browser["agent"] = navigator.userAgent.toLowerCase()).match(/(mozilla|compatible|chrome|webkit|safari|opera|msie|iphone|ipod|ipad)/gi);
+	
+	number_tmp = browser.names && browser.names.length || 0;
+	while(number_tmp-- > 0)browser[browser.names[number_tmp]] = true;
+
+	browser["mozilla"] = browser["mozilla"] && !browser["compatible"] && !browser["webkit"];
+	browser["safari"] = browser["safari"] && !browser["chrome"];
+	browser["msie"] = browser["msie"] && !browser["opera"];
+
+	_browser_msie = browser["msie"] || void 0;
+	
+	global["browser"] = browser;//Export
+}//if(INCLUDE_EXTRAS)
+else {
+	_browser_msie = (_browser_msie = /msie (\d+)/i.exec(navigator.userAgent)) && +_browser_msie[1] || void 0;
+}
+//Browser sniffing :) END
+
 
 
 
@@ -288,17 +376,21 @@ if(!global["Document"])global["Document"] = global["HTMLDocument"];//For IE8
  */
 if(!Function.prototype.bind)Function.prototype.bind = function (object, var_args) {
 	//If IsCallable(Target) is false, throw a TypeError exception.
-	if (typeof this != "function" || !(browser.msie && _String_trim.call(this + "").indexOf("function") === 0)) {
-		throw new TypeError("Function.prototype.bind called on incompatible " + this);
+	if (typeof this != "function") {
+		if(!_browser_msie || _String_trim.call(this + "").indexOf("function") !== 0) {
+			throw new TypeError("Function.prototype.bind called on incompatible " + this);
+		}
 	}
-	var __method = this, args = _arraySlice.call(arguments, 1),
+	var __method = this, args = _Array_slice.call(arguments, 1),
 		_result = function () {
-			return __method.apply(
+			return _Function_apply.call(
+				__method,
 				this instanceof _result ?
 					this ://The `object` value is ignored if the bound function is constructed using the new operator.
 					object,
-				args.concat(_arraySlice.call(arguments)));
-	};
+				args.concat(_Array_slice.call(arguments))
+			);
+		};
 	if(__method.prototype) {
 		_result.prototype = Object.create(__method.prototype);
 		//_result.constructor = __method;
@@ -311,27 +403,7 @@ if(!Function.prototype.bind)Function.prototype.bind = function (object, var_args
 
 
 
-/**
- * @param {boolean=} overwrite
- * @return {function(this:Object, Object, ...[*]): Object}
- */
-function createExtendFunction(overwrite) {
-	/**
-	 * @param {Object} obj
-	 * @param {...} ravArgs
-	 */
-	return function(obj, ravArgs) {
-		for(var i = 1; i < arguments.length; i++) {
-			var extension = arguments[i];
-			for(var key in extension)
-				if(_hasOwnProperty(extension, key) &&
-				   (overwrite || !_hasOwnProperty(obj, key))
-				  )obj[key] = extension[key];
-		}
 
-		return obj;
-	}
-}
 /**
  * Merge the contents of two or more objects together into the first object.
  * This function does not overwrite existing properties
@@ -339,7 +411,7 @@ function createExtendFunction(overwrite) {
  * @param {...} ravArgs extentions
  * @return {Object} the same object as `obj`
  */
-objectAppend = createExtendFunction();
+_append = createExtendFunction();
 if(INCLUDE_EXTRAS) {
 /*  =======================================================================================  */
 /*  ======================================  Classes  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
@@ -352,7 +424,7 @@ if(INCLUDE_EXTRAS) {
  * @param {...} ravArgs extentions
  * @return {Object} the same object as `obj`
  */
-Object["append"] = objectAppend;
+Object["append"] = _append;
 
 /**
  * Merge the contents of two or more objects together into the first object.
@@ -533,26 +605,26 @@ if(!Object.getPrototypeOf)Object.getPrototypeOf = function getPrototypeOf(object
  * ES5 15.2.3.5
  * http://es5.github.com/#x15.2.3.5
  * Creates a new object with the specified prototype object and properties.
- * @param {Object} prototype The object which should be the prototype of the newly-created object.
+ * @param {Object} _prototype The object which should be the prototype of the newly-created object.
  * @param {Object=} properties If specified and not undefined, an object whose enumerable own properties (that is, those properties defined upon itself and not enumerable properties along its prototype chain) specify property descriptors to be added to the newly-created object, with the corresponding property names.
  * @return {!Object}
  */
-if(!Object.create)Object.create = function create(prototype, properties) {
+if(!Object.create)Object.create = function create(_prototype, properties) {
 	var _object;
-	if (prototype === null) {
+	if (_prototype === null) {
 		_object = { "__proto__": null };
 	} else {
-		if (typeof prototype != "object")
-			throw new TypeError("typeof prototype["+(typeof prototype)+"] != 'object'");
+		if (typeof _prototype != "object")
+			throw new TypeError("typeof prototype["+(typeof _prototype)+"] != 'object'");
 
 		var /** @constructor */Type = function () {};
-		Type.prototype = prototype;
+		Type.prototype = _prototype;
 		_object = new Type();
 		// IE has no built-in implementation of `Object.getPrototypeOf`
 		// neither `__proto__`, but this manually setting `__proto__` will
 		// guarantee that `Object.getPrototypeOf` will work as expected with
 		// objects created using `Object.create`
-		_object.__proto__ = prototype;
+		_object.__proto__ = _prototype;
 	}
 	if(properties)
 		Object.defineProperties(_object, properties);
@@ -582,19 +654,19 @@ function doesDefinePropertyWork(object) {
 // check whether defineProperty works if it's given. Otherwise,
 // shim partially.
 if (Object.defineProperty) {
-    var definePropertyWorksOnObject = doesDefinePropertyWork({}),
-		definePropertyWorksOnDom = doesDefinePropertyWork(_testElement);
+    definePropertyWorksOnObject = doesDefinePropertyWork({});
+	definePropertyWorksOnDom = doesDefinePropertyWork(_testElement);
 
     if (!definePropertyWorksOnObject || !definePropertyWorksOnDom) {
-        var definePropertyFallback = Object.defineProperty,
-			definePropertiesFallback = Object.defineProperties;
+        definePropertyFallback = Object.defineProperty;
+		definePropertiesFallback = Object.defineProperties;
     }
 }
 
 if (!Object.defineProperty || definePropertyFallback) {
-    var ERR_NON_OBJECT_DESCRIPTOR = "Property description must be an object: ";
-    var ERR_NON_OBJECT_TARGET = "Object.defineProperty called on non-object: ";
-    var ERR_ACCESSORS_NOT_SUPPORTED = "getters & setters not supported";
+	ERR_NON_OBJECT_DESCRIPTOR = "Property description must be an object: ";
+    ERR_NON_OBJECT_TARGET = "Object.defineProperty called on non-object: ";
+    ERR_ACCESSORS_NOT_SUPPORTED = "getters & setters not supported";
 
 	/**
 	 * Defines a new property directly on an object, or modifies an existing property on an object, and returns the object.
@@ -649,14 +721,14 @@ if (!Object.defineProperty || definePropertyFallback) {
                 // `__proto__` we can safely override `__proto__` while defining
                 // a property to make sure that we don't hit an inherited
                 // accessor.
-                var prototype = object.__proto__;
+                var _prototype = object.__proto__;
                 object.__proto__ = prototypeOfObject;
                 // Deleting a property anyway since getter / setter may be
                 // defined on object itself.
                 delete object[property];
                 object[property] = descriptor["value"];
                 // Setting original `__proto__` back now.
-                object.__proto__ = prototype;
+                object.__proto__ = _prototype;
             } else {
                 object[property] = descriptor["value"];
             }
@@ -684,7 +756,7 @@ if (!Object.defineProperty || definePropertyFallback) {
 }
 
 //[ielt8] Set `Object.defineProperty["ielt8"] = true` for IE < 8
-if(elementProto["ie"] && browser.msie < 8)elementProto["ielt8"] = Object.defineProperty["ielt8"] = true;
+if(_Element_prototype["ie"] && _browser_msie < 8)_Element_prototype["ielt8"] = Object.defineProperty["ielt8"] = true;
 
 // ES5 15.2.3.7
 // http://es5.github.com/#x15.2.3.7
@@ -730,18 +802,16 @@ function doesGetOwnPropertyDescriptorWork(object) {
 // check whether getOwnPropertyDescriptor works if it's given. Otherwise,
 // shim partially.
 if (Object.getOwnPropertyDescriptor) {
-    var getOwnPropertyDescriptorWorksOnObject =
-        doesGetOwnPropertyDescriptorWork({});
-    var getOwnPropertyDescriptorWorksOnDom =
-        doesGetOwnPropertyDescriptorWork(_testElement);
+    getOwnPropertyDescriptorWorksOnObject = doesGetOwnPropertyDescriptorWork({});
+    getOwnPropertyDescriptorWorksOnDom = doesGetOwnPropertyDescriptorWork(_testElement);
     if (!getOwnPropertyDescriptorWorksOnDom ||
         !getOwnPropertyDescriptorWorksOnObject
     ) {
-        var _getOwnPropertyDescriptorFallback = Object.getOwnPropertyDescriptor;
+        getOwnPropertyDescriptorFallback = Object.getOwnPropertyDescriptor;
     }
 }
 
-if (!Object.getOwnPropertyDescriptor || _getOwnPropertyDescriptorFallback) {
+if (!Object.getOwnPropertyDescriptor || getOwnPropertyDescriptorFallback) {
     var ERR_NON_OBJECT = "Object.getOwnPropertyDescriptor called on a non-object: ";
 
 	/**
@@ -757,9 +827,9 @@ if (!Object.getOwnPropertyDescriptor || _getOwnPropertyDescriptorFallback) {
 
         // make a valiant attempt to use the real _getOwnPropertyDescriptor
         // for I8's DOM elements.
-        if (_getOwnPropertyDescriptorFallback) {
+        if (getOwnPropertyDescriptorFallback) {
             try {
-                return _getOwnPropertyDescriptorFallback.call(Object, object, property);
+                return getOwnPropertyDescriptorFallback.call(Object, object, property);
             } catch (exception) {
                 // try the shim if the real one doesn't work
             }
@@ -857,15 +927,13 @@ if(!Object["isnt"])Object["isnt"] = function(x, y) {
 // [bugfix, ielt9, old browsers] 
 // IE < 9 bug: [1,2].splice(0).join("") == "" but should be "12"
 if([1,2].splice(0).length != 2) {
-	var _origArraySplice = Array.prototype.splice;
-
 	Array.prototype.splice = function(start, deleteCount) {
         if(start === void 0 && deleteCount === void 0)return [];
 
-		return _origArraySplice.apply(this,	[
+		return _Array_splice.apply(this,	[
 					start === void 0 ? 0 : start,
 					deleteCount === void 0 ? (this.length - start) : deleteCount
-				].concat(_arraySlice.call(arguments, 2))
+				].concat(_Array_slice.call(arguments, 2))
 			);
 	};
 }
@@ -875,7 +943,7 @@ if([1,2].splice(0).length != 2) {
 /*  ================================ ES6 ==================================  */
 // Based on https://github.com/paulmillr/es6-shim/
 
-var _arrayFrom =
+_Array_from =
 /** toArray function
  * @param {Object|Array} iterable object
  * @return {Array}
@@ -889,7 +957,7 @@ Array["from"] || (Array["from"] = function(iterable) {
 		result;
 
 	try {
-		result = _arraySlice.call(object);
+		result = _Array_slice.call(object);
 	}
 	catch(e) { }
 
@@ -910,7 +978,7 @@ Array["from"] || (Array["from"] = function(iterable) {
  * @return {Array}
  */
 Array["of"] = Array["of"] || function(args) {
-	return _arraySlice.call(arguments);
+	return _Array_slice.call(arguments);
 };
 
 if(INCLUDE_EXTRAS) {
@@ -935,7 +1003,7 @@ if(INCLUDE_EXTRAS) {
 }//if(INCLUDE_EXTRAS)
 
 /*  ================================ ES5 ==================================  */
-// Based on https://github.com/kriskowal/es5-shim/blob/master/es5-shim.js
+// Based on https://github.com/kriskowal/es5-shim
 
 
 /**
@@ -1030,12 +1098,33 @@ var _forEach = _unSafeBind(Function.prototype.call, Array.prototype.forEach);
 /** ES5 15.4.4.14
  * http://es5.github.com/#x15.4.4.14
  * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/indexOf
+ * 
+ * https://gist.github.com/1034425
+ * 
  * Returns the first index at which a given element can be found in the array, or -1 if it is not present.
  * @param {*} searchElement Element to locate in the array.
  * @param {number} fromIndex The index at which to begin the search. Defaults to 0, i.e. the whole array will be searched. If the index is greater than or equal to the length of the array, -1 is returned, i.e. the array will not be searched. If negative, it is taken as the offset from the end of the array. Note that even when the index is negative, the array is still searched from front to back. If the calculated index is less than 0, the whole array will be searched.
  * @return {number}
  */
 if(!Array.prototype.indexOf)Array.prototype.indexOf = function(searchElement, fromIndex) {
+	var thisArray = _toObject(this),
+		length = thisArray.length >>> 0;
+
+	for (
+	  // initialize counter (allow for negative startIndex)
+	  fromIndex = (length + ~~fromIndex) % length ;
+	  // loop if index is smaller than length,
+	  // index is set in (possibly sparse) array
+	  // and item at index is not identical to the searched one
+	  fromIndex < length && (!(fromIndex in thisArray || thisArray[fromIndex] !== searchElement)) ;
+	  // increment counter
+	  fromIndex++
+	){};
+	// if counter equals length (not found), return -1, otherwise counter
+	return fromIndex ^ length ? fromIndex : -1;
+};
+//From https://github.com/kriskowal/es5-shim
+/*if(!Array.prototype.indexOf)Array.prototype.indexOf = function(searchElement, fromIndex) {
 	var thisArray = _toObject(this),
 		length = thisArray.length >>> 0,
 		i;
@@ -1047,6 +1136,8 @@ if(!Array.prototype.indexOf)Array.prototype.indexOf = function(searchElement, fr
 	// handle negative indices
     i = i >= 0 ? i : Math.max(0, length + i);
 	
+    //https://gist.github.com/1034425
+
 	for( ; i < length ; i++) {
 		if(i in thisArray && thisArray[i] === searchElement) {
 			return i;
@@ -1054,7 +1145,8 @@ if(!Array.prototype.indexOf)Array.prototype.indexOf = function(searchElement, fr
 	}
 	
 	return -1;
-};
+};*/
+
 /** ES5 15.4.4.15
  * http://es5.github.com/#x15.4.4.15
  * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/lastIndexOf
@@ -1076,12 +1168,23 @@ if(!Array.prototype.lastIndexOf)Array.prototype.lastIndexOf = function(searchEle
 	// handle negative indices
 	i = i >= 0 ? i : length - Math.abs(i);
 	
-	for (; i >= 0; i--) {
+	//https://gist.github.com/1034458
+    for ( ;
+     // if the index decreased by one is not already -1
+     // index is not set (sparse array)
+     // and the item at index is not identical to the searched one
+     ~--i && (!(i in thisArray) || thisArray[i] !== searchElement) 
+         ; ){};
+
+	// return index of last found item or -1
+	return i;
+
+   /*for (; i >= 0; i--) {
 		if (i in thisArray && thisArray[i] === searchElement) {
 			return i;
 		}
 	}
-	return -1;
+	return -1;*/
 };
 
 /**
@@ -1094,7 +1197,7 @@ if(!Array.prototype.lastIndexOf)Array.prototype.lastIndexOf = function(searchEle
  * @param {boolean=} _option_isAll [DO NOT USE IT] system param
  * @return {boolean}
  */
-if(!Array.prototype.every)Array.prototype.every = function(callback, thisObject, _option_isAll) {
+if(!Array.prototype.every)Array.prototype.every = _shimed_Array_every = function(callback, thisObject, _option_isAll) {
 	if(_option_isAll === void 0)_option_isAll = true;//Default value = true
 	var result = _option_isAll;
 	_forEach(this, function(value, index) {
@@ -1113,7 +1216,7 @@ if(!Array.prototype.every)Array.prototype.every = function(callback, thisObject,
  * @return {boolean}
  */
 if(!Array.prototype.some)Array.prototype.some = function(callback, thisObject) {
-	return Array.prototype.every.call(this, callback, thisObject, false);
+	return _shimed_Array_every.call(this, callback, thisObject, false);
 };
 
 /**
@@ -1141,6 +1244,7 @@ if(!Array.prototype.filter)Array.prototype.filter = function(callback, thisObjec
 	return result;
 };
 
+_Array_map =
 /**
  * http://es5.github.com/#x15.4.4.19
  * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/map
@@ -1149,7 +1253,7 @@ if(!Array.prototype.filter)Array.prototype.filter = function(callback, thisObjec
  * @param {Object?} thisArg Object to use as this when executing callback.
  * @return {Array}
  */
-if (!Array.prototype.map)Array.prototype.map = function(callback, thisArg) {
+Array.prototype.map || (Array.prototype.map = function(callback, thisArg) {
 	var thisArray = _toObject(this),
 		len = this.length >>> 0,
 		result = [];
@@ -1160,7 +1264,7 @@ if (!Array.prototype.map)Array.prototype.map = function(callback, thisArg) {
 		}
 
     return result;
-};
+});
 
 /**
  * http://es5.github.com/#x15.4.3.2
@@ -1194,7 +1298,7 @@ if(!String["random"])String["random"] = function String_random(length) {
 		str = "";
 		
 	while(count1 > 0)count1--, str += (String_random(5) + String_random(5));
-	if(count2)str += (Math.round(Math.random() * parseInt("z".repeat(count2), 36))).toString(36);//36 - 0-9a-z
+	if(count2)str += _toString.call(Math.round(Math.random() * parseInt("z".repeat(count2), 36)), 36);//36 - 0-9a-z
 		
     return str + String_random(length - str.length);
 };
@@ -1215,22 +1319,18 @@ if(!String["random"])String["random"] = function String_random(length) {
  * The trim method returns the string stripped of whitespace from both ends. trim does not affect the value of the string itself.
  * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/String/Trim
  */
-var whitespace = "\x09\x0A\x0B\x0C\x0D\x20\xA0\u1680\u180E\u2000\u2001\u2002\u2003" +
-    "\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u202F\u205F\u3000\u2028" +
-    "\u2029\uFEFF",
-	trimBeginRegexp,
-	trimEndRegexp;
-if (!String.prototype.trim || whitespace.trim()) {
+if (!String.prototype.trim || _String_trim_whitespace.trim()) {
     // http://blog.stevenlevithan.com/archives/faster-trim-javascript
     // http://perfectionkills.com/whitespace-deviations/
-    whitespace = "[" + whitespace + "]";
-    trimBeginRegexp = new RegExp("^" + whitespace + whitespace + "*");
-    trimEndRegexp = new RegExp(whitespace + whitespace + "*$");
+    _String_trim_whitespace = "[" + _String_trim_whitespace + "]";
+    _String_trim_beginRegexp = new RegExp("^" + _String_trim_whitespace + _String_trim_whitespace + "*");
+    _String_trim_endRegexp = new RegExp(_String_trim_whitespace + _String_trim_whitespace + "*$");
 	
     String.prototype.trim = function trim() {
-        return String(this).replace(trimBeginRegexp, "").replace(trimEndRegexp, "");
+        return String(this).replace(_String_trim_beginRegexp, "").replace(_String_trim_endRegexp, "");
     };
 }
+_String_trim = String.prototype.trim;
 
 // ES5 15.5.4.14
 // http://es5.github.com/#x15.5.4.14
@@ -1270,9 +1370,9 @@ if(!String.prototype["startsWith"])String.prototype["startsWith"] = function(sub
  * @return {boolean}
  */
 if(!String.prototype["endsWith"])String.prototype["endsWith"] = function(substring) {
-	var substr = String(substring),
-		index = this.lastIndexOf(substr);
-	return index >= 0 && index === this.length - substr.length;
+	substring = substring + "";
+	var index = this.lastIndexOf(substring);
+	return index >= 0 && index === this.length - substring.length;
 };
 
 /**
@@ -1311,7 +1411,7 @@ if(!Number["isFinite"])Number["isFinite"] = function(value) {
 if(!Number["isInteger"])Number["isInteger"] = function(value) {
 	return Number["isFinite"](value) &&
 		value >= -9007199254740992 && value <= 9007199254740992 &&
-		Math.floor(value) === value;
+		~~value/*Fast Math.floor*/ === value;
 };
 
 if(!Number["isNaN"])Number["isNaN"] = function(value) {
@@ -1321,7 +1421,7 @@ if(!Number["toInteger"])Number["toInteger"] = function(value) {
 	var number = +value;
 	if (Number["isNaN"](number)) return +0;
 	if (number === 0 || !Number["isFinite"](number)) return number;
-	return ((number < 0) ? -1 : 1) * Math.floor(Math.abs(number));
+	return ((number < 0) ? -1 : 1) * ~~(Math.abs(number));
 }
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Number  ==================================  */
 /*  ======================================================================================  */
@@ -1342,7 +1442,7 @@ if(!Number["toInteger"])Number["toInteger"] = function(value) {
  * @param {string} type
  * @param {Object=} dict
  */
-var _Event = function (type, dict) {// Event constructor
+_Event = function (type, dict) {// Event constructor
 	var e = document.createEvent("Events");
 
 	dict = dict || {};
@@ -1352,14 +1452,13 @@ var _Event = function (type, dict) {// Event constructor
 	return e;
 };
 
-var eventProto;
 try {
-	eventProto = Event.prototype;
+	_Event_prototype = Event.prototype;
 	new Event("click");
 } catch (e) {
 	global["Event"] = _Event;
 
-	if(eventProto)_Event.prototype = eventProto;//В IE < 8 не удастся получить Event.prototype
+	if(_Event_prototype)_Event.prototype = _Event_prototype;//В IE < 8 не удастся получить Event.prototype
 }
 
 // Chrome calling .initEvent on a CustomEvent object is a no-no
@@ -1373,7 +1472,7 @@ try {
  * @param {string} type
  * @param {Object=} dict
  */
-var _CustomEvent = function (type, dict) {// CustomEvent constructor
+_CustomEvent = function (type, dict) {// CustomEvent constructor
 	var e;
 	try {
 		e = document.createEvent("CustomEvent");
@@ -1391,14 +1490,13 @@ var _CustomEvent = function (type, dict) {// CustomEvent constructor
 	return e;
 };
 
-var customEventProto;
 try {
-	customEventProto = (global["CustomEvent"] || Event).prototype;//use global to prevent Exception if the is not CustomEvent || CustomEvent.prototype
+	_Custom_Event_prototype = (global["CustomEvent"] || Event).prototype;//use global to prevent Exception if the is not CustomEvent || CustomEvent.prototype
 	var c = new CustomEvent("magic");
 } catch (e) {
 	global["CustomEvent"] = _CustomEvent;
 
-	if(customEventProto)_CustomEvent.prototype = customEventProto;//The is no CustomEvent.prototype in IE < 8
+	if(_Custom_Event_prototype || _Event_prototype)_CustomEvent.prototype = _Custom_Event_prototype || _Event_prototype;//The is no CustomEvent.prototype in IE < 8
 }
 
 
@@ -1409,13 +1507,12 @@ if(document.addEventListener &&
 	// FF fails when you "forgot" the optional parameter for addEventListener and removeEventListener
 	// Agr!!! FF 3.6 Unable to override addEventListener https://bugzilla.mozilla.org/show_bug.cgi?id=428229
 	// Opera didn't do anything without optional parameter
-	var _rightBehavior = false,
-		dummy = function () {
-			_rightBehavior = true
-		};
+	boolean_tmp = false;
 
 	try {
-		_testElement.addEventListener("click", dummy);
+		_testElement.addEventListener("click", function () {
+			boolean_tmp = true
+		});
 		if(_testElement.click)// NO: Opera 10.10
 			_testElement.click();//testing
 		else
@@ -1423,11 +1520,11 @@ if(document.addEventListener &&
 	} catch (e) {
 
 	} finally {
-		if(!_rightBehavior) {//fixEventListenerAll
+		if(!boolean_tmp) {//fixEventListenerAll
 			_forEach(
 				[global["HTMLDocument"] && global["HTMLDocument"].prototype || global["document"],
 				 global["Window"] && global["Window"].prototype || global,
-				 elementProto],
+				 _Element_prototype],
 				function (elementToFix) {
 					if(elementToFix) {
 						var old_addEventListener = elementToFix.addEventListener,
@@ -1468,70 +1565,72 @@ else if(DEBUG && !document.addEventListener) {
  * http://www.w3.org/TR/html5/common-dom-interfaces.html#domsettabletokenlist-0
  * @param {string} string initial string
  * @param {Function} onchange callback for onchange event
+ * @param {Object} onchange_this context of onchange function
  * @constructor
  */
-var DOMStringCollection = function(string, onchange) {
-		/**
-		 * Event fired when any change apply to the object
-		 */
-		this._onchange = onchange;
-		this.length = 0;
-		this.value = "";
-
-		DOMStringCollection_init(this, string);
-	},
-	checkToken = function(token) {
-		if(token === "")_throwDOMException("SYNTAX_ERR");
-		if((token + "").indexOf(" ") > -1)_throwDOMException("INVALID_CHARACTER_ERR");
-	},
+DOMStringCollection = function(string, onchange, onchange_this) {
 	/**
-	 * @param {DOMStringCollection} _DOMStringCollection
-	 * @param {string} _string
+	 * Event fired when any change apply to the object
 	 */
-	DOMStringCollection_init = function(_DOMStringCollection, _string) {
-		var thisObj = _DOMStringCollection,
-			string = _string || "",//default value
-			isChange = !!thisObj.length;
+	this._onchange = onchange;
+	this._onchange_this = onchange_this;
+	this.length = 0;
+	this.value = "";
 
-		if(isChange) {
-			while(thisObj.length > 0)
-				delete thisObj[--thisObj.length];
+	DOMStringCollection_init(this, string);
+};
+DOMStringCollection_checkToken = function(token) {
+	if(token === "")_throwDOMException("SYNTAX_ERR");
+	if((token + "").indexOf(" ") > -1)_throwDOMException("INVALID_CHARACTER_ERR");
+};
+/**
+ * @param {DOMStringCollection} _DOMStringCollection
+ * @param {string} _string
+ */
+DOMStringCollection_init = function(_DOMStringCollection, _string) {
+	var thisObj = _DOMStringCollection,
+		string = _string || "",//default value
+		isChange = !!thisObj.length;
 
-			thisObj.value = "";
+	if(isChange) {
+		while(thisObj.length > 0)
+			delete thisObj[--thisObj.length];
+
+		thisObj.value = "";
+	}
+
+	if(string) {
+		if(string = _String_trim.call(string)) {
+			_String_split.call(string, RE_DOMSettableTokenList_spaces).forEach(DOMStringCollection_init_add, thisObj);
 		}
+		thisObj.value = _string;//empty value should stringify to contain the attribute's whitespace
+	}			
 
-		if(string) {
-			if(string = _String_trim.call(string)) {
-				_String_split.call(string, RE_DOMSettableTokenList_spaces).forEach(DOMStringCollection_init_add, thisObj);
-			}
-			thisObj.value = _string;//empty value should stringify to contain the attribute's whitespace
-		}			
+	if(isChange && thisObj._onchange)thisObj._onchange.call(thisObj._onchange_this, thisObj.value);
+};
+/**
+ * @param {string} token
+ * @this {DOMStringCollection}
+ */
+DOMStringCollection_init_add = function(token) {
+	this[this.length++] = token;
+};
 
-		if(isChange && thisObj._onchange)thisObj._onchange.call(thisObj);
-	},
-	/**
-	 * @param {string} token
-	 * @this {DOMStringCollection}
-	 */
-	DOMStringCollection_init_add = function(token) {
-		this[this.length++] = token;
-	};
-
-var methods = {
+DOMStringCollection_methods = {
 	add: function(token) {
 		var thisObj = this, v = thisObj.value;
 
-		if(thisObj.contains(token)//checkToken(token) here
+		if(thisObj.contains(token)//DOMStringCollection_checkToken(token) here
 			)return;
 
 		thisObj.value += ((v && !v.match(RE_DOMSettableTokenList_lastSpaces) ? " " : "") + token);
 
 		this[this.length++] = token;
 
-		if(thisObj._onchange)thisObj._onchange.call(thisObj);
+		if(thisObj._onchange)thisObj._onchange.call(thisObj._onchange_this, thisObj.value);
 	},
 	remove: function(token) {
-		checkToken(token);
+		DOMStringCollection_checkToken(token);
 
 		var i, itemsArray, thisObj = this;
 
@@ -1548,10 +1647,10 @@ var methods = {
 			}
 		}
 
-		if(thisObj._onchange)thisObj._onchange.call(thisObj)
+		if(thisObj._onchange)thisObj._onchange.call(thisObj._onchange_this, thisObj.value)
 	},
 	contains: function(token) {
-		checkToken(token);
+		DOMStringCollection_checkToken(token);
 
 		return (" " + this.value + " ").indexOf(" " + token + " ") !== -1;
 	},
@@ -1559,16 +1658,20 @@ var methods = {
 		return this[index] || null;
 	},
 	toggle: function(token) {
-		var result = thisObj.contains(token); //checkToken(token) here;
+		var result = thisObj.contains(token); //DOMStringCollection_checkToken(token) here;
 
 		this[result ? 'add' : 'remove'](token);
 
 		return result;
 	}
 };
-for(var key in methods)DOMStringCollection.prototype[key] = methods[key];
+for(string_tmp in DOMStringCollection_methods)DOMStringCollection.prototype[string_tmp] = DOMStringCollection_methods[string_tmp];
 //[ie8 BUG]toString not in result of `for`
-DOMStringCollection.prototype.toString = function(){return this.value||""};
+DOMStringCollection.prototype.toString = function(){ return this.value || "" };
+
+DOMStringCollection_setNodeClassName = function(newValue) {
+	this.className = newValue;
+};
 
 if(INCLUDE_EXTRAS) {//Export DOMStringCollection
 	if(!global["Utils"])global["Utils"] = {};
@@ -1592,18 +1695,14 @@ if(INCLUDE_EXTRAS) {//Export DOMStringCollection
 //Add JS 1.8 Element property classList	   
 // IE < 8 support in a.ielt8.js and a.ielt8.htc
 if(!("classList" in _testElement)) {
-	Object.defineProperty(elementProto, "classList", {
+	Object.defineProperty(_Element_prototype, "classList", {
 		"get" : function() {
 			var thisObj = this,
-				cont = thisObj["_"] || (thisObj["_"] = {}),//Положим _cachedClassList в контейнер "_"
-				_cachedClassList = "_ccl_";
+				cont = thisObj["_"] || (thisObj["_"] = {});//Положим S_ELEMENT_CACHED_CLASSLIST_NAME в контейнер "_";
 
-			if(!cont[_cachedClassList])cont[_cachedClassList] = new DOMStringCollection(thisObj.className, function() {
-				thisObj.setAttribute("class", this.value);//this instanceof DOMStringCollection
-				if(thisObj.className != this.value)thisObj.className = this.value;
-			});
+			if(!cont[S_ELEMENT_CACHED_CLASSLIST_NAME])cont[S_ELEMENT_CACHED_CLASSLIST_NAME] = new DOMStringCollection(thisObj.className, DOMStringCollection_setNodeClassName, thisObj);
 
-			return cont[_cachedClassList];
+			return cont[S_ELEMENT_CACHED_CLASSLIST_NAME];
 		}
 	});
 }
@@ -1611,7 +1710,7 @@ if(!("classList" in _testElement)) {
 //https://developer.mozilla.org/en/DOM/Node.parentElement
 //[FF lt 9]
 if(!("parentElement" in _testElement))
-	Object.defineProperty(elementProto, "parentElement", {"get" : function() {
+	Object.defineProperty(_Element_prototype, "parentElement", {"get" : function() {
 		var parent = this.parentNode;
 
 	    if(parent && parent.nodeType === 1)return parent;
@@ -1670,7 +1769,7 @@ if(!("insertAdjacentHTML" in _testElement)) {
 // TODO:: need more work
 /*
 if(!(global["HTMLTimeElement"] && global["HTMLTimeElement"].prototype))
-Object.defineProperty((global["HTMLUnknownElement"] && global["HTMLUnknownElement"].prototype) || elementProto,
+Object.defineProperty((global["HTMLUnknownElement"] && global["HTMLUnknownElement"].prototype) || _Element_prototype,
 	"dateTime", {
 	"get" : function() {
 		var thisObj = this,
@@ -1738,71 +1837,71 @@ function fixNodeOnProto(proto) {
 }
 
 function mutationMacro(nodes) {
-    var node = null
-    nodes = [].map.call(nodes, function (node) {
+    var node = null;
+    nodes = _Array_map.call(nodes, function (node) {
         if (typeof node === "string") {
-            return document.createTextNode(node)
+            return document.createTextNode(node);
         }
-        return node
+        return node;
     })
     if (nodes.length === 1) {
-        node = nodes[0]
+        node = nodes[0];
     } else {
-        node = document.createDocumentFragment()
-        nodes.forEach(function (item) {
-            node.appendChild(item)
-        })
+        node = document.createDocumentFragment();
+        nodes.forEach(node.appendChild, node);
     }
-    return node
+    return node;
 }
 
 //New DOM4 API
 if(!_testElement["after"]) {
-	elementProto["after"] = function () {
+	_Element_prototype["after"] = function () {
 		if (this.parentNode === null)return;
 
 		var node = mutationMacro(arguments);
 		this.parentNode.insertBefore(node, this.nextSibling);
 	};
 
-	elementProto["before"] = function () {
+	_Element_prototype["before"] = function () {
 		if (this.parentNode === null)return;
 
 		var node = mutationMacro(arguments);
 		this.parentNode.insertBefore(node, this);
 	};
 
-	elementProto["append"] = function () {
-		var node = mutationMacro(arguments)
-		this.appendChild(node)
+	_Element_prototype["append"] = function () {
+		var node = mutationMacro(arguments);
+		this.appendChild(node);
 	};
 	
-	elementProto["prepend"] = function () {
-		var node = mutationMacro(arguments)
-		this.insertBefore(node, this.firstChild)
+	_Element_prototype["prepend"] = function () {
+		var node = mutationMacro(arguments);
+		this.insertBefore(node, this.firstChild);
 	};
 
-	elementProto["replace"] = function () {
+	_Element_prototype["replace"] = function () {
 		if (this.parentNode === null)return;
 
-		var node = mutationMacro(arguments)
-		this.parentNode.replaceChild(node, this)
+		var node = mutationMacro(arguments);
+		this.parentNode.replaceChild(node, this);
 	};
 
-	elementProto["remove"] = function () {
+	_Element_prototype["remove"] = function () {
 		if (this.parentNode === null)return;
-		this.parentNode.removeChild(this)
+		this.parentNode.removeChild(this);
 	};
 }
 
-if(!elementProto.matchesSelector) {
-	elementProto.matchesSelector =
-		elementProto["webkitMatchesSelector"] ||
-		elementProto["mozMatchesSelector"] ||
-		elementProto["msMatchesSelector"] ||
-		elementProto["oMatchesSelector"] || function(selector) {
+if(!_Element_prototype.matchesSelector) {
+	_Element_prototype.matchesSelector =
+		_Element_prototype["webkitMatchesSelector"] ||
+		_Element_prototype["mozMatchesSelector"] ||
+		_Element_prototype["msMatchesSelector"] ||
+		_Element_prototype["oMatchesSelector"] || function(selector) {
 			if(!selector)return false;
 			if(selector === "*")return true;
+			if(this === document.documentElement && selector === ":root")return true;
+			if(this === document.body && selector === "body")return true;
 
 			var thisObj = this,
 				parent,
@@ -1811,7 +1910,7 @@ if(!elementProto.matchesSelector) {
 				tmp,
 				match = false;
 
-			_String_trim.call(selector.replace(RE__matchSelector__doubleSpaces, "$1"));
+			selector = _String_trim.call(selector.replace(RE__matchSelector__doubleSpaces, "$1"));
 
 			if(RE__matchSelector__easySelector1.test(selector) || RE__matchSelector__easySelector2.test(selector)) {
 				switch (selector.charAt(0)) {
@@ -1848,7 +1947,7 @@ if(!elementProto.matchesSelector) {
 		    return match;
 		}
 }
-
+if(!document.documentElement.matchesSelector)document.documentElement.matchesSelector = _Element_prototype.matchesSelector;
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Element.prototype  ==================================  */
 /*  ======================================================================================  */
@@ -1863,19 +1962,18 @@ if(!elementProto.matchesSelector) {
 /*  ================================  HTMLTextAreaElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 /*  ================================  HTMLSelectElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-var labelableElements;
-if(INCLUDE_EXTEND_POLYFILLS) {
-	labelableElements = "INPUT0BUTTON0KEYGEN0METER0OUTPUT0PROGRESS0TEXTAREA0SELECT".split("0");
+if(INCLUDE_EXTRAS) {
+	_labelable_elements = ["INPUT", "BUTTON", "KEYGEN", "METER", "OUTPUT", "PROGRESS", "TEXTAREA", "SELECT"];
 	/*
 	Implement HTML*Element.labels
 	https://developer.mozilla.org/en/DOM/HTMLInputElement
 	http://www.w3.org/TR/html5/forms.html#dom-lfe-labels
 	*/
 	if(!("labels" in document_createElement("input")))
-		Object.defineProperty(elementProto, "labels", {
+		Object.defineProperty(_Element_prototype, "labels", {
 			enumerable: true,
 			"get" : function() {
-				if(!~labelableElements.indexOf(this.nodeName.toUpperCase()))
+				if(!~_labelable_elements.indexOf(this.nodeName.toUpperCase()))
 					return void 0;
 
 				var node = this,
@@ -1884,7 +1982,7 @@ if(INCLUDE_EXTEND_POLYFILLS) {
 					 * @type {Array}
 					 */
 					result = this.id ?
-						_arrayFrom(document.querySelectorAll("label[for='" + this.id + "']")) :
+						_Array_from(document.querySelectorAll("label[for='" + this.id + "']")) :
 						[],
 					_lastInTreeOrder_index = result.length - 1;
 
@@ -1894,27 +1992,27 @@ if(INCLUDE_EXTEND_POLYFILLS) {
 						while(result[_lastInTreeOrder_index] &&
 							result[_lastInTreeOrder_index].compareDocumentPosition(node) & 2)//DOCUMENT_POSITION_PRECEDING
 							_lastInTreeOrder_index--;
-						result.splice(_lastInTreeOrder_index + 1, 0, node)
+						_Array_splice.call(result, _lastInTreeOrder_index + 1, 0, node)
 					}
 
 				return result;
 			}
 		});
-}//INCLUDE_EXTEND_POLYFILLS
+}//INCLUDE_EXTRAS
 
 /*  ======================================================================================  */
 
 /*  ======================================================================================  */
 /*  ================================  HTMLLabelElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-if(INCLUDE_EXTEND_POLYFILLS) {
+if(INCLUDE_EXTRAS) {
 	/*
 	Implement HTMLLabelElement.control
 	https://developer.mozilla.org/en/DOM/HTMLLabelElement
 	http://www.w3.org/TR/html5/forms.html#dom-label-control
 	*/
 	if(!("control" in document_createElement("label")))
-		Object.defineProperty(global["HTMLLabelElement"] && global["HTMLLabelElement"].prototype || elementProto, "control", {
+		Object.defineProperty(global["HTMLLabelElement"] && global["HTMLLabelElement"].prototype || _Element_prototype, "control", {
 			enumerable: true,
 			"get" : function() {
 				if(this.nodeName.toUpperCase() !== "LABEL")
@@ -1925,13 +2023,13 @@ if(INCLUDE_EXTEND_POLYFILLS) {
 
 				return _recursivelyWalk(this.childNodes,
 						function(el) {
-							if(~labelableElements.indexOf(el.nodeName.toUpperCase()))
+							if(~_labelable_elements.indexOf(el.nodeName.toUpperCase()))
 								return el
 						}
 					) || null;
 			}
 		});
-}//INCLUDE_EXTEND_POLYFILLS
+}//INCLUDE_EXTRAS
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  HTMLLabelElement.prototype  ==================================  */
 /*  ======================================================================================  */
@@ -1957,14 +2055,11 @@ if(INCLUDE_EXTEND_POLYFILLS) {
 		type="I"	upper-roman
  */
 //In strict mode code, functions can only be declared at top level or immediately within another function
-var removeAttributeChildValue,
-	reversedShim,
-	autoInitFunction;
-if(INCLUDE_EXTEND_POLYFILLS && !('reversed' in document_createElement("ol"))) {
-	removeAttributeChildValue = function(child) {
+if(INCLUDE_EXTRAS && !('reversed' in document_createElement("ol"))) {
+	OL_reversed_removeAttributeChildValue = function(child) {
 		child.removeAttribute("value");
 	};
-	reversedShim = function(list) {
+	OL_reversed_Shim = function(list) {
 		var reversed = list.getAttribute('reversed'),
 			_ = list["_"];
 		if(reversed !== null && !(_ || _["reversed"]))return;
@@ -1995,11 +2090,11 @@ if(INCLUDE_EXTEND_POLYFILLS && !('reversed' in document_createElement("ol"))) {
 		else {
 			_["reversed"] = false;
 			if(children[0])children[0]["value"] = count || 0;
-			_forEach(children, removeAttributeChildValue);
+			_forEach(children, OL_reversed_removeAttributeChildValue);
 		}
 	};
 
-	Object.defineProperty(global["HTMLOListElement"] && global["HTMLOListElement"].prototype || elementProto, "reversed", {
+	Object.defineProperty(global["HTMLOListElement"] && global["HTMLOListElement"].prototype || _Element_prototype, "reversed", {
 		get : function () {
 			var thisObj = this;
 
@@ -2015,7 +2110,7 @@ if(INCLUDE_EXTEND_POLYFILLS && !('reversed' in document_createElement("ol"))) {
 
 			thisObj[(
 				value ? "remove" :
-				reversedShim(thisObj), //Run shim
+				OL_reversed_Shim(thisObj), //Run shim
 					"set"
 					) + "Attribute"]('reversed', "");
 
@@ -2024,12 +2119,12 @@ if(INCLUDE_EXTEND_POLYFILLS && !('reversed' in document_createElement("ol"))) {
 	});
 
 	//Auto init
-	autoInitFunction = function() {
-		document.removeEventListener('DOMContentLoaded', autoInitFunction, false);
-		_forEach(document.getElementsByTagName("ol"), reversedShim);
+	OL_reversed_autoInitFunction = function() {
+		document.removeEventListener('DOMContentLoaded', OL_reversed_autoInitFunction, false);
+		_forEach(document.getElementsByTagName("ol"), OL_reversed_Shim);
 	};
-	document.addEventListener('DOMContentLoaded', autoInitFunction, false);
-}
+	document.addEventListener('DOMContentLoaded', OL_reversed_autoInitFunction, false);
+};//INCLUDE_EXTRAS
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  HTMLLabelElement.prototype  ==================================  */
 /*  ======================================================================================  */
 
@@ -2037,7 +2132,6 @@ if(INCLUDE_EXTEND_POLYFILLS && !('reversed' in document_createElement("ol"))) {
 /*  ================================  NodeList.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
 //Inherit NodeList from Array
-var nodeList_methods_fromArray = ["every", "filter", "forEach", "indexOf", "join", "lastIndexOf", "map", "reduce", "reduceRight", "reverse", "slice", "some", "toString"];
 function extendNodeListPrototype(nodeListProto) {
 	if(nodeListProto && nodeListProto !== Array.prototype) {
 		nodeList_methods_fromArray.forEach(function(key) {
@@ -2058,7 +2152,7 @@ if(INCLUDE_EXTRAS) {
 
 //https://github.com/Raynos/xhr/blob/master/index.js
 //Thx Raynos !!!
-var XHR = global["XHR"] = function(options, callback) {
+XHR = global["XHR"] = function(options, callback) {
 	options = Object.extend({}, XHR.defaults, options);
 
     var xhr = new XMLHttpRequest();
@@ -2115,13 +2209,11 @@ XHR.defaults = {
 /*  ======================================================================================  */
 /*  ========================================  DOM  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-var Event_prototype = Event.prototype;
-
 //[Opera lt 12]
-if(!Event_prototype["AT_TARGET"]) {
-	Event_prototype["AT_TARGET"] = 2;
-	Event_prototype["BUBBLING_PHASE"] = 3;
-	Event_prototype["CAPTURING_PHASE"] = 1;/*,
+if(!_Event_prototype["AT_TARGET"]) {
+	_Event_prototype["AT_TARGET"] = 2;
+	_Event_prototype["BUBBLING_PHASE"] = 3;
+	_Event_prototype["CAPTURING_PHASE"] = 1;/*,
 		"BLUR": 8192,
 		"CHANGE": 32768,
 		"CLICK": 64,
@@ -2140,26 +2232,21 @@ if(!Event_prototype["AT_TARGET"]) {
 		"SELECT": 16384*/
 }
 
+if(!("stopImmediatePropagation" in _Event_prototype)) {
+	//TODO:: for Opera
+}
+
 // window.getComputedStyle fix
 //FF say that pseudoElt param is required
 try {
 	global.getComputedStyle(_testElement)
 }
 catch(e) {
-	var old = global.getComputedStyle;
+	_window_getComputedStyle = global.getComputedStyle;
 	global.getComputedStyle = function(obj, pseudoElt) {
-		return old.call(global, obj, pseudoElt || null)
+		return _window_getComputedStyle.call(global, obj, pseudoElt || null)
 	}
 }
-
-//Events
-// TODO:: in `a.ie8.js` file
-if(!_testElement.addEventListener) {
-	elementProto.addEventListener = global.addEventListener;
-	elementProto.removeEventListener = global.removeEventListener;
-	elementProto.dispatchEvent = global.dispatchEvent;
-}
-
 
 if(INCLUDE_EXTRAS) {
 /**
@@ -2168,7 +2255,7 @@ if(INCLUDE_EXTRAS) {
  * @param {Node|Array.<Node>} roots or element
  * @return {Node} founded element
  */
-var $ = function(selector, roots) {
+$ = function(selector, roots) {
 	if(typeof selector == 'string' || typeof selector == 'number')return $$(selector, roots, true);
 	return selector;
 };
@@ -2179,11 +2266,11 @@ global["$$0"] = $;
  * document.querySelector with `roots` as Array and special selector (">*", "~*", "+*") support
  * @param {!string} selector CSS3-selector
  * @param {Document|HTMLElement|Node|Array.<HTMLElement>=} roots Array of root element
- * @param {boolean=} isFirst return only first element (ie <root>.querySelector)
+ * @param {boolean=} onlyOne return only first element (ie <root>.querySelector)
  * @return {Array.<HTMLElement>} result
  * @version 2
  */
-var $$ = global["$$"] = function(selector, roots, isFirst) {
+$$ = global["$$"] = function(selector, roots, onlyOne) {
 	//$$N.test = $$N["test"];//$$N["test"] TODO:: добавить в $$N["test"] проверку на нестандартные селекторы
 	//TODO:: вернуть назад поддержку нестандартных псевдо-классов
 	//if(document.querySelector && !($$N.test && $$N.test.test(selector)) {
@@ -2215,19 +2302,19 @@ var $$ = global["$$"] = function(selector, roots, isFirst) {
 
 					tmp = "#" + root.id;
 
-					result = result.concat(_arrayFrom(root.querySelectorAll(tmp + selector.join("," + tmp))));
+					result = result.concat(_Array_from(root.querySelectorAll(tmp + selector.join("," + tmp))));
 				}
 			}
 			else {
-				result = result.concat(_arrayFrom(root.querySelectorAll(selector)));
+				result = result.concat(_Array_from(root.querySelectorAll(selector)));
 			}
 			
-			if(isFirst && result.length)return result[0];
+			if(onlyOne && result.length)return result[0];
 		}
 		else throw new Error("querySelector not supported");
 	}
 
-	return isFirst ? result[0] : result;
+	return onlyOne ? result[0] : result;
 };
 /** @type {string} unique prefix (HTMLElement.id) */
 $$.str_for_id = "r" + String.random(6);
@@ -2253,8 +2340,8 @@ $$.uid_for_id = 0;
 // string format defined in 15.9.1.15. All fields are present in the String.
 // The time zone is always UTC, denoted by the suffix Z. If the time value of
 // this object is not a finite Number a RangeError exception is thrown.
-if(!Date.prototype.toISOString || (new Date(-62198755200000).toISOString().indexOf('-000001') === -1))
-    Date.prototype.toISOString = function() {
+if(!_Native_Date.prototype.toISOString || (new _Native_Date(-62198755200000).toISOString().indexOf('-000001') === -1))
+    _Native_Date.prototype.toISOString = function() {
         var result, length, value, year;
         if (!isFinite(this)) {
             throw new RangeError("Date.prototype.toISOString called on non-finite value.");
@@ -2281,22 +2368,22 @@ if(!Date.prototype.toISOString || (new Date(-62198755200000).toISOString().index
 
 // ES5 15.9.4.4
 // http://es5.github.com/#x15.9.4.4
-if(!Date.now)Date.now = function() {
-	return new Date().getTime();
+if(!_Native_Date.now)_Native_Date.now = function() {
+	return new _Native_Date().getTime();
 };
 
 // ES5 15.9.5.44
 // http://es5.github.com/#x15.9.5.44
 // This function provides a String representation of a Date object for use by
 // JSON.stringify (15.12.3).
-if(!Date.prototype.toJSON || !~((new Date(-62198755200000)).toJSON().indexOf('-000001')) ||
+if(!_Native_Date.prototype.toJSON || !~((new _Native_Date(-62198755200000)).toJSON().indexOf('-000001')) ||
     ~(function() {
         // is Date.prototype.toJSON non-generic?
         try {
-            return Date.prototype.toJSON.call({toISOString:function(){return -1;}});
+            return _Native_Date.prototype.toJSON.call({toISOString:function(){return -1;}});
         } catch (err) {}
     }())) {
-Date.prototype.toJSON = function(key) {
+_Native_Date.prototype.toJSON = function(key) {
 	// When the toJSON method is called with argument key, the following
 	// steps are taken:
 
@@ -2328,121 +2415,119 @@ Date.prototype.toJSON = function(key) {
 // http://es5.github.com/#x15.9.4.2
 // based on work shared by Daniel Friesen (dantman)
 // http://gist.github.com/303249
-if (!Date.parse || "Date.parse is buggy") {
-    // XXX global assignment won't work in embeddings that use
-    // an alternate object for the context.
-    Date = (function(NativeDate) {
-
-        // Date.length === 7
-        var Date = function Date(Y, M, D, h, m, s, ms) {
-            var length = arguments.length;
-            if (this instanceof NativeDate) {
-                var date = length == 1 && String(Y) === Y ? // isString(Y)
-                    // We explicitly pass it through parse:
-                    new NativeDate(Date.parse(Y)) :
-                    // We have to manually make calls depending on argument
-                    // length here
-                    length >= 7 ? new NativeDate(Y, M, D, h, m, s, ms) :
-                    length >= 6 ? new NativeDate(Y, M, D, h, m, s) :
-                    length >= 5 ? new NativeDate(Y, M, D, h, m) :
-                    length >= 4 ? new NativeDate(Y, M, D, h) :
-                    length >= 3 ? new NativeDate(Y, M, D) :
-                    length >= 2 ? new NativeDate(Y, M) :
-                    length >= 1 ? new NativeDate(Y) :
-                                  new NativeDate();
-                // Prevent mixups with unfixed Date object
-                date.constructor = Date;
-                return date;
-            }
-            return NativeDate.apply(this, arguments);
-        };
-
-        // 15.9.1.15 Date Time String Format.
-        var isoDateExpression = new RegExp("^" +
-            "(\\d{4}|[\+\-]\\d{6})" + // four-digit year capture or sign + 6-digit extended year
-            "(?:-(\\d{2})" + // optional month capture
-            "(?:-(\\d{2})" + // optional day capture
-            "(?:" + // capture hours:minutes:seconds.milliseconds
-                "T(\\d{2})" + // hours capture
-                ":(\\d{2})" + // minutes capture
-                "(?:" + // optional :seconds.milliseconds
-                    ":(\\d{2})" + // seconds capture
-                    "(?:\\.(\\d{3}))?" + // milliseconds capture
-                ")?" +
-            "(" + // capture UTC offset component
-                "Z|" + // UTC capture
-                "(?:" + // offset specifier +/-hours:minutes
-                    "([-+])" + // sign capture
-                    "(\\d{2})" + // hours offset capture
-                    ":(\\d{2})" + // minutes offset capture
-                ")" +
-            ")?)?)?)?" +
-        "$");
-
-        var monthes = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365];
-
-        // Returns count of leap years before "year" since 0 CE
-        function leapYears(year) {
-            return Math.ceil(year / 4) - Math.ceil(year / 100) + Math.ceil(year / 400);
+if (!_Native_Date.parse/* || "Date.parse is buggy"*/) {
+    // Date.length === 7
+    _Shimed_Date = function(Y, M, D, h, m, s, ms) {
+        var length = arguments.length;
+        if (this instanceof _Native_Date) {
+            var date = length == 1 && String(Y) === Y ? // isString(Y)
+                // We explicitly pass it through parse:
+                new _Native_Date(_Shimed_Date.parse(Y)) :
+                // We have to manually make calls depending on argument
+                // length here
+                length >= 7 ? new _Native_Date(Y, M, D, h, m, s, ms) :
+                length >= 6 ? new _Native_Date(Y, M, D, h, m, s) :
+                length >= 5 ? new _Native_Date(Y, M, D, h, m) :
+                length >= 4 ? new _Native_Date(Y, M, D, h) :
+                length >= 3 ? new _Native_Date(Y, M, D) :
+                length >= 2 ? new _Native_Date(Y, M) :
+                length >= 1 ? new _Native_Date(Y) :
+                              new _Native_Date();
+            // Prevent mixups with unfixed Date object
+            date.constructor = _Shimed_Date;
+            return date;
         }
+        return _Native_Date.apply(this, arguments);
+    };
 
-        // Copy any custom methods a 3rd party library may have added
-        for (var key in NativeDate) {
-            Date[key] = NativeDate[key];
-        }
+    // 15.9.1.15 Date Time String Format.
+    _Shimed_Date_isoDateExpression = new RegExp("^" +
+        "(\\d{4}|[\+\-]\\d{6})" + // four-digit year capture or sign + 6-digit extended year
+        "(?:-(\\d{2})" + // optional month capture
+        "(?:-(\\d{2})" + // optional day capture
+        "(?:" + // capture hours:minutes:seconds.milliseconds
+            "T(\\d{2})" + // hours capture
+            ":(\\d{2})" + // minutes capture
+            "(?:" + // optional :seconds.milliseconds
+                ":(\\d{2})" + // seconds capture
+                "(?:\\.(\\d{3}))?" + // milliseconds capture
+            ")?" +
+        "(" + // capture UTC offset component
+            "Z|" + // UTC capture
+            "(?:" + // offset specifier +/-hours:minutes
+                "([-+])" + // sign capture
+                "(\\d{2})" + // hours offset capture
+                ":(\\d{2})" + // minutes offset capture
+            ")" +
+        ")?)?)?)?" +
+    "$");
 
-        // Copy "native" methods explicitly; they may be non-enumerable
-        Date.now = NativeDate.now;
-        Date.UTC = NativeDate.UTC;
-        Date.prototype = NativeDate.prototype;
-        Date.prototype.constructor = Date;
+	_Shimed_Date_monthes = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365];
 
-        // Upgrade Date.parse to handle simplified ISO 8601 strings
-        Date.parse = function parse(string) {
-            var match = isoDateExpression.exec(string);
-            if (match) {
-                // parse months, days, hours, minutes, seconds, and milliseconds
-                // provide default values if necessary
-                // parse the UTC offset component
-                var year = Number(match[1]),
-                    month = Number(match[2] || 1),
-                    day = Number(match[3] || 1),
-                    hour = Number(match[4] || 0),
-                    minute = Number(match[5] || 0),
-                    second = Number(match[6] || 0),
-                    millisecond = Number(match[7] || 0),
-                    // When time zone is missed, local offset should be used (ES 5.1 bug)
-                    // see https://bugs.ecmascript.org/show_bug.cgi?id=112
-                    offset = match[8] ? 0 : Number(new Date(1970, 0)),
-                    signOffset = match[9] === "-" ? 1 : -1,
-                    hourOffset = Number(match[10] || 0),
-                    minuteOffset = Number(match[11] || 0),    
-                    leapYears0 = leapYears(year),
-                    leapYears1 = leapYears(year + 1),
-                    result;
-                if (hour < (minute > 0 || second > 0 || millisecond > 0 ? 24 : 25) &&
-                    minute < 60 &&
-                    second < 60 &&
-                    millisecond < 1000 &&
-                    hourOffset < 24 && // detect invalid offsets
-                    minuteOffset < 60 &&
-                    month > 0 &&
-                    month < 13 &&
-                    day > 0 &&
-                    day < (1 + monthes[month] - monthes[month - 1] + (month === 2 ? leapYears1 - leapYears0 : 0))) {
-                    result = 365 * (year - 1970) + (month > 2 ? leapYears1 : leapYears0) - leapYears(1970) + monthes[month - 1] + day - 1;
-                    result = (((result * 24 + hour + hourOffset * signOffset) * 60 + minute + minuteOffset * signOffset) * 60 + second) * 1000 + millisecond + offset;
-                    if (-8.64e15 <= result && result <= 8.64e15) {
-                        return result;
-                    }
-                }
-                return NaN;
-            }
-            return NativeDate.parse.apply(this, arguments);
-        };
+	// Returns count of leap years before "year" since 0 CE
+	_Shimed_Date_leapYears = function(year) {
+	    return Math.ceil(year / 4) - Math.ceil(year / 100) + Math.ceil(year / 400);
+	}
 
-        return Date;
-    })(Date);
+	// Copy any custom methods a 3rd party library may have added
+	for (string_tmp in _Native_Date) {
+	    _Shimed_Date[key] = _Native_Date[key];
+	}
+
+	// Copy "native" methods explicitly; they may be non-enumerable
+	_Shimed_Date.now = _Native_Date.now;
+	_Shimed_Date.UTC = _Native_Date.UTC;
+	_Shimed_Date.prototype = _Native_Date.prototype;
+	_Shimed_Date.prototype.constructor = _Shimed_Date;
+
+	// Upgrade Date.parse to handle simplified ISO 8601 strings
+	_Shimed_Date.parse = function parse(string) {
+	    var match = _Shimed_Date_isoDateExpression.exec(string);
+	    if (match) {
+	        // parse months, days, hours, minutes, seconds, and milliseconds
+	        // provide default values if necessary
+	        // parse the UTC offset component
+	        var year = Number(match[1]),
+	            month = Number(match[2] || 1),
+	            day = Number(match[3] || 1),
+	            hour = Number(match[4] || 0),
+	            minute = Number(match[5] || 0),
+	            second = Number(match[6] || 0),
+	            millisecond = Number(match[7] || 0),
+	            // When time zone is missed, local offset should be used (ES 5.1 bug)
+	            // see https://bugs.ecmascript.org/show_bug.cgi?id=112
+	            offset = match[8] ? 0 : Number(new Date(1970, 0)),
+	            signOffset = match[9] === "-" ? 1 : -1,
+	            hourOffset = Number(match[10] || 0),
+	            minuteOffset = Number(match[11] || 0),    
+	            leapYears0 = _Shimed_Date_leapYears(year),
+	            leapYears1 = _Shimed_Date_leapYears(year + 1),
+	            result;
+
+	        if (hour < (minute > 0 || second > 0 || millisecond > 0 ? 24 : 25) &&
+	            minute < 60 &&
+	            second < 60 &&
+	            millisecond < 1000 &&
+	            hourOffset < 24 && // detect invalid offsets
+	            minuteOffset < 60 &&
+	            month > 0 &&
+	            month < 13 &&
+	            day > 0 &&
+	            day < (1 + monthes[month] - monthes[month - 1] + (month === 2 ? leapYears1 - leapYears0 : 0))) {
+
+		            result = 365 * (year - 1970) + (month > 2 ? leapYears1 : leapYears0) - _Shimed_Date_leapYears(1970) + monthes[month - 1] + day - 1;
+		            result = (((result * 24 + hour + hourOffset * signOffset) * 60 + minute + minuteOffset * signOffset) * 60 + second) * 1000 + millisecond + offset;
+		            if (-8.64e15 <= result && result <= 8.64e15) {
+		                return result;
+		            }
+		            
+	        }
+	        return NaN;
+	    }
+	    return _Native_Date.parse.apply(this, arguments);
+	};
+
+    global["Date"] = _Shimed_Date;
 }
 /*  ======================================================================================  */
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Date  =====================================  */
