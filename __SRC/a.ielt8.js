@@ -2275,7 +2275,7 @@ function _matchesSelector(selector) {
 
 if(!document.querySelectorAll)document.querySelectorAll = queryManySelector;
 if(!document.querySelector)document.querySelector = queryOneManySelector;
-if(!document.documentElement.matchesSelector)document.documentElement.matchesSelector = _Element_prototype.matchesSelector;
+if(!document.documentElement.matchesSelector)document.documentElement.matchesSelector = _matchesSelector;
 
 if(!_Node_prototype.hasAttribute)_Node_prototype.hasAttribute = function(name) {
 	return this.getAttribute(name) !== null;
