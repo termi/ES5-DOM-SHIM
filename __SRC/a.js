@@ -106,6 +106,9 @@ var _browser_msie
 	/** @type {number} */
   , number_tmp
 
+	/** @type {function} */
+  , function_tmp
+
 	/** @const */
   , nodeList_methods_fromArray = ["every", "filter", "forEach", "indexOf", "join", "lastIndexOf", "map", "reduce", "reduceRight", "reverse", "slice", "some", "toString"]
   
@@ -246,6 +249,9 @@ var _browser_msie
   , RE__matchSelector__doubleSpaces = /\s*([,>+~ ])\s*/g//Note: Use with "$1"
 
   // ------------------------------ ==================  Events  ================== ------------------------------
+    /** @type {number} some unique identifire. must inc after use */
+  , UUID = 1
+
   , _Event
 
   , _CustomEvent
@@ -253,6 +259,10 @@ var _browser_msie
   , _Event_prototype
 
   , _Custom_Event_prototype
+
+  , implementation_stopImmediatePropagation
+
+  , implementation_stopImmediatePropagation_listeners = {}
 
 	// ------------------------------ ==================  Utils.Dom  ================== ------------------------------
   , DOMStringCollection
@@ -1499,6 +1509,19 @@ try {
 	if(_Custom_Event_prototype || _Event_prototype)_CustomEvent.prototype = _Custom_Event_prototype || _Event_prototype;//The is no CustomEvent.prototype in IE < 8
 }
 
+//Browser not implement Event.prototype.stopImmediatePropagation
+if(!_Event_prototype["stopImmediatePropagation"]) {
+	implementation_stopImmediatePropagation = function(e) {
+		if(e["__stopNow"]) {
+			e.stopPropagation();
+		}
+		else this.apply(e.currentTarget, arguments)
+	};
+
+	_Event_prototype["stopImmediatePropagation"] = function() {
+		this["__stopNow"] = true;
+	}
+}
 
 //fix [add|remove]EventListener for all browsers that support it
 if(document.addEventListener &&
@@ -1520,7 +1543,9 @@ if(document.addEventListener &&
 	} catch (e) {
 
 	} finally {
-		if(!boolean_tmp) {//fixEventListenerAll
+		if(!boolean_tmp || implementation_stopImmediatePropagation) {//fixEventListenerAll
+
+
 			_forEach(
 				[global["HTMLDocument"] && global["HTMLDocument"].prototype || global["document"],
 				 global["Window"] && global["Window"].prototype || global,
@@ -1532,11 +1557,21 @@ if(document.addEventListener &&
 
 						if(old_addEventListener)elementToFix.addEventListener = function (type, listener, optional) {
 							optional = optional || false;
+
+							listener = implementation_stopImmediatePropagation ? (
+								implementation_stopImmediatePropagation_listeners[listener["uuid"] || (listener["uuid"] = ++UUID)] = implementation_stopImmediatePropagation.bind(listener)
+							) : listener;
+
 							return old_addEventListener.call(this, type, listener, optional);
 						};
 						//elementToFix.addEventListener.shim = true;
 						if(old_removeEventListener)elementToFix.removeEventListener = function (type, listener, optional) {
 							optional = optional || false;
+
+							listener = listener["uuid"] && 
+								implementation_stopImmediatePropagation_listeners[listener["uuid"]]
+							|| listener;
+
 							return old_removeEventListener.call(this, type, listener, optional);
 						};
 						//elementToFix.removeEventListener.shim = true;
@@ -2232,9 +2267,6 @@ if(!_Event_prototype["AT_TARGET"]) {
 		"SELECT": 16384*/
 }
 
-if(!("stopImmediatePropagation" in _Event_prototype)) {
-	//TODO:: for Opera
-}
 
 // window.getComputedStyle fix
 //FF say that pseudoElt param is required

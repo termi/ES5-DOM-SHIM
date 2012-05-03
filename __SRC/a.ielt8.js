@@ -75,6 +75,9 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
   , document_createTextNode = document.createTextNode
 
 	/** @const */
+  , _document_documentElement = document.documentElement
+
+	/** @const */
   , _throwDOMException = function(errStr) {
 		var ex = Object.create(DOMException.prototype);
 		ex.code = DOMException[errStr];
@@ -114,7 +117,7 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
 	 * For system use only
 	 * More standart solution in a.js
 	 */
-  , _String_trim= String.prototype.trim || (String.prototype.trim = function () {//Cache origin trim function
+  , _String_trim = String.prototype.trim || (String.prototype.trim = function () {//Cache origin trim function
 		var	str = this.replace(RE__String_trim_spaces, ''),
 			ws = RE_space,
 			i = str.length;
@@ -207,6 +210,12 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
 	/** @type {number} */
   , number_tmp
 
+	/** @type {function} */
+  , function_tmp
+
+	/** @type {Object} */
+  , object_tmp
+
 	/** @const */
   , nodeList_methods_fromArray = ["every", "filter", "forEach", "indexOf", "join", "lastIndexOf", "map", "reduce", "reduceRight", "reverse", "slice", "some", "toString"]
 
@@ -241,9 +250,9 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
 
 	// ------------------------------ ==================  HTML5 shiv  ================== ------------------------------
 
-  , html5_elements = 'abbr article aside audio canvas command datalist details figure figcaption footer header hgroup keygen mark meter nav output progress section source summary time video'
+  , html5_elements = 'abbr|article|aside|audio|canvas|command|datalist|details|figure|figcaption|footer|header|hgroup|keygen|mark|meter|nav|output|progress|section|source|summary|time|video'
 
-  , html5_elements_array = _String_split.call(html5_elements, ' ')
+  , html5_elements_array = html5_elements.split('|')
 	
 	/* Not all elements can be cloned in IE (this list can be shortend) **/
   , ielt9_elements = /^<|^(?:a|b|button|code|div|fieldset|form|map|h1|h2|h3|h4|h5|h6|i|object|iframe|img|input|label|li|link|ol|option|p|param|q|script|select|span|strong|style|table|tbody|td|textarea|tfoot|th|thead|tr|ul|optgroup)$/i
@@ -368,7 +377,7 @@ if('te'.split(/(s)*/)[1] != void 0 ||
 		if (limit === undefined || +limit < 0) {
 			limit = Infinity;
 		} else {
-			limit = Math.floor(+limit);
+			limit = ~~(+limit);
 			if (!limit) {
 				return [];
 			}
@@ -510,7 +519,7 @@ function fixEvent(event) {
 
 	// вычислить pageX/pageY для IE
 	if(event.pageX == null && event.clientX != null) {
-		var html = document.documentElement, body = document.body;
+		var html = _document_documentElement, body = document.body;
 		/*event.pageX = event.clientX + (html && html.scrollLeft || body && body.scrollLeft || 0) - (html.clientLeft || 0);
 		event.pageY = event.clientY + (html && html.scrollTop || body && body.scrollTop || 0) - (html.clientTop || 0);*/
 		//Новая вервия нуждающаяся в проверки
@@ -599,7 +608,7 @@ function commonHandle(event) {
 
 
 
-if(!document.addEventListener)global.addEventListener = document.addEventListener = function(_type, _handler, useCapture) {
+if(!document.addEventListener)_Node_prototype.addEventListener = global.addEventListener = document.addEventListener = function(_type, _handler, useCapture) {
 	//TODO:: useCapture == true
 	if(typeof _handler != "function" &&
 	   !(typeof _handler === "object" && _handler.handleEvent)//Registering an EventListener with a function object that also has a handleEvent property -> Call EventListener as a function
@@ -721,7 +730,7 @@ if(!document.addEventListener)global.addEventListener = document.addEventListene
 	_[_event_eventsUUID][_type][_handler[_event_UUID_prop_name]] = _handler;
 };
 
-if(!document.removeEventListener)global.removeEventListener = document.removeEventListener = function(_type, _handler, useCapture) {
+if(!document.removeEventListener)_Node_prototype.removeEventListener = global.removeEventListener = document.removeEventListener = function(_type, _handler, useCapture) {
 	var /** @type {Node} */
 		thisObj = this,
 		/** @type {Object} */
@@ -767,7 +776,7 @@ UNSPECIFIED_EVENT_TYPE_ERR: Raised if the Event's type was not specified by init
  * @this {Element} is the target of the event.
  * @return {boolean} The return value is false if at least one of the event handlers which handled this event called preventDefault. Otherwise it returns true.
  */
-if(!document.dispatchEvent)global.dispatchEvent = document.dispatchEvent = function(_event) {
+if(!document.dispatchEvent)_Node_prototype.dispatchEvent = global.dispatchEvent = document.dispatchEvent = function(_event) {
 	if(!_event.type)return true;
 	/**
 	 * @type {Node}
@@ -958,7 +967,7 @@ if(_browser_msie < 9)_.push(function() {
 	function unsafeGetOffsetRect(elem, X_else_Y) {
 		var box = elem.getBoundingClientRect(),//It might be an error here
 			body = document.body,
-			docElem = document.documentElement;
+			docElem = _document_documentElement;
 	 
 	 	return X_else_Y ?
 	 		Math.round(box.left + (window.pageXOffset || docElem.scrollLeft || body.scrollLeft) - (docElem.clientLeft || body.clientLeft || 0)) :
@@ -1090,7 +1099,7 @@ try {
 
 /* is this stuff defined? */
 if(!document.ELEMENT_NODE) {
-	var _constantContainer = {
+	object_tmp = {
 		ELEMENT_NODE : 1,
 		//ATTRIBUTE_NODE : 2,// historical
 		TEXT_NODE : 3,
@@ -1104,14 +1113,14 @@ if(!document.ELEMENT_NODE) {
 		DOCUMENT_FRAGMENT_NODE : 11
 		//NOTATION_NODE : 12// historical
 	};
-	_append(document, _constantContainer);
-	_append(_Node_prototype, _constantContainer);
-	_append(global["Node"], _constantContainer);
+	_append(document, object_tmp);
+	_append(_Node_prototype, object_tmp);
+	_append(global["Node"], object_tmp);
 }
 /*var __ielt8__element_init__ = _Node_prototype["__ielt8__element_init__"];
 if(__ielt8__element_init__) {//__ielt8__element_init__ in a.ielt8.js
 	__ielt8__element_init__["plugins"].push(function(el) {
-		_append(el, _constantContainer);
+		_append(el, object_tmp);
 	})
 }*/
 
@@ -1139,8 +1148,8 @@ if(!("textContent" in _testElement))
 
 
 //https://developer.mozilla.org/en/Document_Object_Model_(DOM)/Node.isEqualNode
-if(!("isEqualNode" in _testElement))
-	_Node_prototype.isEqualNode = function(node) {
+if(!("isEqualNode" in _testElement)) {
+	document.isEqualNode = _document_documentElement.isEqualNode = _Node_prototype.isEqualNode = function(node) {
 		var i, len;
 
 	    if(node === null ||
@@ -1188,7 +1197,7 @@ if(!("isEqualNode" in _testElement))
 
 	    return true;
 	};
-
+}
 /*
 http://www.alistapart.com/articles/crossbrowserscripting
 */
@@ -1231,8 +1240,9 @@ if(!document.importNode) {
 	document.importNode["shim"] = true;
 }
 
+//getElementsByClassName shim
 string_tmp = "getElementsByClassName";
-if(!(string_tmp in _testElement))document[string_tmp] = _Element_prototype[string_tmp] = function(clas) {
+function_tmp = _Element_prototype[string_tmp] || function(clas) {
 	var root = this,
 		result = [],
 		nodes,
@@ -1265,13 +1275,15 @@ if(!(string_tmp in _testElement))document[string_tmp] = _Element_prototype[strin
 	else throw new Error('WRONG_ARGUMENTS_ERR');
 	return result;	
 };
+if(!(string_tmp in _testElement))_Element_prototype[string_tmp] = function_tmp;
+if(!document[string_tmp])_document_documentElement[string_tmp] = document[string_tmp] = function_tmp;
 
 
 string_tmp = 'compareDocumentPosition';
 if(!(string_tmp in document)) {
 	var __name,
 		__n1 = __name || 'DOCUMENT_POSITION_';//Use '__name || ' only for GCC not to inline __n1 param. In this case __name MUST be undefined
-	document[string_tmp] = _Node_prototype[string_tmp] = function(b) {
+	_document_documentElement[string_tmp] = document[string_tmp] = _Node_prototype[string_tmp] = function(b) {
 		var a = this;
 		
 		//compareDocumentPosition from http://ejohn.org/blog/comparing-document-position/
@@ -1285,15 +1297,15 @@ if(!(string_tmp in document)) {
 			0 : 0;
 	};
 	__name = 'DISCONNECTED';
-	document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x01;
+	_document_documentElement[__n1 + __name] = document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x01;
 	__name = 'PRECEDING';
-	document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x02;
+	_document_documentElement[__n1 + __name] = document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x02;
 	__name = 'FOLLOWING';
-	document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x04;
+	_document_documentElement[__n1 + __name] = document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x04;
 	__name = 'CONTAINS';
-	document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x08;
+	_document_documentElement[__n1 + __name] = document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x08;
 	__name = 'CONTAINED_BY';
-	document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x10;
+	_document_documentElement[__n1 + __name] = document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x10;
 }
 
 if(!global.getComputedStyle) {//IE < 9
@@ -1344,16 +1356,16 @@ supportsUnknownElements = (function (a) {
 	return a.childNodes.length === 1;
 })(_testElement);
 	
-html5_elements = " " + html5_elements + " ";
+html5_elements = "|" + html5_elements + "|";
 
 function shivedCreateElement(nodeName) {
 	var node = this["__orig__createElement__"](nodeName);
 
 	if(ielt9_elements.test(nodeName))return node;
 
-	if(!~html5_elements.indexOf(" " + nodeName + " ")) {
+	if(!~html5_elements.indexOf("|" + nodeName + "|")) {
 		html5_elements_array.push(nodeName);
-		html5_elements += (nodeName + " ");
+		html5_elements += (nodeName + "|");
 		(safeFragment["__orig__createElement__"] || safeFragment.createElement)(nodeName);
 		//node.document.createElement(nodeName);
 	}
@@ -1480,7 +1492,7 @@ if(document.querySelectorAll)extendNodeListPrototype(document.querySelectorAll("
 
 
 
-if(!_Node_prototype["ie"] && browser.msie > 7)return;
+if(!_Node_prototype["ie"] && _browser_msie > 7)return;
 /*  ======================================================================================  */
 /*  ======================================================================================  */
 /*  ======================================================================================  */
@@ -1522,9 +1534,10 @@ var /** @const*/
 ;
 //CONFIG END
 
-var /** @type {boolean} */
+var /** @const @type {boolean} */
 	noDocumentReadyState = !document.readyState
 
+	/** @const */
   , ieltbehaviorRules = [__URL_TO_ELEMENT_BEHAVIOR__]
 	
   , ielt9BehaviorRule = "{behavior:"
@@ -1537,11 +1550,16 @@ var /** @type {boolean} */
 
   , __ielt8_Node_behavior_apply
 
+	/** @const */
+  , _Element_getElementsByClassName = document.getElementsByClassName
+
 	// ------------------------------ ==================  Window  ================== ------------------------------
   , _emulate_scrollX_scrollY
   
+	/** @const */
   , originalScrollTo = global.scrollTo
 
+	/** @const */
   , originalScrollBy = global.scrollBy
 
 	// ------------------------------ ==================  querySelector  ================== ------------------------------
@@ -1601,10 +1619,7 @@ function createBehaviorStyle(styleId, tags, behaviorRule) {
 	document.head.appendChild(style);
 }
 
-if(!document.readyState) {
-	noDocumentReadyState = true;
-	document.readyState = "uninitialized";
-}
+if(!noDocumentReadyState)document.readyState = "uninitialized";
 
 
 _Node_prototype["ielt8"] = true;
@@ -1681,46 +1696,69 @@ function queryOneSelector(selector, roots, result, onlyOne) {
 		/** @type {string} */nodeAttrExpected_value;
 	
 	if(isClasses)classes = classes.replace(RE__querySelector__dottes, " ");
-		
+	
+	if(css3Pseudo === ":root")isPreResult = true, result = [~roots.indexOf(document) ? _document_documentElement : null];//TODO:: tests
+
 	if(!isPreResult) {// ! matchesSelector
 		
-			switch(mod) {
-				default://mod == ' ' || mod == ','
-					while(root = roots[++i]) {
-						if(id) {
-							child = (root.getElementById || document.getElementById)(id);
-							if(!tag || child.tagName.toUpperCase() === tag)result.push(child);
-						}
-						else {
-							/*if(mod === " ") {
-								a = root.compareDocumentPosition
-							}*/
-
-							if(isClasses) {
-								tempResult = root.getElementsByClassName(classes);
-							}
-							else {
-								tempResult = (!tag && root.all) ? root.all : root.getElementsByTagName(tag || "*");
-							}
-							kr = -1;
-							while(child = tempResult[++kr]) if(!(child.sourceIndex in resultKeys)) {
-								resultKeys[child.sourceIndex] = true;
-								result.push(child);
-							}
-						}
-					}
+		switch(mod) {
+			default://mod == ' ' || mod == ','
+				while(root = roots[++i]) {
 					if(id) {
-						id = "";
+						child = (root.getElementById || document.getElementById)(id);
+						if(!tag || child.tagName.toUpperCase() === tag)result.push(child);
 					}
 					else {
-						if(isClasses)isClasses = false;
-						else if(tag)tag = "";
+						/*if(mod === " ") {
+							a = root.compareDocumentPosition
+						}*/
+
+						if(isClasses) {
+							tempResult = _Element_getElementsByClassName.call(root, classes);
+						}
+						else {
+							tempResult = (!tag && root.all) ? root.all : root.getElementsByTagName(tag || "*");
+						}
+						kr = -1;
+						while(child = tempResult[++kr]) if(!(child.sourceIndex in resultKeys)) {
+							resultKeys[child.sourceIndex] = true;
+							result.push(child);
+						}
 					}
-				break;
-				case '+':
-					while(root = roots[++i]) {
-						while((child = root.nextSibling) && child.nodeType != 1){}
-						match = child && (!tag || child.tagName.toUpperCase() === tag) &&
+				}
+				if(id) {
+					id = "";
+				}
+				else {
+					if(isClasses)isClasses = false;
+					else if(tag)tag = "";
+				}
+			break;
+			case '+':
+				while(root = roots[++i]) {
+					while((child = root.nextSibling) && child.nodeType != 1){}
+					match = child && (!tag || child.tagName.toUpperCase() === tag) &&
+						(!(child.sourceIndex in resultKeys));
+						
+					if(match && isClasses) {
+						kr = -1;
+						_curClass = ' ' + child.className + ' ';
+						while(classes[++kr] && match)
+							match = !!~_curClass.indexOf(classes[kr]);
+					}
+					if(match) {
+						result.push(child);
+
+						resultKeys[child.sourceIndex] = true;
+					}
+				}
+				isClasses = false;
+				tag = "";
+			break;
+			case '~'://W3C: "an F element preceded by an E element"
+				while(root = roots[++i]) {
+					while (child = child.nextSibling) {//TODO:: Не засовывать в result те элементы, которые уже были туда засованы
+						match = child.nodeType == 1 && (!tag || child.tagName.toUpperCase() === tag) &&
 							(!(child.sourceIndex in resultKeys));
 							
 						if(match && isClasses) {
@@ -1735,55 +1773,34 @@ function queryOneSelector(selector, roots, result, onlyOne) {
 							resultKeys[child.sourceIndex] = true;
 						}
 					}
-					isClasses = false;
-					tag = "";
-				break;
-				case '~'://W3C: "an F element preceded by an E element"
-					while(root = roots[++i]) {
-						while (child = child.nextSibling) {//TODO:: Не засовывать в result те элементы, которые уже были туда засованы
-							match = child.nodeType == 1 && (!tag || child.tagName.toUpperCase() === tag) &&
-								(!(child.sourceIndex in resultKeys));
-								
-							if(match && isClasses) {
-								kr = -1;
-								_curClass = ' ' + child.className + ' ';
-								while(classes[++kr] && match)
-									match = !!~_curClass.indexOf(classes[kr]);
-							}
-							if(match) {
-								result.push(child);
+				}
+				isClasses = false;
+				tag = "";
+			break;
+			case '>'://W3C: "an F element preceded by an E element"
+				while(root = roots[++i]) {
+					a = -1;
+					while(child = root.childNodes[++a]) {
+						match = child.nodeType == 1 && (!tag || child.tagName.toUpperCase() === tag) &&
+							(!(child.sourceIndex in resultKeys));
+							
+						if(match && isClasses) {
+							kr = -1;
+							_curClass = ' ' + child.className + ' ';
+							while(classes[++kr] && match)
+								match = !!~_curClass.indexOf(classes[kr]);
+						}
+						if(match) {
+							result.push(child);
 
-								resultKeys[child.sourceIndex] = true;
-							}
+							resultKeys[child.sourceIndex] = true;
 						}
 					}
-					isClasses = false;
-					tag = "";
-				break;
-				case '>'://W3C: "an F element preceded by an E element"
-					while(root = roots[++i]) {
-						a = -1;
-						while(child = root.childNodes[++a]) {
-							match = child.nodeType == 1 && (!tag || child.tagName.toUpperCase() === tag) &&
-								(!(child.sourceIndex in resultKeys));
-								
-							if(match && isClasses) {
-								kr = -1;
-								_curClass = ' ' + child.className + ' ';
-								while(classes[++kr] && match)
-									match = !!~_curClass.indexOf(classes[kr]);
-							}
-							if(match) {
-								result.push(child);
-
-								resultKeys[child.sourceIndex] = true;
-							}
-						}
-					}
-					isClasses = false;
-					tag = "";
-				break;
-			}
+				}
+				isClasses = false;
+				tag = "";
+			break;
+		}
 		
 		
 		mod = "";
@@ -1938,7 +1955,7 @@ function queryOneSelector(selector, roots, result, onlyOne) {
 				/* W3C: "an E element, the n-th child of its parent" */
 					case 'nth-child':
 						ind = css3Pseudo_add;
-						c = child.nodeIndex || 0;
+						c = child["nodeIndex"] || 0;
 						a = ind[3] ? (ind[2] === '%' ? -1 : 1) * ind[3] : 0;
 						b = ind[1];
 				/* check if we have already looked into siblings, using exando - very bad */
@@ -1952,7 +1969,7 @@ function queryOneSelector(selector, roots, result, onlyOne) {
 				/* looping in child to find if nth expression is correct */
 							do {
 				/* nodeIndex expando used from Peppy / Sizzle/ jQuery */
-								if (brother.nodeType == 1 && (brother.nodeIndex = ++c) && child === brother && (!b ? !(c + a) : !((c + a) % b))) {
+								if (brother.nodeType == 1 && (brother["nodeIndex"] = ++c) && child === brother && (!b ? !(c + a) : !((c + a) % b))) {
 									match = true;
 								}
 							} while (!match && (brother = brother.nextSibling));
@@ -1965,7 +1982,7 @@ function queryOneSelector(selector, roots, result, onlyOne) {
 					case 'nth-last-child':
 				/* almost the same as the previous one */
 						ind = css3Pseudo_add;
-						c = child.nodeIndexLast || 0;
+						c = child["nodeIndexLast"] || 0;
 						a = ind[3] ? (ind[2] === '%' ? -1 : 1) * ind[3] : 0;
 						b = ind[1];
 						if (c) {
@@ -1975,7 +1992,7 @@ function queryOneSelector(selector, roots, result, onlyOne) {
 							match = false;
 							brother = child.parentNode.lastChild;
 							do {
-								if (brother.nodeType == 1 && (brother.nodeLastIndex = ++c) && child === brother && (!b ? !(c + a) : !((c + a) % b))) {
+								if (brother.nodeType == 1 && (brother["nodeIndexLast"] = ++c) && child === brother && (!b ? !(c + a) : !((c + a) % b))) {
 									match = true;
 								}
 							} while (!match && (brother = brother.previousSibling));
@@ -2000,7 +2017,7 @@ function queryOneSelector(selector, roots, result, onlyOne) {
 							do {//looping in rs to find if nth expression is correct
 								//nodeIndex expando used from Peppy / Sizzle/ jQuery
 								if (brother.nodeType == 1 &&
-									isLast ? (brother.nodeLastIndex = i++) : (brother.nodeIndex = ++i) &&
+									isLast ? (brother.nodeIndexLast = i++) : (brother.nodeIndex = ++i) &&
 									child === brother && ((i + a) % b)) {
 									match = false;
 								}
@@ -2031,7 +2048,7 @@ function queryOneSelector(selector, roots, result, onlyOne) {
 				(the document language specifies how language is determined)"
 				*/
 					case 'lang':
-						match = (child.lang == css3Pseudo_add || document.documentElement.lang == css3Pseudo_add);
+						match = (child.lang == css3Pseudo_add || _document_documentElement.lang == css3Pseudo_add);
 					break;
 				/* thx to John, from Sizzle, 2008-12-05, line 398 */
 					case 'enabled':
@@ -2099,13 +2116,13 @@ var queryManySelector = function queryManySelector(selector, onlyOne) {
 				//workaround with IE bug about returning element by name not by ID.
 				//Solution completely changed, thx to deerua.
 				//Get all matching elements with this id
-				if (rt && browser.msie < 9 && rt.id !== selector) {
+				if (rt && _browser_msie < 9 && rt.id !== selector) {
 					rt = root.ownerDocument.all[selector];
 				}
 				return rt && [rt] || [];
 			break;
 			case '.':
-				return root.getElementsByClassName(selector.slice(1).replace(RE__querySelector__dottes, " "));
+				return _Element_getElementsByClassName.call(root, selector.slice(1).replace(RE__querySelector__dottes, " "));
 			break;
 			default:
 				return Array["from"](root.getElementsByTagName(selector));
@@ -2149,13 +2166,13 @@ var queryManySelector = function queryManySelector(selector, onlyOne) {
 						//workaround with IE bug about returning element by name not by ID.
 						//Solution completely changed, thx to deerua.
 						//Get all matching elements with this id
-						if (tmp && browser.msie < 9 && tmp.id !== rule) {
+						if (tmp && _browser_msie < 9 && tmp.id !== rule) {
 							tmp = tmp.ownerDocument.all[rule];
 						}
 						selElements.push(tmp);
 					break;
 					case '.':
-						tmp = rt.getElementsByClassName(rule.slice(1).replace(RE__querySelector__dottes, " "));
+						tmp = _Element_getElementsByClassName.call(rt, rule.slice(1).replace(RE__querySelector__dottes, " "));
 						j = -1;
 						while(tmp2 = tmp[++j])selElements.push(tmp2);
 					break;
@@ -2167,7 +2184,7 @@ var queryManySelector = function queryManySelector(selector, onlyOne) {
 			}
 		}
 		else if(firstRule && rule === ":root") {
-			selElements = [document.documentElement];
+			selElements = [_document_documentElement];
 		}
 		else {//CSS3 selector
 			selElements = queryOneSelector(rule, root, null, onlyOne && lastRule);
@@ -2221,7 +2238,7 @@ function queryOneManySelector(selector) {
 function _matchesSelector(selector) {
 	if(!selector)return false;
 	if(selector === "*")return true;
-	if(this === document.documentElement && selector === ":root")return true;
+	if(this === _document_documentElement && selector === ":root")return true;
 	if(this === document.body && selector === "body")return true;
 
 	selector = _String_trim.call(selector.replace(RE__queryManySelector__doubleSpaces, "$1"));
@@ -2275,7 +2292,7 @@ function _matchesSelector(selector) {
 
 if(!document.querySelectorAll)document.querySelectorAll = queryManySelector;
 if(!document.querySelector)document.querySelector = queryOneManySelector;
-if(!document.documentElement.matchesSelector)document.documentElement.matchesSelector = _matchesSelector;
+if(!_document_documentElement.matchesSelector)_document_documentElement.matchesSelector = _matchesSelector;
 
 if(!_Node_prototype.hasAttribute)_Node_prototype.hasAttribute = function(name) {
 	return this.getAttribute(name) !== null;

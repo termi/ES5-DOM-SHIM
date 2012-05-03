@@ -13,12 +13,12 @@
 
 
 <!--[if lt IE 8]>
-<script src="../../__COMPILE/a.ielt8.js?3"></script>
+<script src="../../__SRC/a.ielt8.js?3"></script>
 <![endif]-->
 <!--[if IE 8]>
-<script src="../../__COMPILE/a.ie8.js?3"></script>
+<script src="../../__SRC/a.ie8.js?3"></script>
 <![endif]-->
-<script src="../../__COMPILE/a.js?3"></script>
+<script src="../../__SRC/a.js?3"></script>
 
 
 <script>
@@ -31,10 +31,8 @@ return{x:c(d,g.b.x,g.c.x),y:c(d,g.b.y,g.c.y)}};return new b(q,w,e,r)}(1,1,1,1);
 var $$ = Function.prototype.bind.call(document.querySelectorAll, document);
 var $$0 = Function.prototype.bind.call(document.querySelector, document);
 
-//https://gist.github.com/2369790
-function delegate(a,b,c,d){return function(e){c=1;d=e.target;
-if(Object.defineProperty){try{delete e.target}catch(x){}Object.defineProperty(e,"target",{writable:true})};
-do if(d.matchesSelector&&d.matchesSelector(a)){e.target=d;c=b.call(this,e)}while(c!==false&&d!=this&&(d=d.parentNode));return c}};
+//https://gist.github.com/2569872
+function delegate(a,b){return function(e,c,d){d=e.target;do d.matchesSelector(a)&&(c=b.call(d,e));while(c!==!1&&d!=this&&(d=d.parentNode));return c}}
 
 function main() {
 	/* Set navigation dots to an active state as the user scrolls */
@@ -59,8 +57,6 @@ function main() {
 			else sect.navLink.classList.remove('active');
 		}
 	}
-	
-	redrawDotNav();
 	
 	var parallaxBgs = Array.from($$(".parallax-bg")).reverse();
 
@@ -95,7 +91,7 @@ function main() {
 	
 	/* Click menu event handler */
 	document.addEventListener("click", delegate("a", function(e) {
-		var href = e.target.getAttribute("href").replace(url, ""),
+		var href = this.getAttribute("href").replace(url, ""),
 			referedSection = href.startsWith("#") ?
 				$$0(href) :
 				null;
@@ -115,6 +111,8 @@ function main() {
 	document.addEventListener('mousewheel', function() {
 		scrollTimer && clearTimeout(scrollTimer), scrollTimer=null;
 	});
+
+	window.onscroll();//First init
 }
 
 document.addEventListener('DOMContentLoaded', main);
