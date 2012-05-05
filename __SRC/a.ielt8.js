@@ -143,21 +143,22 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
 	/** @const */
   , _Function_call = Function.prototype.call
 	
-	/** Unsafe bind for service and performance needs
+	/** Use native "bind" or unsafe bind for service and performance needs
 	 * @const
 	 * @param {Function} __method
 	 * @param {Object} object
 	 * @param {...} var_args
 	 * @return {Function} */
-  , _unSafeBind = function(__method, object, var_args) {
-		var args = _Array_slice.call(arguments, 2);
+  , _unSafeBind = Function.prototype.bind || function(object, var_args) {
+		var __method = this,
+			args = _Array_slice.call(arguments, 1);
 		return function () {
 			return _Function_apply.call(__method, object, args.concat(_Array_slice.call(arguments)));
 		}
-	}
+	} 
 	
 	/** @const */
-  , _hasOwnProperty = _unSafeBind(Function.prototype.call, Object.prototype.hasOwnProperty)
+  , _hasOwnProperty = _unSafeBind.call(Function.prototype.call, Object.prototype.hasOwnProperty)
   
 	/**
 	 * @const
@@ -174,11 +175,10 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
        return _Function_apply.call(_function, context, _Array_slice.call(arguments, 2))
 	}
 
-  	/** @type {Node}
-	 * @const */
+  	/** @type {Node} */
   , _testElement = document.createElement('p')
 
-  , txtTextElement
+  , _txtTextElement
 	
   , _Node_prototype = global["Node"].prototype
 	
@@ -189,8 +189,6 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
 
 	/** @const */
   , _Native_Date = Date
-
-  , _DOMException
 
 	/** @const @type {RegExp} */
   , RE_cloneElement_tagMatcher = /^\<([\w\:\-]*)[\>\ ]/i
@@ -216,7 +214,6 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
 	/** @type {Object} */
   , object_tmp
 
-	/** @const */
   , nodeList_methods_fromArray = ["every", "filter", "forEach", "indexOf", "join", "lastIndexOf", "map", "reduce", "reduceRight", "reverse", "slice", "some", "toString"]
 
 	// ------------------------------ ==================  Events  ================== ------------------------------
@@ -438,15 +435,8 @@ if('te'.split(/(s)*/)[1] != void 0 ||
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Exception  ==================================  */
 /*  =======================================================================================  */
-_DOMException = global["DOMException"];
-if(!_DOMException) {
-	/**
-	 * DOMException
-	 * @constructor
-	 * @param {string} errStr Error string code
-	 */
-	_DOMException = global["DOMException"] = function() { };
-	var p = _DOMException.prototype = new Error;
+if(!global["DOMException"]) {
+	var p = (global["DOMException"] = function() { }).prototype = new Error;
 	p.INDEX_SIZE_ERR = 1;
 	//p.DOMSTRING_SIZE_ERR = 2; // historical
 	p.HIERARCHY_REQUEST_ERR = 3;
@@ -509,7 +499,7 @@ function fixEvent(event) {
 	if(event.type === "click" && event.detail === void 0)event.detail = 1;
 	else if(event.type === "dblclick" && event.detail === void 0)event.detail = 2;
 
-	_append(event, _fake_Event_prototype);
+	_append(event, _Event_prototype);
 
 	event.target || (event.target = event.srcElement || document);// добавить target для IE
 
@@ -590,7 +580,7 @@ function commonHandle(event) {
 		catch(e) {
 			errors.push(e);//Все исключения - добавляем в массив, при этом не прерывая цепочку обработчиков.
 			errorsMessages.push(e.message);
-			if(console)console.error(e);
+			if(typeof console !== "undefined")console.error(e);
 		}
 
 		if(event["__stopNow"])break;//Мгновенная остановка обработки событий
@@ -687,7 +677,7 @@ if(!document.addEventListener)_Node_prototype.addEventListener = global.addEvent
 			//waits for script execution.
 			if (thisObj.readyState === 'loaded') {
 				thisObj.onreadystatechange = null;
-				thisObj.attachEvent("onreadystatechange", _unSafeBind(commonHandle, thisObj, {"type" : _type}));
+				thisObj.attachEvent("onreadystatechange", _unSafeBind.call(commonHandle, thisObj, {"type" : _type}));
 			}
 		};
 		_type = "readystatechange";
@@ -711,7 +701,7 @@ if(!document.addEventListener)_Node_prototype.addEventListener = global.addEvent
 	//Основная его задача - передать вызов универсальному обработчику commonHandle с правильным указанием текущего элемента this. 
 	//Как и events, _[handleUUID] достаточно инициализовать один раз для любых событий.
 	if(!(_callback = _[_event_handleUUID])) {
-		_callback = _[_event_handleUUID] = _unSafeBind(commonHandle, thisObj);
+		_callback = _[_event_handleUUID] = _unSafeBind.call(commonHandle, thisObj);
 	}
 
 	//Если обработчиков такого типа событий не существует - инициализуем events[type] и вешаем
@@ -891,11 +881,11 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 
 
 // IE - contains fails if argument is textnode
-txtTextElement = _Function_call.call(document_createTextNode, document, "temp");
-_testElement.appendChild(txtTextElement);
+_txtTextElement = _Function_call.call(document_createTextNode, document, "temp");
+_testElement.appendChild(_txtTextElement);
 
 try {
-    _testElement.contains(txtTextElement);
+    _testElement.contains(_txtTextElement);
     boolean_tmp = false;
 } catch (e) {
 	boolean_tmp = true;
@@ -926,7 +916,7 @@ if (document.doctype === null && _browser_msie > 7)//TODO:: this fix for IE < 8
 if(!_Node_prototype.contains)_Node_prototype.contains = _Node_contains;
 if (!_Function_call.call(document_createTextNode, document).contains){
 	if(global["Text"] && global["Text"].prototype) {//IE8
-	    _.push(_unSafeBind(_append, null, Text.prototype, _Node_prototype));
+	    _.push(_unSafeBind.call(_append, null, Text.prototype, _Node_prototype));
 	}
 	else {//IE < 8 TODO:: tests
 		document.createTextNode = function(text) {
@@ -937,7 +927,7 @@ if (!_Function_call.call(document_createTextNode, document).contains){
 	}
 }
 if (!_Function_call.call(document_createDocumentFragment, document).contains && global["HTMLDocument"] && global["HTMLDocument"].prototype) {
-    _.push(_unSafeBind(_append, null, global["HTMLDocument"].prototype, _Node_prototype));
+    _.push(_unSafeBind.call(_append, null, global["HTMLDocument"].prototype, _Node_prototype));
 }
 
 
@@ -1487,6 +1477,7 @@ if(document.querySelectorAll)extendNodeListPrototype(document.querySelectorAll("
 
 
 
+_testElement = _txtTextElement = boolean_tmp = string_tmp = number_tmp = function_tmp = object_tmp = nodeList_methods_fromArray = supportsUnknownElements = void 0;
 
 
 
@@ -1534,7 +1525,7 @@ var /** @const*/
 ;
 //CONFIG END
 
-var /** @const @type {boolean} */
+var /** @type {boolean} */
 	noDocumentReadyState = !document.readyState
 
 	/** @const */
@@ -1619,7 +1610,7 @@ function createBehaviorStyle(styleId, tags, behaviorRule) {
 	document.head.appendChild(style);
 }
 
-if(!noDocumentReadyState)document.readyState = "uninitialized";
+if(noDocumentReadyState)document.readyState = "uninitialized";
 
 
 _Node_prototype["ielt8"] = true;
@@ -1653,7 +1644,6 @@ global["__ielt8__wontfix"] = __ielt8__wontfix;
  */
 function queryOneSelector(selector, roots, result, onlyOne) {
 	//\.(.*?)(?=[:\[]|$) -> <.class1.class2>:focus or tag#id<.class1.class2>[attr*=value]
-	//TODO:: Реализовать концепцию isFirst ниже
 	if(!roots)roots = [document];
 	else if(!Array.isArray(roots))roots = [roots];
 	
@@ -1705,7 +1695,7 @@ function queryOneSelector(selector, roots, result, onlyOne) {
 			default://mod == ' ' || mod == ','
 				while(root = roots[++i]) {
 					if(id) {
-						child = (root.getElementById || document.getElementById)(id);
+						child = root.getElementById ? root.getElementById(id) : document.getElementById(id);
 						if(!tag || child.tagName.toUpperCase() === tag)result.push(child);
 					}
 					else {
@@ -1757,7 +1747,7 @@ function queryOneSelector(selector, roots, result, onlyOne) {
 			break;
 			case '~'://W3C: "an F element preceded by an E element"
 				while(root = roots[++i]) {
-					while (child = child.nextSibling) {//TODO:: Не засовывать в result те элементы, которые уже были туда засованы
+					while (child = child.nextSibling) {
 						match = child.nodeType == 1 && (!tag || child.tagName.toUpperCase() === tag) &&
 							(!(child.sourceIndex in resultKeys));
 							
@@ -2112,7 +2102,7 @@ var queryManySelector = function queryManySelector(selector, onlyOne) {
 		switch (selector.charAt(0)) {
 			case '#':
 				selector = selector.slice(1);
-				rt = (root.getElementById || document.getElementById)(selector);
+				rt = root.getElementById ? root.getElementById(selector) : document.getElementById(selector);
 				//workaround with IE bug about returning element by name not by ID.
 				//Solution completely changed, thx to deerua.
 				//Get all matching elements with this id
@@ -2162,7 +2152,7 @@ var queryManySelector = function queryManySelector(selector, onlyOne) {
 				switch (rule.charAt(0)) {
 					case '#':
 						rule = rule.slice(1);
-						tmp = (rt.getElementById || document.getElementById)(rule);
+						tmp = rt.getElementById ? rt.getElementById(rule) : document.getElementById(rule);
 						//workaround with IE bug about returning element by name not by ID.
 						//Solution completely changed, thx to deerua.
 						//Get all matching elements with this id
@@ -2281,7 +2271,7 @@ function _matchesSelector(selector) {
 	else {
 		tmp = queryManySelector.call(thisObj.ownerDocument, selector);
 
-		for ( i in tmp ) if(Object.prototype.hasOwnProperty.call(tmp, i)) {
+		for ( i in tmp ) if(_hasOwnProperty(tmp, i)) {
 	        match = tmp[i] === thisObj;
 	        if(match)return true;
 	    }
@@ -2461,6 +2451,10 @@ global.attachEvent('onload', _onload);//Native method
 
 
 createBehaviorStyle(__STYLE_ID, __SUPPORTED__TAG_NAMES__, ielt9BehaviorRule);
+
+
+
+noDocumentReadyState = ielt9BehaviorRule = number_tmp = void 0;
 
 
 })(window);

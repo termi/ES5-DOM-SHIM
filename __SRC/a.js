@@ -90,6 +90,8 @@ var _browser_msie
 	/** @const */
   , _String_split = String.prototype.split
 
+  , _String_contains
+
   , _Array_map
 
   , _Array_from
@@ -109,24 +111,23 @@ var _browser_msie
 	/** @type {function} */
   , function_tmp
 
-	/** @const */
   , nodeList_methods_fromArray = ["every", "filter", "forEach", "indexOf", "join", "lastIndexOf", "map", "reduce", "reduceRight", "reverse", "slice", "some", "toString"]
   
-	/** Unsafe bind for service and performance needs
-	 * @const
+	/** Use native "bind" or unsafe bind for service and performance needs
 	 * @param {Function} __method
 	 * @param {Object} object
 	 * @param {...} var_args
 	 * @return {Function} */
-  , _unSafeBind = function(__method, object, var_args) {
-		var args = _Array_slice.call(arguments, 2);
+  , _unSafeBind = Function.prototype.bind || function(object, var_args) {
+		var __method = this,
+			args = _Array_slice.call(arguments, 1);
 		return function () {
 			return _Function_apply.call(__method, object, args.concat(_Array_slice.call(arguments)));
 		}
 	}
 
 	/** @const */
-  , _hasOwnProperty = _unSafeBind(Function.prototype.call, Object.prototype.hasOwnProperty)
+  , _hasOwnProperty = _unSafeBind.call(Function.prototype.call, Object.prototype.hasOwnProperty)
 
     /**
 	 * Call _function
@@ -180,10 +181,8 @@ var _browser_msie
 		throw ex;
 	}
 
-	/** @const */
   , functionReturnFalse = function() { return false }
 
-	/** @const */
   , functionReturnFirstParam = function(param) { return param }
 
 	/** @const */
@@ -207,7 +206,6 @@ var _browser_msie
 	}
 
     /**
-	 * @const
 	 * @param {boolean=} overwrite
 	 * @return {function(this:Object, Object, ...[*]): Object}
 	 */
@@ -229,14 +227,10 @@ var _browser_msie
 		}
 	}
 
-	/** @const */
-  , document_createElement = _unSafeBind(document["__orig__createElement__"] || document.createElement, document)
+  , document_createElement = _unSafeBind.call(document["__orig__createElement__"] || document.createElement, document)
 
-    /** @type {Node}
-	 * @const */
   , _testElement = document_createElement('p')
 
-  , _window_getComputedStyle
 	/** @type {RegExp} @const */
   , RE__matchSelector__easySelector1 = /^\ ?[\w#\.][\w-]*$/
 	/** @type {RegExp} @const */
@@ -319,6 +313,10 @@ var _browser_msie
   , _Shimed_Date_monthes
 
   , _Shimed_Date_leapYears
+
+  , _Shimed_Date_test_negDate = -62198755200000
+
+  , _Shimed_Date_test_yearStr = '-000001'
 
 	// ------------------------------ ==================  INCLUDE_EXTRAS  ================== ------------------------------
   , browser
@@ -465,6 +463,7 @@ Object["inherit"] = function(Child, Parent) {
 
 /*  =======================================================================================  */
 /*  =================================  Object prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
 
 /**
  * ES5 15.2.3.14
@@ -1103,7 +1102,7 @@ Array.prototype.forEach || (Array.prototype.forEach = function(iterator, context
 		}
 	}			
 });
-var _forEach = _unSafeBind(Function.prototype.call, Array.prototype.forEach);
+var _forEach = _unSafeBind.call(Function.prototype.call, Array.prototype.forEach);
 
 /** ES5 15.4.4.14
  * http://es5.github.com/#x15.4.4.14
@@ -1241,7 +1240,7 @@ if(!Array.prototype.filter)Array.prototype.filter = function(callback, thisObjec
 	// ES5 : "If IsCallable(callback) is false, throw a TypeError exception." in "_call" function
 
 	var thisArray = _toObject(this),
-		len = this.length >>> 0,
+		len = thisArray.length >>> 0,
 		result = [],
 		val;
 
@@ -1265,7 +1264,7 @@ _Array_map =
  */
 Array.prototype.map || (Array.prototype.map = function(callback, thisArg) {
 	var thisArray = _toObject(this),
-		len = this.length >>> 0,
+		len = thisArray.length >>> 0,
 		result = [];
 
 	for (var i = 0; i < len; i++)
@@ -1297,20 +1296,16 @@ if(!Array.isArray)Array.isArray = function(obj) {
 /*  ================================  String  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 /**
  * Random string
+ * https://gist.github.com/973263
  * @param {!number} length Length of result string
  * @return {string}
  */
 if(!String["random"])String["random"] = function String_random(length) {
 	if(!length || length < 0)return "";
 	
-	var count1 = ~~(length / 10),//fast Math.floor
-		count2 = length % 10,
-		str = "";
-		
-	while(count1 > 0)count1--, str += (String_random(5) + String_random(5));
-	if(count2)str += _toString.call(Math.round(Math.random() * parseInt("z".repeat(count2), 36)), 36);//36 - 0-9a-z
-		
-    return str + String_random(length - str.length);
+	return Array(++length).join(0).replace(/./g,function() {
+		return(0 | Math.random() * 32).toString(32)
+	});
 };
 
 
@@ -1336,7 +1331,7 @@ if (!String.prototype.trim || _String_trim_whitespace.trim()) {
     _String_trim_beginRegexp = new RegExp("^" + _String_trim_whitespace + _String_trim_whitespace + "*");
     _String_trim_endRegexp = new RegExp(_String_trim_whitespace + _String_trim_whitespace + "*$");
 	
-    String.prototype.trim = function trim() {
+    String.prototype.trim = function() {
         return String(this).replace(_String_trim_beginRegexp, "").replace(_String_trim_endRegexp, "");
     };
 }
@@ -1385,14 +1380,15 @@ if(!String.prototype["endsWith"])String.prototype["endsWith"] = function(substri
 	return index >= 0 && index === this.length - substring.length;
 };
 
+_String_contains =
 /**
  * Check if given string locate in current string
  * @param {string} substring substring to locate in the current string.
  * @return {boolean}
  */
-if(!String.prototype["contains"])String.prototype["contains"] = function(s) {
+String.prototype["contains"] || (String.prototype["contains"] = function(s) {
 	return !!~this.indexOf(s);
-};
+});
 
 /**
  * String to Array
@@ -1515,7 +1511,7 @@ if(!_Event_prototype["stopImmediatePropagation"]) {
 		if(e["__stopNow"]) {
 			e.stopPropagation();
 		}
-		else this.apply(e.currentTarget, arguments)
+		else return this.apply ? this.apply(e.currentTarget, arguments) : this.handleEvent ? this.handleEvent.apply(e.currentTarget, arguments) : void 0;
 	};
 
 	_Event_prototype["stopImmediatePropagation"] = function() {
@@ -1568,9 +1564,10 @@ if(document.addEventListener &&
 						if(old_removeEventListener)elementToFix.removeEventListener = function (type, listener, optional) {
 							optional = optional || false;
 
-							listener = listener["uuid"] && 
-								implementation_stopImmediatePropagation_listeners[listener["uuid"]]
-							|| listener;
+							if(listener["uuid"] && implementation_stopImmediatePropagation_listeners[listener["uuid"]]) {
+								listener = implementation_stopImmediatePropagation_listeners[listener["uuid"]];
+								delete implementation_stopImmediatePropagation_listeners[listener["uuid"]];
+							}
 
 							return old_removeEventListener.call(this, type, listener, optional);
 						};
@@ -1616,7 +1613,7 @@ DOMStringCollection = function(string, onchange, onchange_this) {
 };
 DOMStringCollection_checkToken = function(token) {
 	if(token === "")_throwDOMException("SYNTAX_ERR");
-	if((token + "").indexOf(" ") > -1)_throwDOMException("INVALID_CHARACTER_ERR");
+	if(_String_contains.call(token + "", " "))_throwDOMException("INVALID_CHARACTER_ERR");
 };
 /**
  * @param {DOMStringCollection} _DOMStringCollection
@@ -1673,7 +1670,7 @@ DOMStringCollection_methods = {
 			return offset && find.length + offset < string.length ? " " : "";
 		});
 
-		itemsArray = _String_split.call(thisObj.value, " ")
+		itemsArray = _String_split.call(thisObj.value, " ");
 
 		for(i = thisObj.length - 1 ; i > 0  ; --i) {
 			if(!(thisObj[i] = itemsArray[i])) {
@@ -1687,7 +1684,7 @@ DOMStringCollection_methods = {
 	contains: function(token) {
 		DOMStringCollection_checkToken(token);
 
-		return (" " + this.value + " ").indexOf(" " + token + " ") !== -1;
+		return _String_contains.call(" " + this.value + " ", " " + token + " ");
 	},
 	item: function(index) {
 		return this[index] || null;
@@ -1958,7 +1955,7 @@ if(!_Element_prototype.matchesSelector) {
 						tmp = selector.slice(1).split(".");
 						str = " " + thisObj.className + " ";
 						while(tmp[++i] && match) {
-							match = !!~str.indexOf(" " + tmp[i] + " ");
+							match = _String_contains.call(str, " " + tmp[i] + " ");
 						}
 						return match;
 					break;
@@ -2133,7 +2130,7 @@ if(INCLUDE_EXTRAS && !('reversed' in document_createElement("ol"))) {
 		get : function () {
 			var thisObj = this;
 
-			if(thisObj.tagName.toUpperCase() !== "OL")return void 0;
+			if(!thisObj.tagName || thisObj.tagName.toUpperCase() !== "OL")return void 0;
 
 			return thisObj.getAttribute('reversed') !== null;
 		},
@@ -2141,7 +2138,7 @@ if(INCLUDE_EXTRAS && !('reversed' in document_createElement("ol"))) {
 		set : function (value) {
 			var thisObj = this;
 
-			if(thisObj.tagName.toUpperCase() !== "OL")return void 0;
+			if(!thisObj.tagName || thisObj.tagName.toUpperCase() !== "OL")return void 0;
 
 			thisObj[(
 				value ? "remove" :
@@ -2274,10 +2271,9 @@ try {
 	global.getComputedStyle(_testElement)
 }
 catch(e) {
-	_window_getComputedStyle = global.getComputedStyle;
-	global.getComputedStyle = function(obj, pseudoElt) {
-		return _window_getComputedStyle.call(global, obj, pseudoElt || null)
-	}
+	global.getComputedStyle = _unSafeBind(function(obj, pseudoElt) {
+		return this.call(global, obj, pseudoElt || null)
+	}, global.getComputedStyle);
 }
 
 if(INCLUDE_EXTRAS) {
@@ -2372,17 +2368,28 @@ $$.uid_for_id = 0;
 // string format defined in 15.9.1.15. All fields are present in the String.
 // The time zone is always UTC, denoted by the suffix Z. If the time value of
 // this object is not a finite Number a RangeError exception is thrown.
-if(!_Native_Date.prototype.toISOString || (new _Native_Date(-62198755200000).toISOString().indexOf('-000001') === -1))
+if(!_Native_Date.prototype.toISOString || (_String_contains.call(new _Native_Date(_Shimed_Date_test_negDate).toISOString(), _Shimed_Date_test_yearStr)) || (new _Native_Date(-1).toISOString() !== '1969-12-31T23:59:59.999Z'))
     _Native_Date.prototype.toISOString = function() {
-        var result, length, value, year;
+        var result,
+        	length,
+        	value,
+        	year,
+        	month;
+
         if (!isFinite(this)) {
             throw new RangeError("Date.prototype.toISOString called on non-finite value.");
         }
 
-        // the date time string format is specified in 15.9.1.15.
-        result = [this.getUTCMonth() + 1, this.getUTCDate(),
-            this.getUTCHours(), this.getUTCMinutes(), this.getUTCSeconds()];
         year = this.getUTCFullYear();
+
+        month = this.getUTCMonth();
+        // see https://github.com/kriskowal/es5-shim/issues/111
+        year += ~~(month / 12);
+        month = (month % 12 + 12) % 12;
+
+        // the date time string format is specified in 15.9.1.15.
+        result = [month + 1, this.getUTCDate(),
+            this.getUTCHours(), this.getUTCMinutes(), this.getUTCSeconds()];
         year = (year < 0 ? '-' : (year > 9999 ? '+' : '')) + ('00000' + Math.abs(year)).slice(0 <= year && year <= 9999 ? -4 : -6);
 
         length = result.length;
@@ -2408,7 +2415,7 @@ if(!_Native_Date.now)_Native_Date.now = function() {
 // http://es5.github.com/#x15.9.5.44
 // This function provides a String representation of a Date object for use by
 // JSON.stringify (15.12.3).
-if(!_Native_Date.prototype.toJSON || !~((new _Native_Date(-62198755200000)).toJSON().indexOf('-000001')) ||
+if(!_Native_Date.prototype.toJSON || _String_contains.call((new _Native_Date(_Shimed_Date_test_negDate)).toJSON(), _Shimed_Date_test_yearStr) ||
     ~(function() {
         // is Date.prototype.toJSON non-generic?
         try {
@@ -2565,17 +2572,6 @@ if (!_Native_Date.parse/* || "Date.parse is buggy"*/) {
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Date  =====================================  */
 
 
-
-if(!INCLUDE_EXTRAS) {
-	if(!definePropertyWorksOnObject) {
-		Object.defineProperty = null;
-		delete Object.defineProperty;
-	}
-}
-
-
-
-
 /*  =======================================================================================  */
 /*  ========================================  DEBUG  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
@@ -2589,12 +2585,6 @@ if(DEBUG) {
 var i,
 	methods = ['assert','count','debug','dir','dirxml','error','group','groupCollapsed','groupEnd','info','log','markTimeline','profile','profileEnd','table','time','timeEnd','trace','warn'],
 	empty   = {},
-	fnApply = Function.prototype.apply,
-	_bind    = function (context, fn) {
-		return function () {
-				return fnApply.call( fn, context, arguments );
-			};
-	},
 	timeCounters;
 
 for (i = methods.length; i--;) empty[methods[i]] = functionReturnFirstParam;
@@ -2602,7 +2592,7 @@ for (i = methods.length; i--;) empty[methods[i]] = functionReturnFirstParam;
 if (console) {
 
 	if (!console.time) {
-		console.timeCounters = timeCounters = {};
+		timeCounters = {};
 
 		console.time = function(name, reset){
 			if (name) {
@@ -2628,7 +2618,7 @@ if (console) {
 
 	for (i = methods.length; i--;) {
 		console[methods[i]] = methods[i] in console ?
-			_bind(console, console[methods[i]]) : functionReturnFirstParam;
+			_unSafeBind.call(console[methods[i]], console) : functionReturnFirstParam;
 	}
 	console.disable = function () { global.console = empty;   };
 	  empty.enable  = function () { global.console = console; };
@@ -2640,6 +2630,8 @@ if (console) {
 	console.disable = console.enable = functionReturnFirstParam;
 }
 
+methods = void 0;
+
 })( typeof console === 'undefined' ? null : console );
 
 }//if(DEBUG)
@@ -2647,11 +2639,26 @@ if (console) {
 /*  ======================================================================================  */
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  DEBUG  =====================================  */
 
+
+
+// no need any more
+number_tmp = string_tmp = boolean_tmp = _testElement = nodeList_methods_fromArray = _unSafeBind = createExtendFunction = document_createElement = _Event = _CustomEvent = 
+	_Event_prototype = _Custom_Event_prototype = DOMStringCollection_methods = _Element_prototype = _Shimed_Date = functionReturnFalse = functionReturnFirstParam = void 0;
+
 //apply IE lt 9 shims
 if(_) {
 	_.forEach(_call);
 	//Restore original "_" or set "_" to undefined
 	global["_"] = orig_;
 }
+
+if(!INCLUDE_EXTRAS) {
+	if(!definePropertyWorksOnObject) {
+		Object.defineProperty = null;
+		delete Object.defineProperty;
+	}
+}
+
+
 
 })(window);

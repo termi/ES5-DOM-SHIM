@@ -113,10 +113,10 @@ function main() {
 	var j = document.getElementsByClassName("test")[0];
 	j.addEventListener("someEvent", function(e) {
 		console.log("j someEvent bubble");
-	}
-		, false);
+	} , false);
+	
 	j = document.querySelector(".test");
-	j.addEventListener("someEvent", console.log.bind(null, "j someEvent capture"), true);
+	j.addEventListener("someEvent", function(){console.log("j someEvent capture")}, true);
 	
 	//$("test2").addEventListener("someEvent", console.log.bind(null, "test2 someEvent capture"), true);
 	
