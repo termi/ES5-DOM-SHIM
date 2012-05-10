@@ -3,6 +3,7 @@
 <html debug=true>
 	
 	<head>
+
 <script type='text/javascript' src='../libs/firebug/firebug.js'></script>
 		<title>The history of aeronautics</title>
 
@@ -58,10 +59,8 @@ function main() {
 		}
 	}
 	
-	var parallaxBgs = Array.from($$(".parallax-bg")).reverse();
-
 	/* Scroll the background layers */
-	var parallaxScroll = parallaxBgs.forEach.bind(parallaxBgs, function(node, index) {
+	var parallaxScroll = [].forEach.bind(Array.from($$(".parallax-bg")).reverse(), function(node, index, parallaxBgs) {
 		node.style.top = (0 - (window.pageYOffset * (index + 1) / (parallaxBgs.length + 1))) + 'px';
 		//node.style.marginLeft = +node.style.left +lineanBezier.get((0 - (window.pageYOffset * (index + 1) / (parallaxBgs.length + 1))) + 'px';
 	});

@@ -20,7 +20,7 @@ var IS_DEBUG = false;
 
 
 /** @const @type {boolean} */
-var DEBUG = IS_DEBUG && !!(window && window.console);
+var DEBUG = IS_DEBUG;
 
 /** Browser sniffing
  * @type {boolean} */
@@ -58,10 +58,10 @@ if(!global["Document"])global["Document"] = global["DocumentFragment"];
 
 //"_" - container for shims what should be use in a.js
 var orig_ = global["_"],//Save original "_" - we will restore it in a.js
-	_ = global["_"] = {
+	_ = (global["_"] = {
 		"ielt9shims" : [],
 		"orig_" : orig_
-	}["ielt9shims"]
+	})["ielt9shims"]
 	
   , __temporary__DOMContentLoaded_container = {}
 
@@ -103,10 +103,24 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
 	}
 
 	/** @const */
-  , _append = function(obj, extension) {
-		for(var key in extension)
-			if(_hasOwnProperty(extension, key) && !_hasOwnProperty(obj, key))
-				obj[key] = extension[key];
+  , _append = function(obj, extention) {
+		for(var key in extention)
+			if(_hasOwnProperty(extention, key) && !_hasOwnProperty(obj, key))
+				obj[key] = extention[key];
+		
+		return obj;
+	}
+
+	/** @const */
+  , _extend = function(obj, extention) {
+		for(var key in extention)
+			if(_hasOwnProperty(extention, key) && obj[key] !== extention[key])
+				try {//Object(..) - prevent IE error "invalid argument."
+					obj[key] = extention[key];
+				}
+				catch(e) {
+					obj[key] = Object(extention[key]);
+				}
 		
 		return obj;
 	}
@@ -339,7 +353,7 @@ More better solution:: http://xregexp.com/
 */
 if('te'.split(/(s)*/)[1] != void 0 ||
    '1_1'.split(/(_)/).length != 3) {
-   boolean_tmp = /()??/.exec("")[1] === undefined; // NPCG: nonparticipating capturing group
+   boolean_tmp = /()??/.exec("")[1] === void 0; // NPCG: nonparticipating capturing group
    
 	String.prototype.split = function (separator, limit) {
 		var str = this;
@@ -371,10 +385,10 @@ if('te'.split(/(s)*/)[1] != void 0 ||
 		- a positive number: use `Math.floor(limit)`.
 		- a negative number: no limit.
 		- other: type-convert, then use the above rules. */
-		if (limit === undefined || +limit < 0) {
+		if (limit === void 0 || +limit < 0) {
 			limit = Infinity;
 		} else {
-			limit = ~~(+limit);
+			limit = Math.floor(+limit);
 			if (!limit) {
 				return [];
 			}
@@ -536,7 +550,7 @@ function fixEvent(event) {
 }
 
 // вспомогательный универсальный обработчик. Вызывается в контексте элемента всегда this = element
-function commonHandle(event) {
+function commonHandle(nativeEvent) {
 	if(fixEvent === void 0) {//фильтруем редко возникающую ошибку, когда событие отрабатывает после unload'а страницы. 
 		return;
 	}
@@ -544,13 +558,18 @@ function commonHandle(event) {
 	var thisObj = this,
 		_ = thisObj["_"],
 		errors = [],//Инициализуется массив errors для исключений
-		errorsMessages = [];
+		errorsMessages = [],
+		event;
 	
 	if(!_ || !_[_event_eventsUUID])return;
 	
 	// получить объект события и проверить, подготавливали мы его для IE или нет
-	event || (event = window.event);
-	if(!event["__isFixed"])event = fixEvent.call(thisObj, event);
+	nativeEvent || (nativeEvent = window.nativeEvent);
+	if(!nativeEvent["__isFixed"])nativeEvent = fixEvent.call(thisObj, nativeEvent);
+
+	// save event properties in fake 'event' object
+	if(!nativeEvent["__custom_event"])(event = _extend(new Event(nativeEvent.type), nativeEvent))["__custom_event"] = true;
+	else event = nativeEvent;
 
 	var handlers = _[_event_eventsUUID][event.type];
 
@@ -779,7 +798,7 @@ if(!document.dispatchEvent)_Node_prototype.dispatchEvent = global.dispatchEvent 
 	catch(e) {
 		//Shim for Custome events in IE < 9
 		if(e["number"] === -2147024809) {//"Недопустимый аргумент."
-			if(DEBUG)_event._custom_event_ = true;//FOR DEBUG
+			_event["__custom_event"] = true;
 			var node = _event.target = thisObj;
 			//Всплываем событие
 			while(!_event.cancelBubble && node) {//Если мы вызвали stopPropogation() - больше не всплываем событие
@@ -1232,39 +1251,62 @@ if(!document.importNode) {
 
 //getElementsByClassName shim
 string_tmp = "getElementsByClassName";
-function_tmp = _Element_prototype[string_tmp] || function(clas) {
-	var root = this,
-		result = [],
-		nodes,
-		i = -1,
-		node,
-		elementClass,
-		match,
-		k;
-
-	if(arguments.length) {
-		clas = _String_split.call(_String_trim.call(clas + ""), " ");
-		if(!clas[0])return result;
-
-		nodes = root.getElementsByTagName('*');
-
-		while (node = nodes[++i]) {
-			match = node.className
-				&& (k = -1)
-				&& (elementClass = " " + node.className + " ");
-			
-			while(match && ++k < clas.length) {
-				match = !!~(elementClass).indexOf(" " + clas[k] + " ");
-			}
-
-			if (match) {
-				result.push(node);
-			}
+function_tmp = _Element_prototype[string_tmp] || 
+	document.querySelectorAll ? //Here native querySelectorAll in IE8
+		function(names) {
+			if(!names || !(names = _String_trim.call(names)))return [];
+			return (this.querySelectorAll || document.querySelectorAll).call(this, names.replace(/\s+(?=\S)|^/g, "."))
 		}
-	}
-	else throw new Error('WRONG_ARGUMENTS_ERR');
-	return result;	
-};
+		:
+		function(klas) {
+			klas = new RegExp(klas.replace(/\s*(\S+)\s*/g, '(?=(^|.*\\s)$1(\\s|$))'));
+
+			var nodes = this.all,
+				node,
+				i = -1,
+				result = [];
+
+			while(node = nodes[++i]) {
+				if(klas.test(node.className || '')) {
+					result.push(node);
+				}
+			}
+			
+			return result;
+		}
+		/*function(clas) {
+			var root = this,
+				result = [],
+				nodes,
+				i = -1,
+				node,
+				elementClass,
+				match,
+				k;
+
+			if(arguments.length) {
+				clas = _String_split.call(_String_trim.call(clas + ""), " ");
+				if(!clas[0])return result;
+
+				nodes = root.getElementsByTagName('*');
+
+				while (node = nodes[++i]) {
+					match = node.className
+						&& (k = -1)
+						&& (elementClass = " " + node.className + " ");
+					
+					while(match && ++k < clas.length) {
+						match = !!~(elementClass).indexOf(" " + clas[k] + " ");
+					}
+
+					if (match) {
+						result.push(node);
+					}
+				}
+			}
+			else throw new Error('WRONG_ARGUMENTS_ERR');
+			return result;	
+		}*/;
 if(!(string_tmp in _testElement))_Element_prototype[string_tmp] = function_tmp;
 if(!document[string_tmp])_document_documentElement[string_tmp] = document[string_tmp] = function_tmp;
 
@@ -1555,17 +1597,17 @@ var /** @type {boolean} */
 
 	// ------------------------------ ==================  querySelector  ================== ------------------------------
 	/** @type {RegExp} @const */
-  , RE__selector__easySelector1 = /^\ ?[\w#\.][\w-]*$/
+  , RE__selector__easySelector1 = /^\s?[\w#\.][\w-]*$/
 	/** @type {RegExp} @const */
-  , RE__selector__easySelector2 = /^\ ?(\.[\w-]*)+$/
+  , RE__selector__easySelector2 = /^\s?(\.[\w-]*)+$/
 	/** @type {RegExp} @const */
-  , RE__queryManySelector__doubleSpaces = /\s*([,>+~ ])\s*/g//Note: Use with "$1"
+  , RE__queryManySelector__doubleSpaces = /\s*([,>+~\s])\s*/g//Note: Use with "$1"
 	/** @type {RegExp} @const */
   , RE__querySelector__arrtSpaceSeparated_toSafe = /\~\=/g
 	/** @type {RegExp} @const */
   , RE__querySelector__arrtSpaceSeparated_fromSafe = /\|\-\|\=/g
 	/** @type {RegExp} @const */
-  , RE__queryManySelector__selectorsMatcher = /(^[+> ~]?|,|\>|\+|~| ).*?(?=[,>+~ ]|$)/g
+  , RE__queryManySelector__selectorsMatcher = /(^[>+~\s]?|,|\>|\+|~| ).*?(?=[,>+~\s]|$)/g
 	/** @type {RegExp} @const */
   , RE__querySelector__dottes = /\./g
 	/** @type {RegExp} @const */
@@ -1573,7 +1615,7 @@ var /** @type {boolean} */
 	/** @type {RegExp} @const */
   , RE__queryOneSelector__attrMatcher = /^\[?(.*?)(?:([\*~&\^\$\|!]?=)(.*?))?\]?$/
 	/** @type {RegExp} @const */
-  , RE__queryOneSelector__selectorMatch = /^([,>+~ ])?(\w*)(?:|\*)\#?([\w\-]*)((?:\.?[\w\-])*)(\[.*?\])?\:?([\w\-\+\%\(\)]*)$/
+  , RE__queryOneSelector__selectorMatch = /^([,>+~\s])?(\w*)(?:|\*)\#?([\w\-]*)((?:\.?[\w\-])*)(\[.*?\])?\:?([\w\-\+\%\(\)]*)$/
 	/** @type {RegExp} @const */
   , RE__queryOneSelector__pseudoMatcher = /^([^(]+)(?:\(([^)]+)\))?$//* regexpt from jass 0.3.9 (http://yass.webo.in/) rev. 371 line 166 from right */
 	/** @type {RegExp} @const */
@@ -1660,7 +1702,7 @@ function queryOneSelector(selector, roots, result, onlyOne) {
 		/** @type {Node} */child,
 		/** @type {Node} */root,
 
-		/** @type {string} */mod = selectorArr[1],
+		/** @type {string} */combinator = selectorArr[1],
 		/** @type {string} */tag = selectorArr[2].toUpperCase(),
 		/** @type {string} */id = selectorArr[3],
 		/** @type {(string|Array.<string>)} */classes = selectorArr[4],
@@ -1691,15 +1733,15 @@ function queryOneSelector(selector, roots, result, onlyOne) {
 
 	if(!isPreResult) {// ! matchesSelector
 		
-		switch(mod) {
-			default://mod == ' ' || mod == ','
+		switch(combinator) {
+			default://combinator == ' ' || combinator == ','
 				while(root = roots[++i]) {
 					if(id) {
 						child = root.getElementById ? root.getElementById(id) : document.getElementById(id);
 						if(!tag || child.tagName.toUpperCase() === tag)result.push(child);
 					}
 					else {
-						/*if(mod === " ") {
+						/*if(combinator === " ") {
 							a = root.compareDocumentPosition
 						}*/
 
@@ -1793,10 +1835,10 @@ function queryOneSelector(selector, roots, result, onlyOne) {
 		}
 		
 		
-		mod = "";
+		combinator = "";
 	}
 
-	if(result.length && (tag || isClasses || css3Attr || css3Pseudo || id || mod)) {
+	if(result.length && (tag || isClasses || css3Attr || css3Pseudo || id || combinator)) {
 		i = -1;
 		if(isClasses)classes = _String_split.call(classes.slice(1), RE__querySelector__dottes);
 
@@ -1825,7 +1867,10 @@ function queryOneSelector(selector, roots, result, onlyOne) {
 						if((a = b.charAt(0)) === "\'" || a === "\""  && b.substr(-1) === a) {//Note: original IE substr not allowed negative value as first param
 							b = css3Attr_add[1] = _String_substr.call(b, 1, b.length - 2);
 						}
-						if(b == "class" && "all" in document)css3Attr_add[1] = "className";//IE
+						if("all" in document) {//IE
+							if(b == "class")css3Attr_add[1] = "className";
+							else if(b == "for")css3Attr_add[1] = "htmlFor";
+						}
 						b = css3Attr_add[3];
 						if(b && ((a = b.charAt(0)) === "\'" || a === "\""  && b.substr(-1) === a)) {
 							b = css3Attr_add[3] = _String_substr.call(b, 1, b.length - 2);
@@ -2149,7 +2194,7 @@ var queryManySelector = function queryManySelector(selector, onlyOne) {
 			selElements = [];
 			rule = _String_trim.call(rule);
 			while(rt = root[++k]) {
-				switch (rule.charAt(0)) {
+				switch (rule.charAt(0)) {//combinator's
 					case '#':
 						rule = rule.slice(1);
 						tmp = rt.getElementById ? rt.getElementById(rule) : document.getElementById(rule);
@@ -2235,7 +2280,7 @@ function _matchesSelector(selector) {
 
 	var thisObj = this,
 		isSimpleSelector = RE__selector__easySelector1.test(selector) || RE__selector__easySelector2.test(selector),
-		isEasySelector = !isSimpleSelector && !/([,>+~ ])/.test(selector),
+		isEasySelector = !isSimpleSelector && !/([,>+~\s])/.test(selector),
 		tmp,
 		match = false,
 		i,

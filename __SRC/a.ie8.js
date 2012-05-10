@@ -20,7 +20,7 @@ var IS_DEBUG = false;
 
 
 /** @const @type {boolean} */
-var DEBUG = IS_DEBUG && !!(window && window.console);
+var DEBUG = IS_DEBUG;
 
 /** Browser sniffing
  * @type {boolean} */
@@ -103,10 +103,24 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
 	}
 
 	/** @const */
-  , _append = function(obj, extension) {
-		for(var key in extension)
-			if(_hasOwnProperty(extension, key) && !_hasOwnProperty(obj, key))
-				obj[key] = extension[key];
+  , _append = function(obj, extention) {
+		for(var key in extention)
+			if(_hasOwnProperty(extention, key) && !_hasOwnProperty(obj, key))
+				obj[key] = extention[key];
+		
+		return obj;
+	}
+
+	/** @const */
+  , _extend = function(obj, extention) {
+		for(var key in extention)
+			if(_hasOwnProperty(extention, key) && obj[key] !== extention[key])
+				try {//Object(..) - prevent IE error "invalid argument."
+					obj[key] = extention[key];
+				}
+				catch(e) {
+					obj[key] = Object(extention[key]);
+				}
 		
 		return obj;
 	}
@@ -339,7 +353,7 @@ More better solution:: http://xregexp.com/
 */
 if('te'.split(/(s)*/)[1] != void 0 ||
    '1_1'.split(/(_)/).length != 3) {
-   boolean_tmp = /()??/.exec("")[1] === undefined; // NPCG: nonparticipating capturing group
+   boolean_tmp = /()??/.exec("")[1] === void 0; // NPCG: nonparticipating capturing group
    
 	String.prototype.split = function (separator, limit) {
 		var str = this;
@@ -371,10 +385,10 @@ if('te'.split(/(s)*/)[1] != void 0 ||
 		- a positive number: use `Math.floor(limit)`.
 		- a negative number: no limit.
 		- other: type-convert, then use the above rules. */
-		if (limit === undefined || +limit < 0) {
+		if (limit === void 0 || +limit < 0) {
 			limit = Infinity;
 		} else {
-			limit = ~~(+limit);
+			limit = Math.floor(+limit);
 			if (!limit) {
 				return [];
 			}
@@ -536,7 +550,7 @@ function fixEvent(event) {
 }
 
 // вспомогательный универсальный обработчик. Вызывается в контексте элемента всегда this = element
-function commonHandle(event) {
+function commonHandle(nativeEvent) {
 	if(fixEvent === void 0) {//фильтруем редко возникающую ошибку, когда событие отрабатывает после unload'а страницы. 
 		return;
 	}
@@ -544,13 +558,18 @@ function commonHandle(event) {
 	var thisObj = this,
 		_ = thisObj["_"],
 		errors = [],//Инициализуется массив errors для исключений
-		errorsMessages = [];
+		errorsMessages = [],
+		event;
 	
 	if(!_ || !_[_event_eventsUUID])return;
 	
 	// получить объект события и проверить, подготавливали мы его для IE или нет
-	event || (event = window.event);
-	if(!event["__isFixed"])event = fixEvent.call(thisObj, event);
+	nativeEvent || (nativeEvent = window.nativeEvent);
+	if(!nativeEvent["__isFixed"])nativeEvent = fixEvent.call(thisObj, nativeEvent);
+
+	// save event properties in fake 'event' object
+	if(!nativeEvent["__custom_event"])(event = _extend(new Event(nativeEvent.type), nativeEvent))["__custom_event"] = true;
+	else event = nativeEvent;
 
 	var handlers = _[_event_eventsUUID][event.type];
 
@@ -779,7 +798,7 @@ if(!document.dispatchEvent)_Node_prototype.dispatchEvent = global.dispatchEvent 
 	catch(e) {
 		//Shim for Custome events in IE < 9
 		if(e["number"] === -2147024809) {//"Недопустимый аргумент."
-			if(DEBUG)_event._custom_event_ = true;//FOR DEBUG
+			_event["_custom_event_"] = true;//FOR DEBUG
 			var node = _event.target = thisObj;
 			//Всплываем событие
 			while(!_event.cancelBubble && node) {//Если мы вызвали stopPropogation() - больше не всплываем событие
