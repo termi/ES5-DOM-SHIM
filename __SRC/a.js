@@ -52,26 +52,20 @@ Extra polyfills
 /**
  * @type {Window}
  * @const */
-function(global) {
+function(global, _append) {
 
 "use strict";
 
 /** @const @type {boolean} */
-var DEBUG = IS_DEBUG && !!(window && window.console);
-
-var _ = global["_"],
-	orig_;
-if(_ && _["ielt9shims"]) {
-	orig_ = _["orig_"];
-	_ = _["ielt9shims"];
-}
-
-
+var DEBUG = IS_DEBUG;
 
 
 
 var _browser_msie
 
+	/** @const */
+  , prototypeOfObject = Object.prototype
+  
 	/** @const */
   , _Function_apply = Function.prototype.apply
 
@@ -81,8 +75,6 @@ var _browser_msie
 
 	/** @const */
   , S_ELEMENT_CACHED_CLASSLIST_NAME = "_ccl_"
-
-  , _append
 	
 	/** @const */
   , _Array_slice = Array.prototype.slice
@@ -99,22 +91,12 @@ var _browser_msie
 	/** @const */
   , _Array_splice = Array.prototype.splice
 
-	/** @type {boolean} */
-  , boolean_tmp
-
-	/** @type {string} */
-  , string_tmp
-
-	/** @type {number} */
-  , number_tmp
-
-	/** @type {function} */
-  , function_tmp
+  , _tmp_
 
   , nodeList_methods_fromArray = ["every", "filter", "forEach", "indexOf", "join", "lastIndexOf", "map", "reduce", "reduceRight", "reverse", "slice", "some", "toString"]
   
 	/** Use native "bind" or unsafe bind for service and performance needs
-	 * @param {Function} __method
+	 * @const
 	 * @param {Object} object
 	 * @param {...} var_args
 	 * @return {Function} */
@@ -127,7 +109,7 @@ var _browser_msie
 	}
 
 	/** @const */
-  , _hasOwnProperty = _unSafeBind.call(Function.prototype.call, Object.prototype.hasOwnProperty)
+  , _hasOwnProperty = _unSafeBind.call(Function.prototype.call, prototypeOfObject.hasOwnProperty)
 
     /**
 	 * Call _function
@@ -171,7 +153,7 @@ var _browser_msie
 	}
 
 	/** @const */
-  , _toString = Object.prototype.toString
+  , _toString = prototypeOfObject.toString
 
 	/** @const */
   , _throwDOMException = function(errStr) {
@@ -184,9 +166,6 @@ var _browser_msie
   , functionReturnFalse = function() { return false }
 
   , functionReturnFirstParam = function(param) { return param }
-
-	/** @const */
-  , prototypeOfObject = Object.prototype
 
 	/** @const */
   , _recursivelyWalk = function (nodes, cb) {
@@ -205,31 +184,11 @@ var _browser_msie
 		}
 	}
 
-    /**
-	 * @param {boolean=} overwrite
-	 * @return {function(this:Object, Object, ...[*]): Object}
-	 */
-  , createExtendFunction = function (overwrite) {
-		/**
-		 * @param {Object} obj
-		 * @param {...} ravArgs
-		 */
-		return function(obj, ravArgs) {
-			for(var i = 1; i < arguments.length; i++) {
-				var extension = arguments[i];
-				for(var key in extension)
-					if(_hasOwnProperty(extension, key) &&
-					   (overwrite || !_hasOwnProperty(obj, key))
-					  )obj[key] = extension[key];
-			}
-
-			return obj;
-		}
-	}
-
   , document_createElement = _unSafeBind.call(document["__orig__createElement__"] || document.createElement, document)
 
   , _testElement = document_createElement('p')
+  
+  , dom4_mutationMacro
 
 	/** @type {RegExp} @const */
   , RE__matchSelector__easySelector1 = /^\ ?[\w#\.][\w-]*$/
@@ -244,7 +203,7 @@ var _browser_msie
 
   // ------------------------------ ==================  Events  ================== ------------------------------
     /** @type {number} some unique identifire. must inc after use */
-  , UUID = 1
+  , UUID
 
   , _Event
 
@@ -267,11 +226,11 @@ var _browser_msie
 
   , DOMStringCollection_init_add
 
-  , DOMStringCollection_methods
-
   , DOMStringCollection_setNodeClassName
 
 	// ------------------------------ ==================  es5-shim  ================== ------------------------------
+  , _forEach
+
   , _shimed_Array_every
 
   , _String_trim
@@ -325,7 +284,7 @@ var _browser_msie
 
   , $$
 
-  	/** @type {Array} List of labelable element names */
+  	/** @type {string} Space separator list of labelable element names */
   , _labelable_elements
 
   , OL_reversed_removeAttributeChildValue
@@ -345,8 +304,8 @@ if(INCLUDE_EXTRAS) {
 	 * @const */
 	browser["names"] = (browser["agent"] = navigator.userAgent.toLowerCase()).match(/(mozilla|compatible|chrome|webkit|safari|opera|msie|iphone|ipod|ipad)/gi);
 	
-	number_tmp = browser.names && browser.names.length || 0;
-	while(number_tmp-- > 0)browser[browser.names[number_tmp]] = true;
+	_tmp_ = browser.names && browser.names.length || 0;
+	while(_tmp_-- > 0)browser[browser.names[_tmp_]] = true;
 
 	browser["mozilla"] = browser["mozilla"] && !browser["compatible"] && !browser["webkit"];
 	browser["safari"] = browser["safari"] && !browser["chrome"];
@@ -375,7 +334,6 @@ if(!global["Document"])global["Document"] = global["HTMLDocument"];//For IE8
 /*  ==================================  Function prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
 /**
- * From prototypejs (prototypejs.org)
  * Wraps the function in another, locking its execution scope to an object specified by thisObj.
  * @param {Object} object
  * @param {...} var_args
@@ -419,7 +377,6 @@ if(!Function.prototype.bind)Function.prototype.bind = function (object, var_args
  * @param {...} ravArgs extentions
  * @return {Object} the same object as `obj`
  */
-_append = createExtendFunction();
 if(INCLUDE_EXTRAS) {
 /*  =======================================================================================  */
 /*  ======================================  Classes  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
@@ -441,7 +398,15 @@ Object["append"] = _append;
  * @param {...} ravArgs extentions
  * @return {Object} the same object as `obj`
  */
-Object["extend"] = createExtendFunction(true);
+Object["extend"] = function(obj, ravArgs) {
+	for(var i = 1; i < arguments.length; i++) {
+		var extension = arguments[i];
+		for(var key in extension)
+			if(_hasOwnProperty(extension, key))obj[key] = extension[key];
+	}
+
+	return obj;
+};
 
 
 /**
@@ -464,117 +429,115 @@ Object["inherit"] = function(Child, Parent) {
 /*  =======================================================================================  */
 /*  =================================  Object prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
+_append(Object, {
+	/**
+	 * ES5 15.2.3.14
+	 * http://es5.github.com/#x15.2.3.14
+	 * https://developer.mozilla.org/en/JavaScript/Reference/global_Objects/Object/keys
+	 * Returns an array of all own enumerable properties found upon a given object, in the same order as that provided by a for-in loop (the difference being that a for-in loop enumerates properties in the prototype chain as well).
+	 *
+	 * Implementation from http://whattheheadsaid.com/2010/10/a-safer-object-keys-compatibility-implementation
+	 *
+	 * @param obj The object whose enumerable own properties are to be returned.
+	 * @return {Array} object keys
+	 */
+	keys : (function() {
+	    var DontEnums = [
+	            'toString',
+	            'toLocaleString',
+	            'valueOf',
+	            'hasOwnProperty',
+	            'isPrototypeOf',
+	            'propertyIsEnumerable',
+	            'constructor'
+	        ],
+	        hasDontEnumBug = !{"toString":null}.propertyIsEnumerable(DontEnums[0]),
+	        DontEnumsLength = DontEnums.length;
 
-/**
- * ES5 15.2.3.14
- * http://es5.github.com/#x15.2.3.14
- * https://developer.mozilla.org/en/JavaScript/Reference/global_Objects/Object/keys
- * Returns an array of all own enumerable properties found upon a given object, in the same order as that provided by a for-in loop (the difference being that a for-in loop enumerates properties in the prototype chain as well).
- *
- * Implementation from http://whattheheadsaid.com/2010/10/a-safer-object-keys-compatibility-implementation
- *
- * @param obj The object whose enumerable own properties are to be returned.
- * @return {Array} object keys
- */
-if(!Object.keys)Object.keys = (function() {
-    var DontEnums = [
-            'toString',
-            'toLocaleString',
-            'valueOf',
-            'hasOwnProperty',
-            'isPrototypeOf',
-            'propertyIsEnumerable',
-            'constructor'
-        ],
-        hasDontEnumBug = !{"toString":null}.propertyIsEnumerable(DontEnums[0]),
-        DontEnumsLength = DontEnums.length;
+	    return function (obj) {
+	        if (typeof obj != "object" && typeof obj != "function" || obj === null)
+	            throw new TypeError("Object.keys called on a non-object");
 
-    return function (obj) {
-        if (typeof obj != "object" && typeof obj != "function" || obj === null)
-            throw new TypeError("Object.keys called on a non-object");
+	        var result = [];
+	        for (var name in obj) {
+	            if(_hasOwnProperty(obj, name))
+	                result.push(name);
+	        }
 
-        var result = [];
-        for (var name in obj) {
-            if(_hasOwnProperty(obj, name))
-                result.push(name);
-        }
+	        if (hasDontEnumBug) {
+	            for (var i = 0; i < DontEnumsLength; i++) {
+	                if(_hasOwnProperty(obj, DontEnums[i]))
+	                    result.push(DontEnums[i]);
+	            }
+	        }
 
-        if (hasDontEnumBug) {
-            for (var i = 0; i < DontEnumsLength; i++) {
-                if(_hasOwnProperty(obj, DontEnums[i]))
-                    result.push(DontEnums[i]);
-            }
-        }
+	        return result;
+	    };
+	})()
 
-        return result;
-    };
-})();
+	/**
+	 * ES5 15.2.3.4
+	 * http://es5.github.com/#x15.2.3.4
+	 * Returns an array of all properties (enumerable or not) found upon a given object.
+	 * @param obj The object whose enumerable own properties are to be returned.
+	 * @return {Array} object keys
+	 */
+  , getOwnPropertyNames : function(obj) {
+		return Object.keys(obj);
+	}
 
+	/**
+	 * ES5 15.2.3.8
+	 * http://es5.github.com/#x15.2.3.8
+	 * this is misleading and breaks feature-detection, but
+	 * allows "securable" code to "gracefully" degrade to working
+	 * but insecure code.
+	 * @param {!Object} object
+	 * @return {Object} the same object
+	 */
+  , seal : functionReturnFirstParam
 
-/**
- * ES5 15.2.3.4
- * http://es5.github.com/#x15.2.3.4
- * Returns an array of all properties (enumerable or not) found upon a given object.
- * @param obj The object whose enumerable own properties are to be returned.
- * @return {Array} object keys
- */
-if(!Object.getOwnPropertyNames)Object.getOwnPropertyNames = function(obj) {
-	return Object.keys(obj);
-}
+	/**
+	 * ES5 15.2.3.9
+	 * http://es5.github.com/#x15.2.3.9
+	 * this is misleading and breaks feature-detection, but
+	 * allows "securable" code to "gracefully" degrade to working
+	 * but insecure code.
+	 * @param {!Object} object
+	 * @return {Object} the same object
+	 */
+  , freeze : functionReturnFirstParam
 
-/**
- * ES5 15.2.3.8
- * http://es5.github.com/#x15.2.3.8
- * this is misleading and breaks feature-detection, but
- * allows "securable" code to "gracefully" degrade to working
- * but insecure code.
- * @param {!Object} object
- * @return {Object} the same object
- */
-if(!Object.seal)Object.seal = functionReturnFirstParam;
+	/** ES5 15.2.3.10
+	 * http://es5.github.com/#x15.2.3.10
+	 * this is misleading and breaks feature-detection, but
+	 * allows "securable" code to "gracefully" degrade to working
+	 * but insecure code.
+	 * @param {!Object} object
+	 * @return {Object} the same object
+	 */
+  , preventExtensions : functionReturnFirstParam
 
-/**
- * ES5 15.2.3.9
- * http://es5.github.com/#x15.2.3.9
- * this is misleading and breaks feature-detection, but
- * allows "securable" code to "gracefully" degrade to working
- * but insecure code.
- * @param {!Object} object
- * @return {Object} the same object
- */
-if(!Object.freeze)Object.freeze = functionReturnFirstParam;
+	/** ES5 15.2.3.11
+	 * http://es5.github.com/#x15.2.3.11
+	 * @param {!Object} object
+	 * @param {boolean} is sealed?
+	 */
+  , isSealed : functionReturnFalse
 
-/** ES5 15.2.3.10
- * http://es5.github.com/#x15.2.3.10
- * this is misleading and breaks feature-detection, but
- * allows "securable" code to "gracefully" degrade to working
- * but insecure code.
- * @param {!Object} object
- * @return {Object} the same object
- */
-if (!Object.preventExtensions)Object.preventExtensions = functionReturnFirstParam;
+	/** ES5 15.2.3.12
+	 * http://es5.github.com/#x15.2.3.12
+	 * @param {!Object} object
+	 * @param {boolean} is frozen?
+	 */
+  , isFrozen : functionReturnFalse
 
-/** ES5 15.2.3.11
- * http://es5.github.com/#x15.2.3.11
- * @param {!Object} object
- * @param {boolean} is sealed?
- */
-if (!Object.isSealed)Object.isSealed = functionReturnFalse;
-
-/** ES5 15.2.3.12
- * http://es5.github.com/#x15.2.3.12
- * @param {!Object} object
- * @param {boolean} is frozen?
- */
-if (!Object.isFrozen)Object.isFrozen = functionReturnFalse;
-
-/** ES5 15.2.3.13
- * http://es5.github.com/#x15.2.3.13
- * @param {!Object} object
- * @param {boolean} is extensible?
- */
-if (!Object.isExtensible) {
-    Object.isExtensible = function(object) {
+	/** ES5 15.2.3.13
+	 * http://es5.github.com/#x15.2.3.13
+	 * @param {!Object} object
+	 * @param {boolean} is extensible?
+	 */
+  , isExtensible : function(object) {
         // 1. If Type(O) is not Object throw a TypeError exception.
         if (Object(object) !== object) {
             throw new TypeError(); // TODO message
@@ -588,57 +551,80 @@ if (!Object.isExtensible) {
         var returnValue = _hasOwnProperty(object, name);
         delete object[name];
         return returnValue;
-    };
-}
+    }
 
-/**
- * ES5 15.2.3.2
- * http://es5.github.com/#x15.2.3.2
- * https://github.com/kriskowal/es5-shim/issues#issue/2
- * http://ejohn.org/blog/objectgetprototypeof/
- * recommended by fschaefer on github
- * @param {!Object} object
- * @return {Object} prototype of given object
- */
-if(!Object.getPrototypeOf)Object.getPrototypeOf = function getPrototypeOf(object) {
-	return object.__proto__ || (
-		object.constructor ?
-		object.constructor.prototype :
-		prototypeOfObject
-	);
-};
-
-/**
- * https://developer.mozilla.org/en/JavaScript/Reference/global_Objects/Object/create
- * JavaScript 1.8.5
- * ES5 15.2.3.5
- * http://es5.github.com/#x15.2.3.5
- * Creates a new object with the specified prototype object and properties.
- * @param {Object} _prototype The object which should be the prototype of the newly-created object.
- * @param {Object=} properties If specified and not undefined, an object whose enumerable own properties (that is, those properties defined upon itself and not enumerable properties along its prototype chain) specify property descriptors to be added to the newly-created object, with the corresponding property names.
- * @return {!Object}
- */
-if(!Object.create)Object.create = function create(_prototype, properties) {
-	var _object;
-	if (_prototype === null) {
-		_object = { "__proto__": null };
-	} else {
-		if (typeof _prototype != "object")
-			throw new TypeError("typeof prototype["+(typeof _prototype)+"] != 'object'");
-
-		var /** @constructor */Type = function () {};
-		Type.prototype = _prototype;
-		_object = new Type();
-		// IE has no built-in implementation of `Object.getPrototypeOf`
-		// neither `__proto__`, but this manually setting `__proto__` will
-		// guarantee that `Object.getPrototypeOf` will work as expected with
-		// objects created using `Object.create`
-		_object.__proto__ = _prototype;
+	/**
+	 * ES5 15.2.3.2
+	 * http://es5.github.com/#x15.2.3.2
+	 * https://github.com/kriskowal/es5-shim/issues#issue/2
+	 * http://ejohn.org/blog/objectgetprototypeof/
+	 * recommended by fschaefer on github
+	 * @param {!Object} object
+	 * @return {Object} prototype of given object
+	 */
+  , getPrototypeOf : function getPrototypeOf(object) {
+		return object.__proto__ || (
+			object.constructor ?
+			object.constructor.prototype :
+			prototypeOfObject
+		);
 	}
-	if(properties)
-		Object.defineProperties(_object, properties);
-	return _object;
-};
+
+	/**
+	 * https://developer.mozilla.org/en/JavaScript/Reference/global_Objects/Object/create
+	 * JavaScript 1.8.5
+	 * ES5 15.2.3.5
+	 * http://es5.github.com/#x15.2.3.5
+	 * Creates a new object with the specified prototype object and properties.
+	 * @param {Object} _prototype The object which should be the prototype of the newly-created object.
+	 * @param {Object=} properties If specified and not undefined, an object whose enumerable own properties (that is, those properties defined upon itself and not enumerable properties along its prototype chain) specify property descriptors to be added to the newly-created object, with the corresponding property names.
+	 * @return {!Object}
+	 */
+  , create : function create(_prototype, properties) {
+		var _object;
+		if (_prototype === null) {
+			_object = { "__proto__": null };
+		} else {
+			if (typeof _prototype != "object")
+				throw new TypeError("typeof prototype["+(typeof _prototype)+"] != 'object'");
+
+			var /** @constructor */Type = function () {};
+			Type.prototype = _prototype;
+			_object = new Type();
+			// IE has no built-in implementation of `Object.getPrototypeOf`
+			// neither `__proto__`, but this manually setting `__proto__` will
+			// guarantee that `Object.getPrototypeOf` will work as expected with
+			// objects created using `Object.create`
+			_object.__proto__ = _prototype;
+		}
+		if(properties)
+			Object.defineProperties(_object, properties);
+		return _object;
+	}
+
+	//from https://github.com/paulmillr/es6-shim/blob/master/es6-shim.js
+  , "is" : function(x, y) {
+	  if (x === y) {
+	    // 0 === -0, but they are not identical
+	    if (x === 0) {
+	      return 1 / x === 1 / y;
+	    } else {
+	      return true;
+	    }
+	  }
+
+	  // NaN !== NaN, but they are identical.
+	  // NaNs are the only non-reflexive value, i.e., if x !== x,
+	  // then x is a NaN.
+	  // isNaN is broken: it converts its argument to number, so
+	  // isNaN("foo") => true
+	  return x !== x && y !== y;
+	}
+
+  , "isnt" : function(x, y) {
+	  return !Object["is"](x, y);
+	}
+});
 
 // ES5 15.2.3.6
 // http://es5.github.com/#x15.2.3.6
@@ -896,27 +882,7 @@ if (!Object.getOwnPropertyDescriptor || getOwnPropertyDescriptorFallback) {
     };
 }
 
-//from https://github.com/paulmillr/es6-shim/blob/master/es6-shim.js
-if(!Object["is"])Object["is"] = function(x, y) {
-  if (x === y) {
-    // 0 === -0, but they are not identical
-    if (x === 0) {
-      return 1 / x === 1 / y;
-    } else {
-      return true;
-    }
-  }
 
-  // NaN !== NaN, but they are identical.
-  // NaNs are the only non-reflexive value, i.e., if x !== x,
-  // then x is a NaN.
-  // isNaN is broken: it converts its argument to number, so
-  // isNaN("foo") => true
-  return x !== x && y !== y;
-}
-if(!Object["isnt"])Object["isnt"] = function(x, y) {
-  return !Object["is"](x, y);
-}
 //TODO::
 // 1. getOwnPropertyDescriptors
 // 2. getPropertyDescriptor
@@ -952,43 +918,321 @@ if([1,2].splice(0).length != 2) {
 /*  ================================ ES6 ==================================  */
 // Based on https://github.com/paulmillr/es6-shim/
 
-_Array_from =
-/** toArray function
- * @param {Object|Array} iterable object
- * @return {Array}
- */
-Array["from"] || (Array["from"] = function(iterable) {
-	if(Array.isArray(iterable))return iterable;
-	if(iterable.toArray)return iterable.toArray();
-
-	var object = _toObject(iterable, true),
-		length = object.length >>> 0,
-		result;
-
-	try {
-		result = _Array_slice.call(object);
-	}
-	catch(e) { }
-
-	if(result && result.length === length)return result;
-
-	result = [];
-
-	for(var key = 0 ; key < length ; key++) {
-		if(key in object)
-			result[key] = object[key];
+_append(Array, {
+	/**
+	 * http://es5.github.com/#x15.4.3.2
+	 * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/isArray
+	 * https://gist.github.com/1034882
+	 * Returns true if an object is an array, false if it is not.
+	 * @param {*} obj The object to be checked
+	 * @return {boolean}
+	 */
+	isArray : function(obj) {
+		return '' + obj !== obj &&// is not the string '[object Array]' and
+	           _toString.call(obj) == '[object Array]'// test with Object.prototype.toString
 	}
 
-	return result;
+	/** toArray function
+	 * @param {Object|Array} iterable object
+	 * @return {Array}
+	 */
+  , "from" : function(iterable) {
+		if(Array.isArray(iterable))return iterable;
+		if(iterable.toArray)return iterable.toArray();
+
+		var object = _toObject(iterable, true),
+			length = object.length >>> 0,
+			result;
+
+		try {
+			result = _Array_slice.call(object);
+		}
+		catch(e) { }
+
+		if(result && result.length === length)return result;
+
+		result = [];
+
+		for(var key = 0 ; key < length ; key++) {
+			if(key in object)
+				result[key] = object[key];
+		}
+
+		return result;
+	}
+
+	/** return array of arguments of this function
+	 * @param {...} args
+	 * @return {Array}
+	 */
+  , "of" : function(args) {
+		return _Array_slice.call(arguments);
+	}
 });
+_Array_from = Array["from"];
 
-/** return array of arguments of this function
- * @param {...} args
- * @return {Array}
- */
-Array["of"] = Array["of"] || function(args) {
-	return _Array_slice.call(arguments);
-};
+/*  ================================ ES5 ==================================  */
+// Based on https://github.com/kriskowal/es5-shim
+
+_append(Array.prototype, {
+	/**
+	 * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/Reduce
+	 *
+	 * Apply a function against an accumulator and each value of the array (from left-to-right) as to reduce it to a single value.
+	 * @param {Function} accumulator Function to execute on each value in the array, taking four arguments:
+	 *	previousValue The value previously returned in the last invocation of the callback, or initialValue, if supplied. (See below.)
+	 *	currentValue The current element being processed in the array.
+	 *	index The index of the current element being processed in the array.
+	 *	array The array reduce was called upon.
+	 * @param {*=} initialValue Object to use as the first argument to the first call of the callback.
+	 * @return {*} single value
+	 */
+	reduce : function(accumulator, initialValue) {
+		// ES5 : "If IsCallable(callbackfn) is false, throw a TypeError exception." in "_call" function
+
+		var thisArray = _toObject(this),
+			l = thisArray.length >>> 0,
+			i = 0;
+
+		if(l === 0 && arguments.length <= 1)// == on purpose to test 0 and false.// no value to return if no initial value, empty array
+			throw new TypeError("Array length is 0 and no second argument");
+
+		if(initialValue === void 0)initialValue = (++i, thisArray[0]);
+
+		for( ; i < l ; ++i) {
+		  if(i in thisArray)
+		    initialValue = _call(accumulator, void 0, initialValue, thisArray[i], i, thisArray);
+		}
+
+		return initialValue;
+	}
+
+	/**
+	 * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/reduceRight
+	 *
+	Apply a function simultaneously against two values of the array (from right-to-left) as to reduce it to a single value.
+	reduceRight executes the callback function once for each element present in the array, excluding holes in the array, receiving four arguments: the initial value (or value from the previous callback call), the value of the current element, the current index, and the array over which iteration is occurring.
+
+	The call to the reduceRight callback would look something like this:
+	array.reduceRight(function(previousValue, currentValue, index, array) {
+	    // ...
+	});
+
+	The first time the function is called, the previousValue and currentValue can be one of two values. If an initialValue was provided in the call to reduceRight, then previousValue will be equal to initialValue and currentValue will be equal to the last value in the array. If no initialValue was provided, then previousValue will be equal to the last value in the array and currentValue will be equal to the second-to-last value.
+
+	 * @param {Function} accumulator Function to execute on each value in the array.
+	 * @param {*=} initialValue Object to use as the first argument to the first call of the callback.
+	 */
+  , reduceRight : function(accumulator, initialValue) {
+		// ES5 : "If IsCallable(callbackfn) is false, throw a TypeError exception." in "_call" function
+
+		var thisArray = _toObject(this),
+			l = thisArray.length >>> 0;
+
+		if(l === 0 && arguments.length <= 1)// == on purpose to test 0 and false.// no value to return if no initial value, empty array
+			throw new TypeError("Array length is 0 and no second argument");
+
+		--l;
+		if(initialValue === void 0)initialValue = (--l, thisArray[l + 1]);
+
+		for( ; l >= 0 ; --l) {
+		  if(l in thisArray)
+		    initialValue = _call(accumulator, void 0, initialValue, thisArray[l], l, thisArray);
+		}
+
+		return initialValue;
+	}
+
+
+	/** ES5 15.4.4.18
+	 * http://es5.github.com/#x15.4.4.18
+	 * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/array/forEach
+	 * Executes a provided function once per array element.
+	 * @param {Function} iterator Function to execute for each element.
+	 * @param {Object} context Object to use as this when executing callback.
+	 */
+  , forEach : function(iterator, context) {
+		var thisArray = _toObject(this),
+			length = thisArray.length >>> 0,
+			i = -1;
+		
+		while (++i < length) {
+			if (i in thisArray) {
+				_call(iterator, context, thisArray[i], i, thisArray);
+			}
+		}			
+	}
+
+	/** ES5 15.4.4.14
+	 * http://es5.github.com/#x15.4.4.14
+	 * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/indexOf
+	 * 
+	 * https://gist.github.com/1034425
+	 * 
+	 * Returns the first index at which a given element can be found in the array, or -1 if it is not present.
+	 * @param {*} searchElement Element to locate in the array.
+	 * @param {number} fromIndex The index at which to begin the search. Defaults to 0, i.e. the whole array will be searched. If the index is greater than or equal to the length of the array, -1 is returned, i.e. the array will not be searched. If negative, it is taken as the offset from the end of the array. Note that even when the index is negative, the array is still searched from front to back. If the calculated index is less than 0, the whole array will be searched.
+	 * @return {number}
+	 */
+  , indexOf : function(searchElement, fromIndex) {
+		var thisArray = _toObject(this),
+			length = thisArray.length >>> 0;
+
+		for (
+		  // initialize counter (allow for negative startIndex)
+		  fromIndex = (length + ~~fromIndex) % length ;
+		  // loop if index is smaller than length,
+		  // index is set in (possibly sparse) array
+		  // and item at index is not identical to the searched one
+		  fromIndex < length && (!(fromIndex in thisArray || thisArray[fromIndex] !== searchElement)) ;
+		  // increment counter
+		  fromIndex++
+		){};
+		// if counter equals length (not found), return -1, otherwise counter
+		return fromIndex ^ length ? fromIndex : -1;
+	}
+	//From https://github.com/kriskowal/es5-shim
+	/*if(!Array.prototype.indexOf)Array.prototype.indexOf = function(searchElement, fromIndex) {
+		var thisArray = _toObject(this),
+			length = thisArray.length >>> 0,
+			i;
+		
+		if(!length)return -1;
+		
+		i = fromIndex || 0;
+		
+		// handle negative indices
+	    i = i >= 0 ? i : Math.max(0, length + i);
+		
+	    //https://gist.github.com/1034425
+
+		for( ; i < length ; i++) {
+			if(i in thisArray && thisArray[i] === searchElement) {
+				return i;
+			}
+		}
+		
+		return -1;
+	};*/
+
+	/** ES5 15.4.4.15
+	 * http://es5.github.com/#x15.4.4.15
+	 * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/lastIndexOf
+	 * Returns the last index at which a given element can be found in the array, or -1 if it is not present. The array is searched backwards, starting at fromIndex.
+	 * @param {*} searchElement Element to locate in the array.
+	 * @param {number} fromIndex The index at which to start searching backwards. Defaults to the array's length, i.e. the whole array will be searched. If the index is greater than or equal to the length of the array, the whole array will be searched. If negative, it is taken as the offset from the end of the array. Note that even when the index is negative, the array is still searched from back to front. If the calculated index is less than 0, -1 is returned, i.e. the array will not be searched.
+	 * @return {number}
+	 */
+  , lastIndexOf : function(searchElement, fromIndex) {
+		var thisArray = _toObject(this),
+			length = thisArray.length >>> 0,
+			i;
+
+		if(!length)return -1;
+
+		i = length - 1;
+		if(fromIndex !== void 0)i = Math.min(i, fromIndex);
+		
+		// handle negative indices
+		i = i >= 0 ? i : length - Math.abs(i);
+		
+		//https://gist.github.com/1034458
+	    for ( ;
+	     // if the index decreased by one is not already -1
+	     // index is not set (sparse array)
+	     // and the item at index is not identical to the searched one
+	     ~--i && (!(i in thisArray) || thisArray[i] !== searchElement) 
+	         ; ){};
+
+		// return index of last found item or -1
+		return i;
+
+	   /*for (; i >= 0; i--) {
+			if (i in thisArray && thisArray[i] === searchElement) {
+				return i;
+			}
+		}
+		return -1;*/
+	}
+
+	/**
+	 * ES5 15.4.4.16
+	 * http://es5.github.com/#x15.4.4.16
+	 * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/every
+	 * Tests whether all elements in the array pass the test implemented by the provided function.
+	 * @param {Function} callback Function to test for each element.
+	 * @param {Object=} thisObject Object to use as this when executing callback.
+	 * @param {boolean=} _option_isAll [DO NOT USE IT] system param
+	 * @return {boolean}
+	 */
+  , every : function(callback, thisObject, _option_isAll) {
+		if(_option_isAll === void 0)_option_isAll = true;//Default value = true
+		var result = _option_isAll;
+		_forEach(this, function(value, index) {
+			if(result == _option_isAll)result = !!_call(callback, thisObject, value, index, this);
+		}, this);
+		return result;
+	}
+
+	/**
+	 * ES5 15.4.4.17
+	 * http://es5.github.com/#x15.4.4.17
+	 * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/some
+	 * Tests whether some element in the array passes the test implemented by the provided function.
+	 * @param {Function} callback Function to test for each element.
+	 * @param {Object=} thisObject Object to use as this when executing callback.
+	 * @return {boolean}
+	 */
+  , some : function(callback, thisObject) {
+		return _shimed_Array_every.call(this, callback, thisObject, false);
+	}
+
+	/**
+	 * http://es5.github.com/#x15.4.4.17
+	 * https://developer.mozilla.org/en/JavaScript/Reference/global_Objects/Array/filter
+	 * Creates a new array with all elements that pass the test implemented by the provided function.
+	 * @param {Function} callback Function to test each element of the array.
+	 * @param {Object=} thisObject Object to use as this when executing callback.
+	 * @return {boolean}
+	 */
+  , filter : function(callback, thisObject) {
+		// ES5 : "If IsCallable(callback) is false, throw a TypeError exception." in "_call" function
+
+		var thisArray = _toObject(this),
+			len = thisArray.length >>> 0,
+			result = [],
+			val;
+
+		for (var i = 0; i < len; i++)
+			if (i in thisArray) {
+				val = thisArray[i];// in case callback mutates this
+				if(_call(callback, thisObject, val, i, thisArray))result.push(val);
+			}
+
+		return result;
+	}
+
+	/**
+	 * http://es5.github.com/#x15.4.4.19
+	 * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/map
+	 * Creates a new array with the results of calling a provided function on every element in this array.
+	 * @param {Function} callback Function that produces an element of the new Array from an element of the current one.
+	 * @param {Object?} thisArg Object to use as this when executing callback.
+	 * @return {Array}
+	 */
+  , map : function(callback, thisArg) {
+		var thisArray = _toObject(this),
+			len = thisArray.length >>> 0,
+			result = [];
+
+		for (var i = 0; i < len; i++)
+			if (i in thisArray) {
+				result[i] = _call(callback, thisArg, thisArray[i], i, this);
+			}
+
+	    return result;
+	}
+});
 
 if(INCLUDE_EXTRAS) {
 	/**
@@ -1011,283 +1255,9 @@ if(INCLUDE_EXTRAS) {
 	);
 }//if(INCLUDE_EXTRAS)
 
-/*  ================================ ES5 ==================================  */
-// Based on https://github.com/kriskowal/es5-shim
-
-
-/**
- * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/Reduce
- *
- * Apply a function against an accumulator and each value of the array (from left-to-right) as to reduce it to a single value.
- * @param {Function} accumulator Function to execute on each value in the array, taking four arguments:
- *	previousValue The value previously returned in the last invocation of the callback, or initialValue, if supplied. (See below.)
- *	currentValue The current element being processed in the array.
- *	index The index of the current element being processed in the array.
- *	array The array reduce was called upon.
- * @param {*=} initialValue Object to use as the first argument to the first call of the callback.
- * @return {*} single value
- */
-if(!Array.prototype.reduce)Array.prototype.reduce = function(accumulator, initialValue) {
-	// ES5 : "If IsCallable(callbackfn) is false, throw a TypeError exception." in "_call" function
-
-	var thisArray = _toObject(this),
-		l = thisArray.length >>> 0,
-		i = 0;
-
-	if(l === 0 && arguments.length <= 1)// == on purpose to test 0 and false.// no value to return if no initial value, empty array
-		throw new TypeError("Array length is 0 and no second argument");
-
-	if(initialValue === void 0)initialValue = (++i, thisArray[0]);
-
-	for( ; i < l ; ++i) {
-	  if(i in thisArray)
-	    initialValue = _call(accumulator, void 0, initialValue, thisArray[i], i, thisArray);
-	}
-
-	return initialValue;
-};
-
-/**
- * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/reduceRight
- *
-Apply a function simultaneously against two values of the array (from right-to-left) as to reduce it to a single value.
-reduceRight executes the callback function once for each element present in the array, excluding holes in the array, receiving four arguments: the initial value (or value from the previous callback call), the value of the current element, the current index, and the array over which iteration is occurring.
-
-The call to the reduceRight callback would look something like this:
-array.reduceRight(function(previousValue, currentValue, index, array) {
-    // ...
-});
-
-The first time the function is called, the previousValue and currentValue can be one of two values. If an initialValue was provided in the call to reduceRight, then previousValue will be equal to initialValue and currentValue will be equal to the last value in the array. If no initialValue was provided, then previousValue will be equal to the last value in the array and currentValue will be equal to the second-to-last value.
-
- * @param {Function} accumulator Function to execute on each value in the array.
- * @param {*=} initialValue Object to use as the first argument to the first call of the callback.
- */
-if(!Array.prototype.reduceRight)Array.prototype.reduceRight = function(accumulator, initialValue) {
-	// ES5 : "If IsCallable(callbackfn) is false, throw a TypeError exception." in "_call" function
-
-	var thisArray = _toObject(this),
-		l = thisArray.length >>> 0;
-
-	if(l === 0 && arguments.length <= 1)// == on purpose to test 0 and false.// no value to return if no initial value, empty array
-		throw new TypeError("Array length is 0 and no second argument");
-
-	--l;
-	if(initialValue === void 0)initialValue = (--l, thisArray[l + 1]);
-
-	for( ; l >= 0 ; --l) {
-	  if(l in thisArray)
-	    initialValue = _call(accumulator, void 0, initialValue, thisArray[l], l, thisArray);
-	}
-
-	return initialValue;
-};
-
-
-/** ES5 15.4.4.18
- * http://es5.github.com/#x15.4.4.18
- * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/array/forEach
- * Executes a provided function once per array element.
- * @param {Function} iterator Function to execute for each element.
- * @param {Object} context Object to use as this when executing callback.
- */
-Array.prototype.forEach || (Array.prototype.forEach = function(iterator, context) {
-	var thisArray = _toObject(this),
-		length = thisArray.length >>> 0,
-		i = -1;
-	
-	while (++i < length) {
-		if (i in thisArray) {
-			_call(iterator, context, thisArray[i], i, thisArray);
-		}
-	}			
-});
-var _forEach = _unSafeBind.call(Function.prototype.call, Array.prototype.forEach);
-
-/** ES5 15.4.4.14
- * http://es5.github.com/#x15.4.4.14
- * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/indexOf
- * 
- * https://gist.github.com/1034425
- * 
- * Returns the first index at which a given element can be found in the array, or -1 if it is not present.
- * @param {*} searchElement Element to locate in the array.
- * @param {number} fromIndex The index at which to begin the search. Defaults to 0, i.e. the whole array will be searched. If the index is greater than or equal to the length of the array, -1 is returned, i.e. the array will not be searched. If negative, it is taken as the offset from the end of the array. Note that even when the index is negative, the array is still searched from front to back. If the calculated index is less than 0, the whole array will be searched.
- * @return {number}
- */
-if(!Array.prototype.indexOf)Array.prototype.indexOf = function(searchElement, fromIndex) {
-	var thisArray = _toObject(this),
-		length = thisArray.length >>> 0;
-
-	for (
-	  // initialize counter (allow for negative startIndex)
-	  fromIndex = (length + ~~fromIndex) % length ;
-	  // loop if index is smaller than length,
-	  // index is set in (possibly sparse) array
-	  // and item at index is not identical to the searched one
-	  fromIndex < length && (!(fromIndex in thisArray || thisArray[fromIndex] !== searchElement)) ;
-	  // increment counter
-	  fromIndex++
-	){};
-	// if counter equals length (not found), return -1, otherwise counter
-	return fromIndex ^ length ? fromIndex : -1;
-};
-//From https://github.com/kriskowal/es5-shim
-/*if(!Array.prototype.indexOf)Array.prototype.indexOf = function(searchElement, fromIndex) {
-	var thisArray = _toObject(this),
-		length = thisArray.length >>> 0,
-		i;
-	
-	if(!length)return -1;
-	
-	i = fromIndex || 0;
-	
-	// handle negative indices
-    i = i >= 0 ? i : Math.max(0, length + i);
-	
-    //https://gist.github.com/1034425
-
-	for( ; i < length ; i++) {
-		if(i in thisArray && thisArray[i] === searchElement) {
-			return i;
-		}
-	}
-	
-	return -1;
-};*/
-
-/** ES5 15.4.4.15
- * http://es5.github.com/#x15.4.4.15
- * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/lastIndexOf
- * Returns the last index at which a given element can be found in the array, or -1 if it is not present. The array is searched backwards, starting at fromIndex.
- * @param {*} searchElement Element to locate in the array.
- * @param {number} fromIndex The index at which to start searching backwards. Defaults to the array's length, i.e. the whole array will be searched. If the index is greater than or equal to the length of the array, the whole array will be searched. If negative, it is taken as the offset from the end of the array. Note that even when the index is negative, the array is still searched from back to front. If the calculated index is less than 0, -1 is returned, i.e. the array will not be searched.
- * @return {number}
- */
-if(!Array.prototype.lastIndexOf)Array.prototype.lastIndexOf = function(searchElement, fromIndex) {
-	var thisArray = _toObject(this),
-		length = thisArray.length >>> 0,
-		i;
-
-	if(!length)return -1;
-
-	i = length - 1;
-	if(fromIndex !== void 0)i = Math.min(i, fromIndex);
-	
-	// handle negative indices
-	i = i >= 0 ? i : length - Math.abs(i);
-	
-	//https://gist.github.com/1034458
-    for ( ;
-     // if the index decreased by one is not already -1
-     // index is not set (sparse array)
-     // and the item at index is not identical to the searched one
-     ~--i && (!(i in thisArray) || thisArray[i] !== searchElement) 
-         ; ){};
-
-	// return index of last found item or -1
-	return i;
-
-   /*for (; i >= 0; i--) {
-		if (i in thisArray && thisArray[i] === searchElement) {
-			return i;
-		}
-	}
-	return -1;*/
-};
-
-/**
- * ES5 15.4.4.16
- * http://es5.github.com/#x15.4.4.16
- * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/every
- * Tests whether all elements in the array pass the test implemented by the provided function.
- * @param {Function} callback Function to test for each element.
- * @param {Object=} thisObject Object to use as this when executing callback.
- * @param {boolean=} _option_isAll [DO NOT USE IT] system param
- * @return {boolean}
- */
-if(!Array.prototype.every)Array.prototype.every = _shimed_Array_every = function(callback, thisObject, _option_isAll) {
-	if(_option_isAll === void 0)_option_isAll = true;//Default value = true
-	var result = _option_isAll;
-	_forEach(this, function(value, index) {
-		if(result == _option_isAll)result = !!_call(callback, thisObject, value, index, this);
-	}, this);
-	return result;
-};
-
-/**
- * ES5 15.4.4.17
- * http://es5.github.com/#x15.4.4.17
- * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/some
- * Tests whether some element in the array passes the test implemented by the provided function.
- * @param {Function} callback Function to test for each element.
- * @param {Object=} thisObject Object to use as this when executing callback.
- * @return {boolean}
- */
-if(!Array.prototype.some)Array.prototype.some = function(callback, thisObject) {
-	return _shimed_Array_every.call(this, callback, thisObject, false);
-};
-
-/**
- * http://es5.github.com/#x15.4.4.17
- * https://developer.mozilla.org/en/JavaScript/Reference/global_Objects/Array/filter
- * Creates a new array with all elements that pass the test implemented by the provided function.
- * @param {Function} callback Function to test each element of the array.
- * @param {Object=} thisObject Object to use as this when executing callback.
- * @return {boolean}
- */
-if(!Array.prototype.filter)Array.prototype.filter = function(callback, thisObject) {
-	// ES5 : "If IsCallable(callback) is false, throw a TypeError exception." in "_call" function
-
-	var thisArray = _toObject(this),
-		len = thisArray.length >>> 0,
-		result = [],
-		val;
-
-	for (var i = 0; i < len; i++)
-		if (i in thisArray) {
-			val = thisArray[i];// in case callback mutates this
-			if(_call(callback, thisObject, val, i, thisArray))result.push(val);
-		}
-
-	return result;
-};
-
-_Array_map =
-/**
- * http://es5.github.com/#x15.4.4.19
- * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/map
- * Creates a new array with the results of calling a provided function on every element in this array.
- * @param {Function} callback Function that produces an element of the new Array from an element of the current one.
- * @param {Object?} thisArg Object to use as this when executing callback.
- * @return {Array}
- */
-Array.prototype.map || (Array.prototype.map = function(callback, thisArg) {
-	var thisArray = _toObject(this),
-		len = thisArray.length >>> 0,
-		result = [];
-
-	for (var i = 0; i < len; i++)
-		if (i in thisArray) {
-			result[i] = _call(callback, thisArg, thisArray[i], i, this);
-		}
-
-    return result;
-});
-
-/**
- * http://es5.github.com/#x15.4.3.2
- * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/isArray
- * https://gist.github.com/1034882
- * Returns true if an object is an array, false if it is not.
- * @param {*} obj The object to be checked
- * @return {boolean}
- */
-if(!Array.isArray)Array.isArray = function(obj) {
-	return '' + obj !== obj &&// is not the string '[object Array]' and
-           _toString.call(obj) == '[object Array]'// test with Object.prototype.toString
-};
-
+_forEach = _unSafeBind.call(Function.prototype.call, Array.prototype.forEach);
+_Array_map = Array.prototype.map;
+_shimed_Array_every = Array.prototype.every;
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Array.prototype  ==================================  */
 /*  ======================================================================================  */
@@ -1350,54 +1320,58 @@ if("0".split(void 0, 0).length) {
 }
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  bug fixing  ==================================  */
 
-//from https://github.com/paulmillr/es6-shim/blob/master/es6-shim.js
-/**
- * String repeat
- * @param {!number} count repeat times
- * @return {string} result
- */
-if(!String.prototype.repeat)String.prototype.repeat = function(count) {
-	return new Array(++count).join(this + "");
-};
+_append(String.prototype, {
+	//from https://github.com/paulmillr/es6-shim/blob/master/es6-shim.js
+	/**
+	 * String repeat
+	 * @param {!number} count repeat times
+	 * @return {string} result
+	 */
+	"repeat" : function(count) {
+		return new Array(++count).join(this + "");
+	}
 
-/**
- * Check if given string locate in the begining of current string
- * @param {string} substring substring to locate in the current string.
- * @return {boolean}
- */
-if(!String.prototype["startsWith"])String.prototype["startsWith"] = function(substring) {
-	return this.indexOf(substring) === 0;
-};
+	/**
+	 * Check if given string locate in the begining of current string
+	 * @param {string} substring substring to locate in the current string.
+	 * @return {boolean}
+	 */
+  , "startsWith" : function(substring) {
+		return this.indexOf(substring) === 0;
+	}
 
-/**
- * Check if given string locate at the end of current string
- * @param {string} substring substring to locate in the current string.
- * @return {boolean}
- */
-if(!String.prototype["endsWith"])String.prototype["endsWith"] = function(substring) {
-	substring = substring + "";
-	var index = this.lastIndexOf(substring);
-	return index >= 0 && index === this.length - substring.length;
-};
+	/**
+	 * Check if given string locate at the end of current string
+	 * @param {string} substring substring to locate in the current string.
+	 * @return {boolean}
+	 */
+  , "endsWith" : function(substring) {
+		substring = substring + "";
+		return this.substr(-substring.length) == substring;
+		//var index = this.lastIndexOf(substring);
+		//return index >= 0 && index === this.length - substring.length;
+	}
 
-_String_contains =
-/**
- * Check if given string locate in current string
- * @param {string} substring substring to locate in the current string.
- * @return {boolean}
- */
-String.prototype["contains"] || (String.prototype["contains"] = function(s) {
-	return !!~this.indexOf(s);
-});
+	/**
+	 * Check if given string locate in current string
+	 * @param {string} substring substring to locate in the current string.
+	 * @return {boolean}
+	 */
+  , "contains" : function(s) {
+		return !!~this.indexOf(s);
+	}
 
-/**
- * String to Array
- * @return {Array}
- */
-if(!String.prototype["toArray"])String.prototype["toArray"] = function() {
-	return _String_split.call(this, '');
-};
+	/**
+	 * String to Array
+	 * @return {Array}
+	 */
+  , "toArray" : function() {
+		return _String_split.call(this, '');
+	}
+})
 
+
+_String_contains = String.prototype["contains"];
 
 // TODO::
 //  1. Maybe https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/String/TrimRight ?
@@ -1410,25 +1384,28 @@ if(!String.prototype["toArray"])String.prototype["toArray"] = function() {
 /*  ================================  Number  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 //from https://github.com/paulmillr/es6-shim/blob/master/es6-shim.js
 
-if(!Number["isFinite"])Number["isFinite"] = function(value) {
-	return typeof value === 'number' && global.isFinite(value);	
-};
+_append(Number, {
+	"isFinite" : function(value) {
+		return typeof value === 'number' && global.isFinite(value);	
+	}
 
-if(!Number["isInteger"])Number["isInteger"] = function(value) {
-	return Number["isFinite"](value) &&
-		value >= -9007199254740992 && value <= 9007199254740992 &&
-		~~value/*Fast Math.floor*/ === value;
-};
+  , "isInteger" : function(value) {
+		return Number["isFinite"](value) &&
+			value >= -9007199254740992 && value <= 9007199254740992 &&
+			Math.floor(value) === value;
+	}
 
-if(!Number["isNaN"])Number["isNaN"] = function(value) {
-	return Object["is"](value, NaN);
-};
-if(!Number["toInteger"])Number["toInteger"] = function(value) {
-	var number = +value;
-	if (Number["isNaN"](number)) return +0;
-	if (number === 0 || !Number["isFinite"](number)) return number;
-	return ((number < 0) ? -1 : 1) * ~~(Math.abs(number));
-}
+  , "isNaN" : function(value) {
+		return Object["is"](value, NaN);
+	}
+
+  , "toInteger" : function(value) {
+		var number = +value;
+		if (Number["isNaN"](number)) return +0;
+		if (number === 0 || !global.isFinite(number)) return number;
+		return ((number < 0) ? -1 : 1) * Math.floor(Math.abs(number));
+	}
+})
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Number  ==================================  */
 /*  ======================================================================================  */
 
@@ -1526,11 +1503,11 @@ if(document.addEventListener &&
 	// FF fails when you "forgot" the optional parameter for addEventListener and removeEventListener
 	// Agr!!! FF 3.6 Unable to override addEventListener https://bugzilla.mozilla.org/show_bug.cgi?id=428229
 	// Opera didn't do anything without optional parameter
-	boolean_tmp = false;
+	_tmp_ = false;
 
 	try {
 		_testElement.addEventListener("click", function () {
-			boolean_tmp = true
+			_tmp_ = true
 		});
 		if(_testElement.click)// NO: Opera 10.10
 			_testElement.click();//testing
@@ -1539,8 +1516,8 @@ if(document.addEventListener &&
 	} catch (e) {
 
 	} finally {
-		if(!boolean_tmp || implementation_stopImmediatePropagation) {//fixEventListenerAll
-
+		if(!_tmp_ || implementation_stopImmediatePropagation) {//fixEventListenerAll
+			UUID = 1;
 
 			_forEach(
 				[global["HTMLDocument"] && global["HTMLDocument"].prototype || global["document"],
@@ -1555,7 +1532,7 @@ if(document.addEventListener &&
 							optional = optional || false;
 
 							listener = implementation_stopImmediatePropagation ? (
-								implementation_stopImmediatePropagation_listeners[listener["uuid"] || (listener["uuid"] = ++UUID)] = implementation_stopImmediatePropagation.bind(listener)
+								implementation_stopImmediatePropagation_listeners[listener["uuid"] || (listener["uuid"] = ++UUID)] = _unSafeBind.call(implementation_stopImmediatePropagation, listener)
 							) : listener;
 
 							return old_addEventListener.call(this, type, listener, optional);
@@ -1648,7 +1625,7 @@ DOMStringCollection_init_add = function(token) {
 	this[this.length++] = token;
 };
 
-DOMStringCollection_methods = {
+_append(DOMStringCollection.prototype, {
 	add: function(token) {
 		var thisObj = this, v = thisObj.value;
 
@@ -1695,11 +1672,11 @@ DOMStringCollection_methods = {
 		this[result ? 'add' : 'remove'](token);
 
 		return result;
+	},
+	"toString" : function() {//TODO:: check in IE8 | //[ie8 BUG]toString not in result of `for`
+		return this.value || ""
 	}
-};
-for(string_tmp in DOMStringCollection_methods)DOMStringCollection.prototype[string_tmp] = DOMStringCollection_methods[string_tmp];
-//[ie8 BUG]toString not in result of `for`
-DOMStringCollection.prototype.toString = function(){ return this.value || "" };
+});
 
 DOMStringCollection_setNodeClassName = function(newValue) {
 	this.className = newValue;
@@ -1781,7 +1758,7 @@ if(!("insertAdjacentHTML" in _testElement)) {
 				"afterbegin" : "preppend",
 				"beforeend" : "append",
 				"afterend" : "after"
-			}
+			},
 			func;
 
 		container.innerHTML = html;
@@ -1850,7 +1827,7 @@ try {
 	[
 		Node.prototype,
 		//Comment.prototype,
-		Element.prototype,
+		_Element_prototype,
 		//ProcessingInstruction.prototype,
 		Document.prototype,
 		//DocumentType.prototype,
@@ -1868,59 +1845,49 @@ function fixNodeOnProto(proto) {
 	};
 }
 
-function mutationMacro(nodes) {
-    var node = null;
-    nodes = _Array_map.call(nodes, function (node) {
-        if (typeof node === "string") {
-            return document.createTextNode(node);
-        }
-        return node;
-    })
-    if (nodes.length === 1) {
-        node = nodes[0];
-    } else {
-        node = document.createDocumentFragment();
-        nodes.forEach(node.appendChild, node);
-    }
-    return node;
-}
-
 //New DOM4 API
 if(!_testElement["after"]) {
+	dom4_mutationMacro = function(nodes) {
+		var resultNode = null;
+		
+		nodes = _Array_map.call(nodes, function (node) {
+			return typeof node === "string" ?
+				document.createTextNode(node) :
+				node;
+		});
+		
+		if (nodes.length === 1) {
+			resultNode = nodes[0];
+		} else {
+			resultNode = document.createDocumentFragment();
+			nodes.forEach(resultNode.appendChild, resultNode);
+		}
+		
+		return resultNode;
+	}
+	
 	_Element_prototype["after"] = function () {
-		if (this.parentNode === null)return;
-
-		var node = mutationMacro(arguments);
-		this.parentNode.insertBefore(node, this.nextSibling);
+		this.parentNode && this.parentNode.insertBefore(dom4_mutationMacro(arguments), this.nextSibling);
 	};
 
 	_Element_prototype["before"] = function () {
-		if (this.parentNode === null)return;
-
-		var node = mutationMacro(arguments);
-		this.parentNode.insertBefore(node, this);
+		this.parentNode && this.parentNode.insertBefore(dom4_mutationMacro(arguments), this);
 	};
 
 	_Element_prototype["append"] = function () {
-		var node = mutationMacro(arguments);
-		this.appendChild(node);
+		this.appendChild(dom4_mutationMacro(arguments));
 	};
 	
 	_Element_prototype["prepend"] = function () {
-		var node = mutationMacro(arguments);
-		this.insertBefore(node, this.firstChild);
+		this.insertBefore(dom4_mutationMacro(arguments), this.firstChild);
 	};
 
 	_Element_prototype["replace"] = function () {
-		if (this.parentNode === null)return;
-
-		var node = mutationMacro(arguments);
-		this.parentNode.replaceChild(node, this);
+		this.parentNode && this.parentNode.replaceChild(dom4_mutationMacro(arguments), this);
 	};
 
 	_Element_prototype["remove"] = function () {
-		if (this.parentNode === null)return;
-		this.parentNode.removeChild(this);
+		this.parentNode && this.parentNode.removeChild(this);
 	};
 }
 
@@ -1995,7 +1962,7 @@ if(!document.documentElement.matchesSelector)document.documentElement.matchesSel
 /*  ================================  HTMLSelectElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
 if(INCLUDE_EXTRAS) {
-	_labelable_elements = ["INPUT", "BUTTON", "KEYGEN", "METER", "OUTPUT", "PROGRESS", "TEXTAREA", "SELECT"];
+	_labelable_elements = " INPUT BUTTON KEYGEN METER OUTPUT PROGRESS TEXTAREA SELECT ";
 	/*
 	Implement HTML*Element.labels
 	https://developer.mozilla.org/en/DOM/HTMLInputElement
@@ -2005,7 +1972,7 @@ if(INCLUDE_EXTRAS) {
 		Object.defineProperty(_Element_prototype, "labels", {
 			enumerable: true,
 			"get" : function() {
-				if(!~_labelable_elements.indexOf(this.nodeName.toUpperCase()))
+				if(!(_String_contains.call(_labelable_elements, " " + this.nodeName.toUpperCase() + " ")))
 					return void 0;
 
 				var node = this,
@@ -2055,7 +2022,7 @@ if(INCLUDE_EXTRAS) {
 
 				return _recursivelyWalk(this.childNodes,
 						function(el) {
-							if(~_labelable_elements.indexOf(el.nodeName.toUpperCase()))
+							if(_String_contains(_labelable_elements, " " + el.nodeName.toUpperCase() + " "))
 								return el
 						}
 					) || null;
@@ -2509,7 +2476,7 @@ if (!_Native_Date.parse/* || "Date.parse is buggy"*/) {
 	}
 
 	// Copy any custom methods a 3rd party library may have added
-	for (string_tmp in _Native_Date) {
+	for (_tmp_ in _Native_Date) {
 	    _Shimed_Date[key] = _Native_Date[key];
 	}
 
@@ -2640,17 +2607,17 @@ methods = void 0;
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  DEBUG  =====================================  */
 
 
+//apply IE lt 9 shims
+if((_tmp_ = global["_"]) && _tmp_["ielt9shims"]) {
+	_tmp_["ielt9shims"].forEach(_call);
+	//Restore original "_" or set "_" to undefined
+	global["_"] = _tmp_["orig_"];
+}
 
 // no need any more
-number_tmp = string_tmp = boolean_tmp = _testElement = nodeList_methods_fromArray = _unSafeBind = createExtendFunction = document_createElement = _Event = _CustomEvent = 
-	_Event_prototype = _Custom_Event_prototype = DOMStringCollection_methods = _Element_prototype = _Shimed_Date = functionReturnFalse = functionReturnFirstParam = void 0;
-
-//apply IE lt 9 shims
-if(_) {
-	_.forEach(_call);
-	//Restore original "_" or set "_" to undefined
-	global["_"] = orig_;
-}
+_append = _tmp_ = _testElement = nodeList_methods_fromArray = document_createElement = _Event =
+	_CustomEvent = _Event_prototype = _Custom_Event_prototype = 
+	_Element_prototype = _Shimed_Date = functionReturnFalse = functionReturnFirstParam = void 0;
 
 if(!INCLUDE_EXTRAS) {
 	if(!definePropertyWorksOnObject) {
@@ -2661,4 +2628,14 @@ if(!INCLUDE_EXTRAS) {
 
 
 
-})(window);
+})(window, function(obj, ravArgs) {
+	for(var i = 1; i < arguments.length; i++) {
+		var extension = arguments[i];
+		for(var key in extension)
+			if(Object.prototype.hasOwnProperty.call(extension, key) &&
+			   (!Object.prototype.hasOwnProperty.call(obj, key))
+			  )obj[key] = extension[key];
+	}
+
+	return obj;
+});

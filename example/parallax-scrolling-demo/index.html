@@ -32,7 +32,7 @@ var $$ = Function.prototype.bind.call(document.querySelectorAll, document);
 var $$0 = Function.prototype.bind.call(document.querySelector, document);
 
 //https://gist.github.com/2569872
-function delegate(a,b){return function(e,c,d){d=e.target;do d.matchesSelector(a)&&(c=b.call(d,e));while(c!==!1&&d!=this&&(d=d.parentElement));return c}}
+function delegate(e,f){return function(c,b,a){for(a=c.target;a&&!1!==b&&a!=this;a=a.parentElement)a.matchesSelector(e)&&(b=f.call(a,c));return b}};
 
 function main() {
 	/* Set navigation dots to an active state as the user scrolls */
