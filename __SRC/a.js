@@ -398,7 +398,7 @@ Object["append"] = _append;
  * @param {...} ravArgs extentions
  * @return {Object} the same object as `obj`
  */
-Object["extend"] = function(obj, ravArgs) {
+if(!Object["extend"])Object["extend"] = function(obj, ravArgs) {
 	for(var i = 1; i < arguments.length; i++) {
 		var extension = arguments[i];
 		for(var key in extension)
@@ -1485,10 +1485,21 @@ try {
 //Browser not implement Event.prototype.stopImmediatePropagation
 if(!_Event_prototype["stopImmediatePropagation"]) {
 	implementation_stopImmediatePropagation = function(e) {
+		var listener = this._listener,
+			thisObj = this._this;
+
+		if(typeof listener !== "function") {
+			if("handleEvent" in listener) {
+				thisObj = listener;
+				listener = listener.handleEvent;
+			}
+			else return;
+		}
+
 		if(e["__stopNow"]) {
 			e.stopPropagation();
 		}
-		else return this.apply ? this.apply(e.currentTarget, arguments) : this.handleEvent ? this.handleEvent.apply(e.currentTarget, arguments) : void 0;
+		else return listener.apply(thisObj, arguments);
 	};
 
 	_Event_prototype["stopImmediatePropagation"] = function() {
@@ -1532,7 +1543,7 @@ if(document.addEventListener &&
 							optional = optional || false;
 
 							listener = implementation_stopImmediatePropagation ? (
-								implementation_stopImmediatePropagation_listeners[listener["uuid"] || (listener["uuid"] = ++UUID)] = _unSafeBind.call(implementation_stopImmediatePropagation, listener)
+								implementation_stopImmediatePropagation_listeners[listener["uuid"] || (listener["uuid"] = ++UUID)] = _unSafeBind.call(implementation_stopImmediatePropagation, {_listener : listener, _this : this})
 							) : listener;
 
 							return old_addEventListener.call(this, type, listener, optional);
@@ -1706,6 +1717,8 @@ if(INCLUDE_EXTRAS) {//Export DOMStringCollection
 if(!("classList" in _testElement)) {
 	Object.defineProperty(_Element_prototype, "classList", {
 		"get" : function() {
+			if(!this.tagName)return void 0;
+
 			var thisObj = this,
 				cont = thisObj["_"] || (thisObj["_"] = {});//Положим S_ELEMENT_CACHED_CLASSLIST_NAME в контейнер "_";
 

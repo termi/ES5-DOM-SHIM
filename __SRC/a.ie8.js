@@ -7,7 +7,7 @@
 // ==/ClosureCompiler==
 /**
  * ES5 and DOM shim for IE < 8
- * @version 4
+ * @version 4.2
  */
  
 //GCC DEFINES START
@@ -112,15 +112,13 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
 	}
 
 	/** @const */
-  , _extend = function(obj, extention) {
+  , _safeExtend = function(obj, extention) {
 		for(var key in extention)
 			if(_hasOwnProperty(extention, key) && obj[key] !== extention[key])
-				try {//Object(..) - prevent IE error "invalid argument."
+				try {//prevent IE error "invalid argument."
 					obj[key] = extention[key];
 				}
-				catch(e) {
-					obj[key] = Object(extention[key]);
-				}
+				catch(e) { }
 		
 		return obj;
 	}
@@ -531,8 +529,9 @@ function fixEvent(event) {
 		event.pageY = event.clientY + (window.pageYOffset || html.scrollTop || body.scrollTop || 0) - (html.clientTop || 0);
 	}
 
-	// записать нажатую кнопку мыши в which для IE. 1 == левая; 2 == средняя; 3 == правая
-	event.which || event.button && (event.which = event.button & 1 ? 1 : event.button & 2 ? 3 : event.button & 4 ? 2 : 0);
+	//Add 'which' for click: 1 == left; 2 == middle; 3 == right
+	//Unfortunately the event.button property is not set for click events. It is however set for mouseup/down/move ... but not click | http://bugs.jquery.com/ticket/4164
+	if(!event.which && "button" in event)event.which = event.button & 1 ? 1 : event.button & 2 ? 3 : event.button & 4 ? 2 : 0;
 
 	if(!event.timeStamp)event.timeStamp = +new _Native_Date();
 	
@@ -567,9 +566,10 @@ function commonHandle(nativeEvent) {
 	nativeEvent || (nativeEvent = window.nativeEvent);
 	if(!nativeEvent["__isFixed"])nativeEvent = fixEvent.call(thisObj, nativeEvent);
 
-	// save event properties in fake 'event' object
-	if(!nativeEvent["__custom_event"])(event = _extend(new Event(nativeEvent.type), nativeEvent))["__custom_event"] = true;
+	// save event properties in fake 'event' object to allow store 'event' and use it in future
+	if(!nativeEvent["__custom_event"])(event = _safeExtend(new Event(nativeEvent.type), nativeEvent))["__custom_event"] = true;
 	else event = nativeEvent;
+
 
 	var handlers = _[_event_eventsUUID][event.type];
 
@@ -604,6 +604,11 @@ function commonHandle(nativeEvent) {
 
 		if(event["__stopNow"])break;//Мгновенная остановка обработки событий
 	}
+
+	//return changed properties in native 'event' object
+	nativeEvent.returnValue = event.returnValue;
+	nativeEvent.cancelBubble = event.cancelBubble;
+	//TODO:: check out that properties need to be returned in native 'event' object or _extend(nativeEvent, event);
 	
 	if(errors.length == 1) {//Если была только одна ошибка - кидаем ее дальше
 		throw errors[0]
@@ -797,8 +802,9 @@ if(!document.dispatchEvent)_Node_prototype.dispatchEvent = global.dispatchEvent 
 	}
 	catch(e) {
 		//Shim for Custome events in IE < 9
-		if(e["number"] === -2147024809) {//"Недопустимый аргумент."
-			_event["_custom_event_"] = true;//FOR DEBUG
+		if(e["number"] === -2147024809 ||//"invalid argument."
+		   thisObj === global) {		 //window has not 'fireEvent' method
+			_event["__custom_event"] = true;
 			var node = _event.target = thisObj;
 			//Всплываем событие
 			while(!_event.cancelBubble && node) {//Если мы вызвали stopPropogation() - больше не всплываем событие
@@ -1039,13 +1045,8 @@ if(_testElement.childElementCount == void 0)_.push(function() {
 		"firstElementChild" : {//https://developer.mozilla.org/en/DOM/Element.firstElementChild
 			"get" : function() {
 			    var node = this;
-			    // для старых браузеров
-			    // находим первый дочерний узел
 			    node = node.firstChild;
-			    // ищем в цикле следующий узел,
-			    // пока не встретим элемент с nodeType == 1
 			    while(node && node.nodeType != 1) node = node.nextSibling;
-			    // возвращаем результат
 			    return node;
 			}
 		},
@@ -1251,39 +1252,62 @@ if(!document.importNode) {
 
 //getElementsByClassName shim
 string_tmp = "getElementsByClassName";
-function_tmp = _Element_prototype[string_tmp] || function(clas) {
-	var root = this,
-		result = [],
-		nodes,
-		i = -1,
-		node,
-		elementClass,
-		match,
-		k;
-
-	if(arguments.length) {
-		clas = _String_split.call(_String_trim.call(clas + ""), " ");
-		if(!clas[0])return result;
-
-		nodes = root.getElementsByTagName('*');
-
-		while (node = nodes[++i]) {
-			match = node.className
-				&& (k = -1)
-				&& (elementClass = " " + node.className + " ");
-			
-			while(match && ++k < clas.length) {
-				match = !!~(elementClass).indexOf(" " + clas[k] + " ");
-			}
-
-			if (match) {
-				result.push(node);
-			}
+function_tmp = _Element_prototype[string_tmp] || 
+	document.querySelectorAll ? //Here native querySelectorAll in IE8
+		function(names) {
+			if(!names || !(names = _String_trim.call(names)))return [];
+			return (this.querySelectorAll || document.querySelectorAll).call(this, names.replace(/\s+(?=\S)|^/g, "."))
 		}
-	}
-	else throw new Error('WRONG_ARGUMENTS_ERR');
-	return result;	
-};
+		:
+		function(klas) {
+			klas = new RegExp(klas.replace(/\s*(\S+)\s*/g, '(?=(^|.*\\s)$1(\\s|$))'));
+
+			var nodes = this.all,
+				node,
+				i = -1,
+				result = [];
+
+			while(node = nodes[++i]) {
+				if(klas.test(node.className || '')) {
+					result.push(node);
+				}
+			}
+			
+			return result;
+		}
+		/*function(clas) {
+			var root = this,
+				result = [],
+				nodes,
+				i = -1,
+				node,
+				elementClass,
+				match,
+				k;
+
+			if(arguments.length) {
+				clas = _String_split.call(_String_trim.call(clas + ""), " ");
+				if(!clas[0])return result;
+
+				nodes = root.getElementsByTagName('*');
+
+				while (node = nodes[++i]) {
+					match = node.className
+						&& (k = -1)
+						&& (elementClass = " " + node.className + " ");
+					
+					while(match && ++k < clas.length) {
+						match = !!~(elementClass).indexOf(" " + clas[k] + " ");
+					}
+
+					if (match) {
+						result.push(node);
+					}
+				}
+			}
+			else throw new Error('WRONG_ARGUMENTS_ERR');
+			return result;	
+		}*/;
 if(!(string_tmp in _testElement))_Element_prototype[string_tmp] = function_tmp;
 if(!document[string_tmp])_document_documentElement[string_tmp] = document[string_tmp] = function_tmp;
 
@@ -1359,11 +1383,7 @@ if(_browser_msie < 9) {
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  HTML5 shiv  ==================================  */
 /*  =======================================================================================  */
 
-supportsUnknownElements = (function (a) {
-	a.innerHTML = '<x-x></x-x>';
-
-	return a.childNodes.length === 1;
-})(_testElement);
+supportsUnknownElements = (_testElement.innerHTML = '<x-x></x-x>'), _testElement.childNodes.length === 1;
 	
 html5_elements = "|" + html5_elements + "|";
 
