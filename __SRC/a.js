@@ -6,7 +6,7 @@
 // @check_types
 // ==/ClosureCompiler==
 /**
- * @version 6
+ * @version 6.2
  * TODO:: eng comments
  *        dateTime prop for IE < 8
  */
@@ -937,7 +937,7 @@ _append(Array, {
 	 * @return {Array}
 	 */
   , "from" : function(iterable) {
-		if(Array.isArray(iterable))return iterable;
+		if(iterable instanceof Array || Array.isArray(iterable))return iterable;
 		if(iterable.toArray)return iterable.toArray();
 
 		var object = _toObject(iterable, true),
@@ -1683,11 +1683,12 @@ _append(DOMStringCollection.prototype, {
 		this[result ? 'add' : 'remove'](token);
 
 		return result;
-	},
-	"toString" : function() {//TODO:: check in IE8 | //[ie8 BUG]toString not in result of `for`
-		return this.value || ""
 	}
 });
+
+DOMStringCollection.prototype.toString = function() {//_append function do not overwrite Object.prototype.toString
+	return this.value || ""
+};
 
 DOMStringCollection_setNodeClassName = function(newValue) {
 	this.className = newValue;

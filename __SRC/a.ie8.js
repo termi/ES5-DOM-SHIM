@@ -638,7 +638,7 @@ if(!document.addEventListener)_Node_prototype.addEventListener = global.addEvent
 		_callback,
 		/** @type {boolean} */
 		_useInteractive = false;
-		/** @type {number} 
+		/* * @ type {number} 
 		_event_phase = useCapture ? 1 : 3;*/
 		
 	if(!_)_ = thisObj["_"] = {};
@@ -646,6 +646,8 @@ if(!document.addEventListener)_Node_prototype.addEventListener = global.addEvent
 	
 	if(_type === "DOMContentLoaded") {//IE
 		if (document.readyState == 'complete')return;
+
+		if(thisObj === global)thisObj = document;
 
 		_useInteractive = true;
 		

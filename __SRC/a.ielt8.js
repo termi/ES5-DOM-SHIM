@@ -637,7 +637,7 @@ if(!document.addEventListener)_Node_prototype.addEventListener = global.addEvent
 		_callback,
 		/** @type {boolean} */
 		_useInteractive = false;
-		/** @type {number} 
+		/* * @ type {number} 
 		_event_phase = useCapture ? 1 : 3;*/
 		
 	if(!_)_ = thisObj["_"] = {};
@@ -645,6 +645,8 @@ if(!document.addEventListener)_Node_prototype.addEventListener = global.addEvent
 	
 	if(_type === "DOMContentLoaded") {//IE
 		if (document.readyState == 'complete')return;
+
+		if(thisObj === global)thisObj = document;
 
 		_useInteractive = true;
 		
@@ -2479,6 +2481,10 @@ function _DOMContentLoaded() {
 	if(noDocumentReadyState)document.readyState = "interactive";
 	
 	if(_emulate_scrollX_scrollY)_emulate_scrollX_scrollY();
+
+	if("classList" in document.body.firstChild) {
+		//TODO:: no htc available do for(var node in document.all) __ielt8__element_init__(node)
+	}
 }
 function _onload() {
 	global.detachEvent('onload', _onload);
@@ -2495,9 +2501,7 @@ global.attachEvent('onload', _onload);//Native method
 
 
 
-
 createBehaviorStyle(__STYLE_ID, __SUPPORTED__TAG_NAMES__, ielt9BehaviorRule);
-
 
 
 noDocumentReadyState = ielt9BehaviorRule = number_tmp = void 0;
