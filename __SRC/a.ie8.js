@@ -653,7 +653,7 @@ if(!document.addEventListener)_Node_prototype.addEventListener = global.addEvent
 		
 		if(!__temporary__DOMContentLoaded_container[_type]) {
 			__temporary__DOMContentLoaded_container[_type] = true;
-			var a = document.getElementById("__ie_onload");
+			/*var a = document.getElementById("__ie_onload");
 			if(!a) {
 				document.write("<script id=\"__ie_onload\" defer=\"defer\" src=\"javascript:void(0)\"><\/script>");
 				a = document.getElementById("__ie_onload");
@@ -665,17 +665,15 @@ if(!document.addEventListener)_Node_prototype.addEventListener = global.addEvent
 						commonHandle.call(thisObj, {"type" : _type});
 					}
 				}
-			}/*
+			}*/
 			function poll() {
 				try { document.documentElement.doScroll('left'); } catch(e) { setTimeout(poll, 50); return; }
 				commonHandle.call(thisObj, {"type" : _type});
 			};
 
-			var top;
-			if (document.createEventObject && document.documentElement.doScroll) {
-				try { top = !global.frameElement; } catch(e) { }
-				if (top) poll();
-			}*/
+			if ("createEventObject" in document && "doScroll" in document.documentElement) {
+				try { if(!global.frameElement)poll() } catch(e) { }
+			}
 		}
 	}
 	/* TODO:: DOMAttrModified
@@ -1385,7 +1383,7 @@ if(_browser_msie < 9) {
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  HTML5 shiv  ==================================  */
 /*  =======================================================================================  */
 
-supportsUnknownElements = (_testElement.innerHTML = '<x-x></x-x>'), _testElement.childNodes.length === 1;
+supportsUnknownElements = ((_testElement.innerHTML = '<x-x></x-x>'), _testElement.childNodes.length === 1);
 	
 html5_elements = "|" + html5_elements + "|";
 

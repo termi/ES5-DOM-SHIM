@@ -304,8 +304,8 @@ if(INCLUDE_EXTRAS) {
 	 * @const */
 	browser["names"] = (browser["agent"] = navigator.userAgent.toLowerCase()).match(/(mozilla|compatible|chrome|webkit|safari|opera|msie|iphone|ipod|ipad)/gi);
 	
-	_tmp_ = browser.names && browser.names.length || 0;
-	while(_tmp_-- > 0)browser[browser.names[_tmp_]] = true;
+	_tmp_ = browser["names"] && browser["names"].length || 0;
+	while(_tmp_-- > 0)browser[browser["names"][_tmp_]] = true;
 
 	browser["mozilla"] = browser["mozilla"] && !browser["compatible"] && !browser["webkit"];
 	browser["safari"] = browser["safari"] && !browser["chrome"];
