@@ -1,4 +1,6 @@
-﻿// ==ClosureCompiler==
+﻿ /** @license MIT License (c) copyright Egor Halimonenko (termi1uc1@gmail.com) */
+
+// ==ClosureCompiler==
 // @compilation_level ADVANCED_OPTIMIZATIONS
 // @warning_level VERBOSE
 // @jscomp_warning missingProperties
@@ -6,7 +8,7 @@
 // @check_types
 // ==/ClosureCompiler==
 /**
- * @version 6.2
+ * @version 6.4
  * TODO:: eng comments
  *        dateTime prop for IE < 8
  */
@@ -1078,13 +1080,15 @@ _append(Array.prototype, {
 		var thisArray = _toObject(this),
 			length = thisArray.length >>> 0;
 
+		if((fromIndex = ~~fromIndex) > length)return -1;
+
 		for (
 		  // initialize counter (allow for negative startIndex)
-		  fromIndex = (length + ~~fromIndex) % length ;
+		  fromIndex = (length + fromIndex) % length ;
 		  // loop if index is smaller than length,
 		  // index is set in (possibly sparse) array
 		  // and item at index is not identical to the searched one
-		  fromIndex < length && (!(fromIndex in thisArray || thisArray[fromIndex] !== searchElement)) ;
+		  fromIndex < length && (!(fromIndex in thisArray) || thisArray[fromIndex] !== searchElement) ;
 		  // increment counter
 		  fromIndex++
 		){};
@@ -1131,28 +1135,17 @@ _append(Array.prototype, {
 		if(!length)return -1;
 
 		i = length - 1;
-		if(fromIndex !== void 0)i = Math.min(i, fromIndex);
+		if(fromIndex !== void 0)i = Math.min(i, Number["toInteger"](fromIndex))
 		
 		// handle negative indices
 		i = i >= 0 ? i : length - Math.abs(i);
 		
-		//https://gist.github.com/1034458
-	    for ( ;
-	     // if the index decreased by one is not already -1
-	     // index is not set (sparse array)
-	     // and the item at index is not identical to the searched one
-	     ~--i && (!(i in thisArray) || thisArray[i] !== searchElement) 
-	         ; ){};
-
-		// return index of last found item or -1
-		return i;
-
-	   /*for (; i >= 0; i--) {
+		for (; i >= 0; i--) {
 			if (i in thisArray && thisArray[i] === searchElement) {
 				return i;
 			}
 		}
-		return -1;*/
+		return -1;
 	}
 
 	/**
@@ -1232,27 +1225,38 @@ _append(Array.prototype, {
 
 	    return result;
 	}
+
+	/**
+	 * Check if given object locate in current array
+	 * @param {*} object object to locate in the current array.
+	 * @return {boolean}
+	 */
+  , "contains" : function(object) {
+		return !!~this.indexOf(object);
+	}
 });
 
 if(INCLUDE_EXTRAS) {
-	/**
-	 * __Non-standart method__ [(!!!)]
-	 * https://gist.github.com/1044540
-	 * Create a new Array with the all unique items
-	 * @return {Array}
-	 */
-	if(!Array.prototype["unique"])Array.prototype["unique"] = (function(a) {
-	  return function() {     // with a function that
-		return this.filter(a);// filters by the cached function
-	  }
-	})(
-	  function(a,b,c) {       // which
-		return c.indexOf(     // finds out whether the array contains
-		  a,                  // the item
-		  b + 1               // after the current index
-		) <	0                 // and returns false if it does.
-	  }
-	);
+
+/**
+ * __Non-standart method__ [(!!!)]
+ * https://gist.github.com/1044540
+ * Create a new Array with the all unique items
+ * @return {Array}
+ */
+if(!Array.prototype["unique"])Array.prototype["unique"] = (function(a) {
+  return function() {     // with a function that
+	return this.filter(a);// filters by the cached function
+  }
+})(
+  function(a,b,c) {       // which
+	return c.indexOf(     // finds out whether the array contains
+	  a,                  // the item
+	  b + 1               // after the current index
+	) <	0                 // and returns false if it does.
+  }
+);
+
 }//if(INCLUDE_EXTRAS)
 
 _forEach = _unSafeBind.call(Function.prototype.call, Array.prototype.forEach);
@@ -1264,6 +1268,8 @@ _shimed_Array_every = Array.prototype.every;
 
 /*  ============================================================================  */
 /*  ================================  String  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+if(INCLUDE_EXTRAS) {
+
 /**
  * Random string
  * https://gist.github.com/973263
@@ -1277,6 +1283,8 @@ if(!String["random"])String["random"] = function String_random(length) {
 		return(0 | Math.random() * 32).toString(32)
 	});
 };
+
+}//if(INCLUDE_EXTRAS)
 
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  String  ==================================  */
@@ -1334,31 +1342,36 @@ _append(String.prototype, {
 	/**
 	 * Check if given string locate in the begining of current string
 	 * @param {string} substring substring to locate in the current string.
+	 * @param {number=} fromIndex start the startsWith check at that position
 	 * @return {boolean}
 	 */
-  , "startsWith" : function(substring) {
-		return this.indexOf(substring) === 0;
+  , "startsWith" : function(substring, fromIndex) {
+  		return this.lastIndexOf(substring, fromIndex) === (fromIndex || 0);
+  		//return this.indexOf(value) == ((position -= position % 1) || 0);
 	}
 
 	/**
 	 * Check if given string locate at the end of current string
 	 * @param {string} substring substring to locate in the current string.
+	 * @param {number=} fromIndex end the endsWith check at that position
 	 * @return {boolean}
 	 */
-  , "endsWith" : function(substring) {
+  , "endsWith" : function(substring, fromIndex) {
 		substring = substring + "";
-		return this.substr(-substring.length) == substring;
-		//var index = this.lastIndexOf(substring);
-		//return index >= 0 && index === this.length - substring.length;
+		return this.substr(-substring.length - (fromIndex || 0), fromIndex) == substring;
+		//var length = this.length - value.length;
+  		//position = typeof position == "undefined" ? length : ((position -= position % 1) || 0);
+  		//return length > -1 && this.indexOf(value, position) == position;
 	}
 
 	/**
 	 * Check if given string locate in current string
 	 * @param {string} substring substring to locate in the current string.
+	 * @param {number=} fromIndex start the contains check at that position
 	 * @return {boolean}
 	 */
-  , "contains" : function(s) {
-		return !!~this.indexOf(s);
+  , "contains" : function(substring, fromIndex) {
+		return !!~this.indexOf(substring, fromIndex);
 	}
 
 	/**
@@ -1366,7 +1379,15 @@ _append(String.prototype, {
 	 * @return {Array}
 	 */
   , "toArray" : function() {
-		return _String_split.call(this, '');
+		return _String_split.call(this, "");
+	}
+
+	/**
+	 * Reverse string
+	 * @return {Array}
+	 */
+  , "reverse" : function() {
+		return Array.prototype.reverse.call(_String_split.call(this + "", "")).join("");
 	}
 })
 
@@ -1528,7 +1549,7 @@ if(document.addEventListener &&
 
 	} finally {
 		if(!_tmp_ || implementation_stopImmediatePropagation) {//fixEventListenerAll
-			UUID = 1;
+			implementation_stopImmediatePropagation && (UUID = 1);
 
 			_forEach(
 				[global["HTMLDocument"] && global["HTMLDocument"].prototype || global["document"],
@@ -1783,7 +1804,7 @@ if(!("insertAdjacentHTML" in _testElement)) {
 			func(nodes)
 		}
 
-		nodes = container = null;
+		nodes = container = void 0;
 	};
 }
 
@@ -2491,7 +2512,7 @@ if (!_Native_Date.parse/* || "Date.parse is buggy"*/) {
 
 	// Copy any custom methods a 3rd party library may have added
 	for (_tmp_ in _Native_Date) {
-	    _Shimed_Date[key] = _Native_Date[key];
+	    _Shimed_Date[_tmp_] = _Native_Date[_tmp_];
 	}
 
 	// Copy "native" methods explicitly; they may be non-enumerable
@@ -2533,9 +2554,9 @@ if (!_Native_Date.parse/* || "Date.parse is buggy"*/) {
 	            month > 0 &&
 	            month < 13 &&
 	            day > 0 &&
-	            day < (1 + monthes[month] - monthes[month - 1] + (month === 2 ? leapYears1 - leapYears0 : 0))) {
+	            day < (1 + _Shimed_Date_monthes[month] - _Shimed_Date_monthes[month - 1] + (month === 2 ? leapYears1 - leapYears0 : 0))) {
 
-		            result = 365 * (year - 1970) + (month > 2 ? leapYears1 : leapYears0) - _Shimed_Date_leapYears(1970) + monthes[month - 1] + day - 1;
+		            result = 365 * (year - 1970) + (month > 2 ? leapYears1 : leapYears0) - _Shimed_Date_leapYears(1970) + _Shimed_Date_monthes[month - 1] + day - 1;
 		            result = (((result * 24 + hour + hourOffset * signOffset) * 60 + minute + minuteOffset * signOffset) * 60 + second) * 1000 + millisecond + offset;
 		            if (-8.64e15 <= result && result <= 8.64e15) {
 		                return result;

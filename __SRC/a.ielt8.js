@@ -1,3 +1,5 @@
+ /** @license MIT License (c) copyright Egor Halimonenko (termi1uc1@gmail.com) */
+
 // ==ClosureCompiler==
 // @compilation_level ADVANCED_OPTIMIZATIONS
 // @warning_level VERBOSE
@@ -7,13 +9,14 @@
 // ==/ClosureCompiler==
 /**
  * ES5 and DOM shim for IE < 8
- * @version 4.2
+ * @version 4.4
  */
  
 //GCC DEFINES START
 /** @define {boolean} */
 var IS_DEBUG = false;
 //GCC DEFINES END
+
 
 ;(function(global) {
 
@@ -52,15 +55,13 @@ if(!global["Document"])global["Document"] = global["DocumentFragment"];
 
 
 
-
-
+global["_"] = {
+	"ielt9shims" : [],
+	"orig_" : global["_"]//Save original "_" - we will restore it in a.js
+};
 
 //"_" - container for shims what should be use in a.js
-var orig_ = global["_"],//Save original "_" - we will restore it in a.js
-	_ = global["_"] = {
-		"ielt9shims" : [],
-		"orig_" : orig_
-	}["ielt9shims"]
+var _ = global["_"]["ielt9shims"]
 	
   , __temporary__DOMContentLoaded_container = {}
 
@@ -129,7 +130,7 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
 	 * More standart solution in a.js
 	 */
   , _String_trim = String.prototype.trim || (String.prototype.trim = function () {//Cache origin trim function
-		var	str = this.replace(RE__String_trim_spaces, ''),
+		var	str = this.replace(/^\s+/, ''),
 			ws = RE_space,
 			i = str.length;
 		while (ws.test(str.charAt(--i))){};
@@ -248,7 +249,7 @@ var orig_ = global["_"],//Save original "_" - we will restore it in a.js
   , _event_UUID_prop_name = "uuid"
 
 	/** @type {number} unique indentifier for event listener */
-  , _event_UUID = 0
+  , _event_UUID = 1//MUST be more then 0 | 0 - using for DOM0 events
 
 	/** @const @type {string} */
   , _event_handleUUID = "_h_9e2"
@@ -497,7 +498,8 @@ if(!("pageXOffset" in global)) {
 
 
 function fixEvent(event) {
-	var thisObj = this;
+	var thisObj = this,
+		_button = ("button" in event) && event.button;
 	
 	// один объект события может передаваться по цепочке разным обработчикам
 	// при этом кроссбраузерная обработка будет вызвана только 1 раз
@@ -507,16 +509,28 @@ function fixEvent(event) {
 	//http://javascript.gakaa.com/event-detail.aspx
 	//http://www.w3.org/TR/2011/WD-DOM-Level-3-Events-20110531/#event-type-click
 	//indicates the current click count; the attribute value must be 1 when the user begins this action and increments by 1 for each click.
-	if(event.type === "click" && event.detail === void 0)event.detail = 1;
-	else if(event.type === "dblclick" && event.detail === void 0)event.detail = 2;
+	if(event.type === "click" || event.type === "dblclick") {
+		if(event.detail === void 0)event.detail = event.type === "click" ? 1 : 2;
+		if(!event.button && fixEvent["__b"] !== void 0)_button = fixEvent["__b"];
+	}
 
 	_append(event, _Event_prototype);
 
 	event.target || (event.target = event.srcElement || document);// добавить target для IE
+	/*
+	if ( event.target && (/3|4/).test( event.target.nodeType ) ) {
+		event.target = event.target.parentNode;
+	}
+	*/
 
 	// добавить relatedTarget в IE, если это нужно
 	if(event.relatedTarget === void 0 && event.fromElement)
 		event.relatedTarget = event.fromElement == event.target ? event.toElement : event.fromElement;
+	/*
+	event.relatedTarget = event.relatedTarget ||
+		event.type == 'mouseout' ? event.toElement :
+		event.type == 'mouseover' ? event.fromElement : null;
+	*/
 
 	// вычислить pageX/pageY для IE
 	if(event.pageX == null && event.clientX != null) {
@@ -530,7 +544,7 @@ function fixEvent(event) {
 
 	//Add 'which' for click: 1 == left; 2 == middle; 3 == right
 	//Unfortunately the event.button property is not set for click events. It is however set for mouseup/down/move ... but not click | http://bugs.jquery.com/ticket/4164
-	if(!event.which && "button" in event)event.which = event.button & 1 ? 1 : event.button & 2 ? 3 : event.button & 4 ? 2 : 0;
+	if(!event.which && _button)event.which = _button & 1 ? 1 : _button & 2 ? 3 : _button & 4 ? 2 : 0;
 
 	if(!event.timeStamp)event.timeStamp = +new _Native_Date();
 	
@@ -559,10 +573,16 @@ function commonHandle(nativeEvent) {
 		errorsMessages = [],
 		event;
 	
-	if(!_ || !_[_event_eventsUUID])return;
+	if((!_ || !_[_event_eventsUUID])) {
+		if(!("__dom0__" in nativeEvent))return;
+		else {
+			_ || (_ = {});
+			_[_event_eventsUUID] || (_[_event_eventsUUID] = {});
+		}
+	}
 	
 	// получить объект события и проверить, подготавливали мы его для IE или нет
-	nativeEvent || (nativeEvent = window.nativeEvent);
+	nativeEvent || (nativeEvent = window.event);
 	if(!nativeEvent["__isFixed"])nativeEvent = fixEvent.call(thisObj, nativeEvent);
 
 	// save event properties in fake 'event' object to allow store 'event' and use it in future
@@ -571,6 +591,9 @@ function commonHandle(nativeEvent) {
 
 
 	var handlers = _[_event_eventsUUID][event.type];
+	if("__dom0__" in nativeEvent) {
+		(handlers || (handlers = []))[0] = nativeEvent["__dom0__"];
+	}
 
 	if(!handlers)return;
 
@@ -621,158 +644,165 @@ function commonHandle(nativeEvent) {
 
 
 
-if(!document.addEventListener)_Node_prototype.addEventListener = global.addEventListener = document.addEventListener = function(_type, _handler, useCapture) {
-	//TODO:: useCapture == true
-	if(typeof _handler != "function" &&
-	   !(typeof _handler === "object" && _handler.handleEvent)//Registering an EventListener with a function object that also has a handleEvent property -> Call EventListener as a function
-	  ) {
-		return;
-	}
-	
-	var /** @type {Node} */
-		thisObj = this,
-		/** @type {Object} */
-		_ = thisObj["_"],
-		/** @type {Function} */
-		_callback,
-		/** @type {boolean} */
-		_useInteractive = false;
-		/* * @ type {number} 
-		_event_phase = useCapture ? 1 : 3;*/
+if(!document.addEventListener) {
+	_Node_prototype.addEventListener = global.addEventListener = document.addEventListener = function(_type, _handler, useCapture) {
+		//TODO:: useCapture == true
+		if(typeof _handler != "function" &&
+		   !(typeof _handler === "object" && _handler.handleEvent)//Registering an EventListener with a function object that also has a handleEvent property -> Call EventListener as a function
+		  ) {
+			return;
+		}
 		
-	if(!_)_ = thisObj["_"] = {};
-	//_ = _[_event_phase] || (_[_event_phase] = {});
-	
-	if(_type === "DOMContentLoaded") {//IE
-		if (document.readyState == 'complete')return;
-
-		if(thisObj === global)thisObj = document;
-
-		_useInteractive = true;
+		var /** @type {Node} */
+			thisObj = this,
+			/** @type {Object} */
+			_ = thisObj["_"],
+			/** @type {Function} */
+			_callback,
+			/** @type {boolean} */
+			_useInteractive = false;
+			/* * @ type {number} 
+			_event_phase = useCapture ? 1 : 3;*/
+			
+		if(!_)_ = thisObj["_"] = {};
+		//_ = _[_event_phase] || (_[_event_phase] = {});
 		
-		if(!__temporary__DOMContentLoaded_container[_type]) {
-			__temporary__DOMContentLoaded_container[_type] = true;
-			/*var a = document.getElementById("__ie_onload");
-			if(!a) {
-				document.write("<script id=\"__ie_onload\" defer=\"defer\" src=\"javascript:void(0)\"><\/script>");
-				a = document.getElementById("__ie_onload");
-				a.onreadystatechange = function(e) {
-					var n = this;
-					if(n.readyState == "complete") {
-						if(n.alreadyDone)return;
-						n.alreadyDone = true;
-						commonHandle.call(thisObj, {"type" : _type});
+		if(_type === "DOMContentLoaded") {//IE
+			if (document.readyState == 'complete')return;
+
+			if(thisObj === global)thisObj = document;
+
+			_useInteractive = true;
+			
+			if(!__temporary__DOMContentLoaded_container[_type]) {
+				__temporary__DOMContentLoaded_container[_type] = true;
+				/*var a = document.getElementById("__ie_onload");
+				if(!a) {
+					document.write("<script id=\"__ie_onload\" defer=\"defer\" src=\"javascript:void(0)\"><\/script>");
+					a = document.getElementById("__ie_onload");
+					a.onreadystatechange = function(e) {
+						var n = this;
+						if(n.readyState == "complete") {
+							if(n.alreadyDone)return;
+							n.alreadyDone = true;
+							commonHandle.call(thisObj, {"type" : _type});
+						}
 					}
-				}
-			}*/
-			function poll() {
-				try { document.documentElement.doScroll('left'); } catch(e) { setTimeout(poll, 50); return; }
-				commonHandle.call(thisObj, {"type" : _type});
-			};
+				}*/
+				function poll() {
+					try { document.documentElement.doScroll('left'); } catch(e) { setTimeout(poll, 50); return; }
+					commonHandle.call(thisObj, {"type" : _type});
+				};
 
-			var top;
-			if ("createEventObject" in document && "doScroll" in document.documentElement) {
-				try { top = !global.frameElement; } catch(e) { }
-				if (top) poll();
+				if ("createEventObject" in document && "doScroll" in document.documentElement) {
+					try { if(!global.frameElement)poll() } catch(e) { }
+				}
 			}
 		}
-	}
-	/* TODO:: DOMAttrModified
-	else if(_type == "DOMAttrModified") {
-	
-	}
-	*/
-	else if(_type === "load" && "tagName" in thisObj && thisObj.tagName.toUpperCase() === "SCRIPT") {//[script:onload]
-		//FROM https://github.com/jrburke/requirejs/blob/master/require.js
-		//Probably IE. IE (at least 6-8) do not fire
-		//script onload right after executing the script, so
-		//we cannot tie the anonymous define call to a name.
-		//However, IE reports the script as being in "interactive"
-		//readyState at the time of the define call.
-		_useInteractive = true;
+		/* TODO:: DOMAttrModified
+		else if(_type == "DOMAttrModified") {
 		
-		//Need to use old school onreadystate here since
-		//when the event fires and the node is not attached
-		//to the DOM, the evt.srcElement is null, so use
-		//a closure to remember the node.
-		thisObj.onreadystatechange = function (evt) {
-			evt = evt || window.event;
-			//Script loaded but not executed.
-			//Clear loaded handler, set the real one that
-			//waits for script execution.
-			if (thisObj.readyState === 'loaded') {
-				thisObj.onreadystatechange = null;
-				thisObj.attachEvent("onreadystatechange", _unSafeBind.call(commonHandle, thisObj, {"type" : _type}));
-			}
-		};
-		_type = "readystatechange";
-	}
-	else if(_type === "DOMMouseScroll")_type = "mousewheel";//TODO:: Test it
-	
-	/*
-	TODO::
-	Reference: http://www.w3.org/TR/DOM-Level-2-Events/events.html#Events-EventTarget
-	If multiple identical EventListeners are registered on the same EventTarget with the same parameters the duplicate instances are discarded. They do not cause the EventListener to be called twice and since they are discarded they do not need to be removed with the removeEventListener method.
-	*/
-	
-	
-	// исправляем небольшой глюк IE с передачей объекта window
-	if(thisObj.setInterval && (thisObj != global && !thisObj["frameElement"]))thisObj = global;
-	
-	//Назначить функции-обработчику уникальный номер. По нему обработчик можно будет легко найти в списке events[type].
-	if(!_handler[_event_UUID_prop_name])_handler[_event_UUID_prop_name] = ++_event_UUID;
-	
-	//Инициализовать служебную структуру events и обработчик _[handleUUID]. 
-	//Основная его задача - передать вызов универсальному обработчику commonHandle с правильным указанием текущего элемента this. 
-	//Как и events, _[handleUUID] достаточно инициализовать один раз для любых событий.
-	if(!(_callback = _[_event_handleUUID])) {
-		_callback = _[_event_handleUUID] = _unSafeBind.call(commonHandle, thisObj);
-	}
-
-	//Если обработчиков такого типа событий не существует - инициализуем events[type] и вешаем
-	// commonHandle как обработчик на elem для запуска браузером по событию type.
-	if(!_[_event_eventsUUID])_[_event_eventsUUID] = {};
-	if(!_[_event_eventsUUID][_type]) {
-		_[_event_eventsUUID][_type] = {};
+		}
+		*/
+		else if(_type === "load" && "tagName" in thisObj && thisObj.tagName.toUpperCase() === "SCRIPT") {//[script:onload]
+			//FROM https://github.com/jrburke/requirejs/blob/master/require.js
+			//Probably IE. IE (at least 6-8) do not fire
+			//script onload right after executing the script, so
+			//we cannot tie the anonymous define call to a name.
+			//However, IE reports the script as being in "interactive"
+			//readyState at the time of the define call.
+			_useInteractive = true;
+			
+			//Need to use old school onreadystate here since
+			//when the event fires and the node is not attached
+			//to the DOM, the evt.srcElement is null, so use
+			//a closure to remember the node.
+			thisObj.onreadystatechange = function (evt) {
+				evt = evt || window.event;
+				//Script loaded but not executed.
+				//Clear loaded handler, set the real one that
+				//waits for script execution.
+				if (thisObj.readyState === 'loaded') {
+					thisObj.onreadystatechange = null;
+					thisObj.attachEvent("onreadystatechange", _unSafeBind.call(commonHandle, thisObj, {"type" : _type}));
+				}
+			};
+			_type = "readystatechange";
+		}
+		else if(_type === "DOMMouseScroll")_type = "mousewheel";//TODO:: Test it
 		
-		if(!_useInteractive)//[script:onload]
-			thisObj.attachEvent('on' + _type, _callback);
-	}
-	
-	//Добавляем пользовательский обработчик в список elem[_event_eventsUUID][type] под заданным номером. 
-	//Так как номер устанавливается один раз, и далее не меняется - это приводит к ряду интересных фич.
-	// Например, запуск add с одинаковыми аргументами добавит событие только один раз.
-	_[_event_eventsUUID][_type][_handler[_event_UUID_prop_name]] = _handler;
-};
+		/*
+		TODO::
+		Reference: http://www.w3.org/TR/DOM-Level-2-Events/events.html#Events-EventTarget
+		If multiple identical EventListeners are registered on the same EventTarget with the same parameters the duplicate instances are discarded. They do not cause the EventListener to be called twice and since they are discarded they do not need to be removed with the removeEventListener method.
+		*/
+		
+		
+		// исправляем небольшой глюк IE с передачей объекта window
+		if(thisObj.setInterval && (thisObj != global && !thisObj["frameElement"]))thisObj = global;
+		
+		//Назначить функции-обработчику уникальный номер. По нему обработчик можно будет легко найти в списке events[type].
+		if(!_handler[_event_UUID_prop_name])_handler[_event_UUID_prop_name] = ++_event_UUID;
+		
+		//Инициализовать служебную структуру events и обработчик _[handleUUID]. 
+		//Основная его задача - передать вызов универсальному обработчику commonHandle с правильным указанием текущего элемента this. 
+		//Как и events, _[handleUUID] достаточно инициализовать один раз для любых событий.
+		if(!(_callback = _[_event_handleUUID])) {
+			_callback = _[_event_handleUUID] = _unSafeBind.call(commonHandle, thisObj);
+		}
 
-if(!document.removeEventListener)_Node_prototype.removeEventListener = global.removeEventListener = document.removeEventListener = function(_type, _handler, useCapture) {
-	var /** @type {Node} */
-		thisObj = this,
-		/** @type {Object} */
-		_ = thisObj["_"];
-		/** @type {number} 
-		_event_phase = useCapture ? 1 : 3;*/
-	
-	if(typeof _handler != "function" || !_handler.guid || !_)return;
+		//Если обработчиков такого типа событий не существует - инициализуем events[type] и вешаем
+		// commonHandle как обработчик на elem для запуска браузером по событию type.
+		if(!_[_event_eventsUUID])_[_event_eventsUUID] = {};
+		if(!_[_event_eventsUUID][_type]) {
+			_[_event_eventsUUID][_type] = {};
+			
+			if(!_useInteractive)//[script:onload]
+				thisObj.attachEvent('on' + _type, _callback);
+		}
+		
+		//Добавляем пользовательский обработчик в список elem[_event_eventsUUID][type] под заданным номером. 
+		//Так как номер устанавливается один раз, и далее не меняется - это приводит к ряду интересных фич.
+		// Например, запуск add с одинаковыми аргументами добавит событие только один раз.
+		_[_event_eventsUUID][_type][_handler[_event_UUID_prop_name]] = _handler;
+	};
 
-	//_ = _[_event_phase] || (_[_event_phase] = {});
-	//if(!_)return;
+	_Node_prototype.removeEventListener = global.removeEventListener = document.removeEventListener = function(_type, _handler, useCapture) {
+		var /** @type {Node} */
+			thisObj = this,
+			/** @type {Object} */
+			_ = thisObj["_"];
+			/** @type {number} 
+			_event_phase = useCapture ? 1 : 3;*/
+		
+		if(typeof _handler != "function" || !_handler.guid || !_)return;
 
-	var handlers = _[_event_eventsUUID] && _[_event_eventsUUID][_type];//Получить список обработчиков
-	
-	delete handlers[_handler.guid];//Удалить обработчик по его номеру
+		//_ = _[_event_phase] || (_[_event_phase] = {});
+		//if(!_)return;
 
-	for(var any in handlers)if(_hasOwnProperty(handlers, any))return;//TODO: проверить, что тут делается. Глупость какая-то.Проверить, не пуст ли список обработчиков
-	//Если пуст, то удалить служебный обработчик и очистить служебную структуру events[type]
-	thisObj.detachEvent("on" + _type, commonHandle);
+		var handlers = _[_event_eventsUUID] && _[_event_eventsUUID][_type];//Получить список обработчиков
+		
+		delete handlers[_handler.guid];//Удалить обработчик по его номеру
 
-	delete _[_event_eventsUUID][_type];
+		for(var any in handlers)if(_hasOwnProperty(handlers, any))return;//TODO: проверить, что тут делается. Глупость какая-то.Проверить, не пуст ли список обработчиков
+		//Если пуст, то удалить служебный обработчик и очистить служебную структуру events[type]
+		thisObj.detachEvent("on" + _type, commonHandle);
 
-	//Если событий вообще не осталось - удалить events за ненадобностью.
-	for(var any in _[_event_eventsUUID])if(_hasOwnProperty(_[_event_eventsUUID], any))return;
-	
-	delete _[_event_eventsUUID];
-};
+		delete _[_event_eventsUUID][_type];
+
+		//Если событий вообще не осталось - удалить events за ненадобностью.
+		for(var any in _[_event_eventsUUID])if(_hasOwnProperty(_[_event_eventsUUID], any))return;
+		
+		delete _[_event_eventsUUID];
+	};
+
+	document.attachEvent("onmousedown", function(){
+		fixEvent["__b"] = event.button
+	});
+	document.attachEvent("onclick", function(){
+		fixEvent["__b"] = void 0
+	});
+}
 
 /**
 dispatchEvent
@@ -806,13 +836,16 @@ if(!document.dispatchEvent)_Node_prototype.dispatchEvent = global.dispatchEvent 
 		if(e["number"] === -2147024809 ||//"invalid argument."
 		   thisObj === global) {		 //window has not 'fireEvent' method
 			_event["__custom_event"] = true;
-			var node = _event.target = thisObj;
+			var node = _event.target = thisObj,
+				dom0event = "on" + _event.type;
 			//Всплываем событие
 			while(!_event.cancelBubble && node) {//Если мы вызвали stopPropogation() - больше не всплываем событие
-				if("_" in node && _event_eventsUUID in node["_"])//Признак того, что на элемент могли навесить событие
+				if((dom0event in node && typeof node[dom0event] == "function" && (_event["__dom0__"] = node[dom0event])) ||
+				   ("_" in node && _event_eventsUUID in node["_"]))//Признак того, что на элемент могли навесить событие
 					commonHandle.call(node, _event);
 				//Если у события отключено всплытие - не всплываем его
 				node = _event.bubbles ? (node === document ? document.defaultView : node.parentNode) : null;
+				if("__dom0__" in _event)_event["__dom0__"] = void 0;
 			}
 			
 			return !_event.cancelBubble;
@@ -944,13 +977,13 @@ if (!_Function_call.call(document_createTextNode, document).contains){
 	if(global["Text"] && global["Text"].prototype) {//IE8
 	    _.push(_unSafeBind.call(_append, null, Text.prototype, _Node_prototype));
 	}
-	else {//IE < 8 TODO:: tests
+	/*else {//IE < 8 TODO:: tests
 		document.createTextNode = function(text) {
 			text = _Function_call.call(document_createTextNode, this, text);
-			text.contains = _Node_prototype.contains;
+			text.contains = _Node_prototype.contains;//Can't do this due IE throw error
 			return text;
 		}
-	}
+	}*/
 }
 if (!_Function_call.call(document_createDocumentFragment, document).contains && global["HTMLDocument"] && global["HTMLDocument"].prototype) {
     _.push(_unSafeBind.call(_append, null, global["HTMLDocument"].prototype, _Node_prototype));
@@ -1252,6 +1285,7 @@ if(!document.importNode) {
 }
 
 //getElementsByClassName shim
+//based on https://gist.github.com/1383091
 string_tmp = "getElementsByClassName";
 function_tmp = _Element_prototype[string_tmp] || 
 	document.querySelectorAll ? //Here native querySelectorAll in IE8
@@ -1275,40 +1309,7 @@ function_tmp = _Element_prototype[string_tmp] ||
 			}
 			
 			return result;
-		}
-		/*function(clas) {
-			var root = this,
-				result = [],
-				nodes,
-				i = -1,
-				node,
-				elementClass,
-				match,
-				k;
-
-			if(arguments.length) {
-				clas = _String_split.call(_String_trim.call(clas + ""), " ");
-				if(!clas[0])return result;
-
-				nodes = root.getElementsByTagName('*');
-
-				while (node = nodes[++i]) {
-					match = node.className
-						&& (k = -1)
-						&& (elementClass = " " + node.className + " ");
-					
-					while(match && ++k < clas.length) {
-						match = !!~(elementClass).indexOf(" " + clas[k] + " ");
-					}
-
-					if (match) {
-						result.push(node);
-					}
-				}
-			}
-			else throw new Error('WRONG_ARGUMENTS_ERR');
-			return result;	
-		}*/;
+		};
 if(!(string_tmp in _testElement))_Element_prototype[string_tmp] = function_tmp;
 if(!document[string_tmp])_document_documentElement[string_tmp] = document[string_tmp] = function_tmp;
 
@@ -1429,6 +1430,13 @@ safeFragment = html5_document(_Function_call.call(document_createDocumentFragmen
 
 if(!supportsUnknownElements) {
 	 html5_document(document);
+	 //style
+	document.head.insertAdjacentHTML("beforeend", "<br><style>" +//<br> need for all IE
+		// corrects block display not defined in IE6/7/8/9
+		"article,aside,figcaption,figure,footer,header,hgroup,nav,section{display:block}" +
+		// adds styling not present in IE6/7/8/9
+		"mark{background:#FF0;color:#000}" +
+	"</style>");
 }
 
 //Test for broken 'cloneNode'
@@ -1518,6 +1526,7 @@ if(document.querySelectorAll)extendNodeListPrototype(document.querySelectorAll("
 
 
 _testElement = _txtTextElement = boolean_tmp = string_tmp = number_tmp = function_tmp = object_tmp = nodeList_methods_fromArray = supportsUnknownElements = void 0;
+
 
 
 
@@ -1765,8 +1774,8 @@ function queryOneSelector(selector, roots, result, onlyOne) {
 				}
 			break;
 			case '+':
-				while(root = roots[++i]) {
-					while((child = root.nextSibling) && child.nodeType != 1){}
+				while(child = roots[++i]) {
+					while((child = child.nextSibling) && child.nodeType != 1){}
 					match = child && (!tag || child.tagName.toUpperCase() === tag) &&
 						(!(child.sourceIndex in resultKeys));
 						
@@ -1786,7 +1795,7 @@ function queryOneSelector(selector, roots, result, onlyOne) {
 				tag = "";
 			break;
 			case '~'://W3C: "an F element preceded by an E element"
-				while(root = roots[++i]) {
+				while(child = roots[++i]) {
 					while (child = child.nextSibling) {
 						match = child.nodeType == 1 && (!tag || child.tagName.toUpperCase() === tag) &&
 							(!(child.sourceIndex in resultKeys));
@@ -1936,7 +1945,7 @@ function queryOneSelector(selector, roots, result, onlyOne) {
 					left) with "nodeAttrExpected_value"
 					*/
 						case '|=':
-							match = (nodeAttrCurrent_value && (nodeAttrCurrent_value === nodeAttrExpected_value || !!nodeAttrCurrent_value.indexOf(nodeAttrExpected_value + '-')));
+							match = (nodeAttrCurrent_value && (nodeAttrCurrent_value === nodeAttrExpected_value || !!~nodeAttrCurrent_value.indexOf(nodeAttrExpected_value + '-')));
 						break;
 					/* nodeAttrCurrent_value doesn't contain given nodeAttrExpected_value */
 						case '!=':
@@ -1958,7 +1967,7 @@ function queryOneSelector(selector, roots, result, onlyOne) {
 						if(!/\D/.test(css3Pseudo[2]))css3Pseudo_add = [null, 0, '%', css3Pseudo[2]];
 						else if(css3Pseudo[2] === 'even')css3Pseudo_add = [null, 2];
 						else if(css3Pseudo[2] === 'odd')css3Pseudo_add = [null, 2, '%', 1];
-						else css3Pseudo_add = css3Pseudo[2].replace(RE__queryOneSelector__pseudoNthChildPlus, "\($1%$2\)").match(RE__queryOneSelector__pseudoNthChildMatcher);
+						else css3Pseudo_add = css3Pseudo[2].match(RE__queryOneSelector__pseudoNthChildMatcher);
 					}
 				}
 				//TODO:: Не работает nth-child и nth-last-child - путаница с nodeIndex
@@ -2165,6 +2174,7 @@ var queryManySelector = function queryManySelector(selector, onlyOne) {
 	var result = [],
 		rules = (selector + ",")
 			.replace(RE__querySelector__arrtSpaceSeparated_toSafe, "|-|")
+			.replace(RE__queryOneSelector__pseudoNthChildPlus, "\($1%$2\)")
 			.match(RE__queryManySelector__selectorsMatcher),
 		rule,
 		i = -1,
