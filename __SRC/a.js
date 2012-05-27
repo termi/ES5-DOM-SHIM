@@ -193,9 +193,7 @@ var _browser_msie
   , dom4_mutationMacro
 
 	/** @type {RegExp} @const */
-  , RE__matchSelector__easySelector1 = /^\ ?[\w#\.][\w-]*$/
-	/** @type {RegExp} @const */
-  , RE__matchSelector__easySelector2 = /^\ ?(\.[\w-]*)+$/
+  , RE__selector__easySelector = /^(\w+)?((?:\.(?:[\w\-]+))+)?$|^#([\w\-]+$)/
 	/** @type {RegExp} @const */
   , RE_DOMSettableTokenList_lastSpaces = /\\s+$/g
 	/** @type {RegExp} @const */
@@ -930,8 +928,7 @@ _append(Array, {
 	 * @return {boolean}
 	 */
 	isArray : function(obj) {
-		return '' + obj !== obj &&// is not the string '[object Array]' and
-	           _toString.call(obj) == '[object Array]'// test with Object.prototype.toString
+		return _toString.call(obj) == '[object Array]'// test with Object.prototype.toString
 	}
 
 	/** toArray function
@@ -1934,48 +1931,47 @@ if(!_Element_prototype.matchesSelector) {
 		_Element_prototype["oMatchesSelector"] || function(selector) {
 			if(!selector)return false;
 			if(selector === "*")return true;
-			if(this === document.documentElement && selector === ":root")return true;
-			if(this === document.body && selector === "body")return true;
+			if(selector === ":root" && this === document.documentElement)return true;
+			if(selector === "body" && this === document.body)return true;
 
 			var thisObj = this,
 				parent,
 				i,
 				str,
+				rules,
 				tmp,
 				match = false;
 
 			selector = _String_trim.call(selector.replace(RE__matchSelector__doubleSpaces, "$1"));
 
-			if(RE__matchSelector__easySelector1.test(selector) || RE__matchSelector__easySelector2.test(selector)) {
+			if(rules = selector.match(RE__selector__easySelector)) {
 				switch (selector.charAt(0)) {
 					case '#':
 						return thisObj.id === selector.slice(1);
 					break;
-					case '.':
-						match = true;
-						i = -1;
-						tmp = selector.slice(1).split(".");
-						str = " " + thisObj.className + " ";
-						while(tmp[++i] && match) {
-							match = _String_contains.call(str, " " + tmp[i] + " ");
+					default:
+						match = !rules[1] || (!("tagName" in thisObj) || thisObj.tagName.toUpperCase() === rules[1].toUpperCase());
+						if(match && rules[2]) {
+							i = -1;
+							tmp = rules[2].slice(1).split(".");
+							str = " " + thisObj.className + " ";
+							while(tmp[++i] && match) {
+								match = _String_contains.call(str, " " + tmp[i] + " ");
+							}
 						}
 						return match;
-					break;
-					default:
-						return thisObj.tagName && thisObj.tagName.toUpperCase() === selector.toUpperCase();
 				}
 			}
-			parent = thisObj.parentNode;
 			
-			if(parent && parent.querySelector) {
+			if(!/([,>+~ ])/.test(selector) && (parent = thisObj.parentNode) && parent.querySelector) {
 				match = parent.querySelector(selector) === thisObj;
 			}
 
 			if(!match && (parent = thisObj.ownerDocument)) {
 				tmp = parent.querySelectorAll(selector);
-			    for (i in tmp ) if(_hasOwnProperty(tmp, i)) {
+				i = -1;
+				while(!match && tmp[++i]) {
 			        match = tmp[i] === thisObj;
-			        if(match)return true;
 			    }
 			}
 		    return match;
@@ -2456,6 +2452,12 @@ _Native_Date.prototype.toJSON = function(key) {
 // http://es5.github.com/#x15.9.4.2
 // based on work shared by Daniel Friesen (dantman)
 // http://gist.github.com/303249
+/*
+OR
+https://github.com/csnover/js-iso8601
+https://raw.github.com/csnover/js-iso8601/master/iso8601.min.js
+?
+*/
 if (!_Native_Date.parse/* || "Date.parse is buggy"*/) {
     // Date.length === 7
     _Shimed_Date = function(Y, M, D, h, m, s, ms) {

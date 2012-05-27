@@ -158,7 +158,6 @@ var _ = global["_"]["ielt9shims"]
 	
 	/** Use native "bind" or unsafe bind for service and performance needs
 	 * @const
-	 * @param {Function} __method
 	 * @param {Object} object
 	 * @param {...} var_args
 	 * @return {Function} */
@@ -213,19 +212,13 @@ var _ = global["_"]["ielt9shims"]
   , RE__String_trim_spaces = /^\s\s*/
 	
 	/** @type {boolean} */
-  , boolean_tmp
+  , _String_split_shim_isnonparticipating
 
-	/** @type {string} */
-  , string_tmp
+	/** @type {*} */
+  , tmp
 
-	/** @type {number} */
-  , number_tmp
-
-	/** @type {function} */
+	/** @type {Function} */
   , function_tmp
-
-	/** @type {Object} */
-  , object_tmp
 
   , nodeList_methods_fromArray = ["every", "filter", "forEach", "indexOf", "join", "lastIndexOf", "map", "reduce", "reduceRight", "reverse", "slice", "some", "toString"]
 
@@ -307,12 +300,12 @@ _append(_Event_prototype, _fake_Event_prototype);
 
 //Fix Function.prototype.apply to work with generic array-like object instead of an array
 // test: (function(a,b){console.log(a,b)}).apply(null, {0:1,1:2,length:2})
-boolean_tmp = false;
+tmp = false;
 try {
-	boolean_tmp = isNaN.apply(null, {})
+	tmp = isNaN.apply(null, {})
 }
 catch(e) { }
-if(!boolean_tmp) {
+if(!tmp) {
 	Function.prototype.apply = function(contexts, args) {
 		try {
 			return args != void 0 ?
@@ -352,7 +345,7 @@ More better solution:: http://xregexp.com/
 */
 if('te'.split(/(s)*/)[1] != void 0 ||
    '1_1'.split(/(_)/).length != 3) {
-   boolean_tmp = /()??/.exec("")[1] === void 0; // NPCG: nonparticipating capturing group
+   _String_split_shim_isnonparticipating = /()??/.exec("")[1] === void 0; // NPCG: nonparticipating capturing group
    
 	String.prototype.split = function (separator, limit) {
 		var str = this;
@@ -374,7 +367,7 @@ if('te'.split(/(s)*/)[1] != void 0 ||
 			separator2 = null, match, lastIndex, lastLength;
 
 		str = str + ""; // type conversion
-		if (!boolean_tmp) {
+		if (!_String_split_shim_isnonparticipating) {
 			separator2 = new RegExp("^" + separator1.source + "$(?!\\s)", flags); // doesn't need /g or /y, but they don't hurt
 		}
 
@@ -401,7 +394,7 @@ if('te'.split(/(s)*/)[1] != void 0 ||
 
 				// fix browsers whose `exec` methods don't consistently return `undefined` for nonparticipating capturing groups
 				// __ NOT WORKING __ !!!!
-				if (!boolean_tmp && match.length > 1) {
+				if (!_String_split_shim_isnonparticipating && match.length > 1) {
 					match[0].replace(separator2, function() {
 						for (var i = 1, a = arguments, l = a.length - 2; i < l; i++) {//for (var i = 1; i < arguments.length - 2; i++) {
 							if (a[i] === void 0) {
@@ -950,14 +943,14 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 
 
 // IE - contains fails if argument is textnode
-_txtTextElement = _Function_call.call(document_createTextNode, document, "temp");
+_txtTextElement = _Function_call.call(document_createTextNode, document, "");
 _testElement.appendChild(_txtTextElement);
 
 try {
     _testElement.contains(_txtTextElement);
-    boolean_tmp = false;
+    tmp = false;
 } catch (e) {
-	boolean_tmp = true;
+	tmp = true;
 	_Node_prototype.contains = function contains(other) {
     	if(other.nodeType === 3) {
 		    return _recursivelyWalk(this.childNodes, function (node) {
@@ -983,7 +976,7 @@ if (document.doctype === null && _browser_msie > 7)//TODO:: this fix for IE < 8
 // Extend Text.prototype and HTMLDocument.prototype with shims
 // TODO:: Do something with IE < 8
 if(!_Node_prototype.contains)_Node_prototype.contains = _Node_contains;
-if (!_Function_call.call(document_createTextNode, document).contains){
+if (!_Function_call.call(document_createTextNode, document, "").contains){
 	if(global["Text"] && global["Text"].prototype) {//IE8
 	    _.push(_unSafeBind.call(_append, null, Text.prototype, _Node_prototype));
 	}
@@ -1153,7 +1146,7 @@ try {
 
 /* is this stuff defined? */
 if(!document.ELEMENT_NODE) {
-	object_tmp = {
+	tmp = {
 		ELEMENT_NODE : 1,
 		//ATTRIBUTE_NODE : 2,// historical
 		TEXT_NODE : 3,
@@ -1167,14 +1160,14 @@ if(!document.ELEMENT_NODE) {
 		DOCUMENT_FRAGMENT_NODE : 11
 		//NOTATION_NODE : 12// historical
 	};
-	_append(document, object_tmp);
-	_append(_Node_prototype, object_tmp);
-	_append(global["Node"], object_tmp);
+	_append(document, tmp);
+	_append(_Node_prototype, tmp);
+	_append(global["Node"], tmp);
 }
 /*var __ielt8__element_init__ = _Node_prototype["__ielt8__element_init__"];
 if(__ielt8__element_init__) {//__ielt8__element_init__ in a.ielt8.js
 	__ielt8__element_init__["plugins"].push(function(el) {
-		_append(el, object_tmp);
+		_append(el, tmp);
 	})
 }*/
 
@@ -1296,8 +1289,8 @@ if(!document.importNode) {
 
 //getElementsByClassName shim
 //based on https://gist.github.com/1383091
-string_tmp = "getElementsByClassName";
-function_tmp = _Element_prototype[string_tmp] || 
+tmp = "getElementsByClassName";
+function_tmp = _Element_prototype[tmp] || 
 	document.querySelectorAll ? //Here native querySelectorAll in IE8
 		function(names) {
 			if(!names || !(names = _String_trim.call(names)))return [];
@@ -1305,30 +1298,38 @@ function_tmp = _Element_prototype[string_tmp] ||
 		}
 		:
 		function(klas) {
-			klas = new RegExp(klas.replace(/\s*(\S+)\s*/g, '(?=(^|.*\\s)$1(\\s|$))'));
 
-			var nodes = this.all,
+			klas = new RegExp(klas.replace(RE__getElementsByClassName, STRING_FOR_RE__getElementsByClassName));
+
+			var magicTagName = arguments.callee["tagName"],//only for IE < 8 querySelector shim
+				nodes = magicTagName ? 
+			  		(
+			  		delete arguments.callee["tagName"], 
+			    	this.nodeType === 9 && magicTagName === "BODY" ? 
+			    		[this.body] :
+						this.getElementsByTagName(magicTagName)
+					) : this.all,
 				node,
 				i = -1,
 				result = [];
 
 			while(node = nodes[++i]) {
-				if(klas.test(node.className || '')) {
+				if(node.className && klas.test(node.className)) {
 					result.push(node);
 				}
 			}
-			
+
 			return result;
 		};
-if(!(string_tmp in _testElement))_Element_prototype[string_tmp] = function_tmp;
-if(!document[string_tmp])_document_documentElement[string_tmp] = document[string_tmp] = function_tmp;
+if(!(tmp in _testElement))_Element_prototype[tmp] = function_tmp;
+if(!document[tmp])_document_documentElement[tmp] = document[tmp] = function_tmp;
 
 
-string_tmp = 'compareDocumentPosition';
-if(!(string_tmp in document)) {
+tmp = 'compareDocumentPosition';
+if(!(tmp in document)) {
 	var __name,
 		__n1 = __name || 'DOCUMENT_POSITION_';//Use '__name || ' only for GCC not to inline __n1 param. In this case __name MUST be undefined
-	_document_documentElement[string_tmp] = document[string_tmp] = _Node_prototype[string_tmp] = function(b) {
+	_document_documentElement[tmp] = document[tmp] = _Node_prototype[tmp] = function(b) {
 		var a = this;
 		
 		//compareDocumentPosition from http://ejohn.org/blog/comparing-document-position/
@@ -1395,7 +1396,7 @@ if(_browser_msie < 9) {
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  HTML5 shiv  ==================================  */
 /*  =======================================================================================  */
 
-supportsUnknownElements = ((_testElement.innerHTML = '<x-x></x-x>'), _testElement.childNodes.length === 1);
+supportsUnknownElements = ((_testElement.innerHTML = '<x-x></x-x>'), _testElement.childNodes.length === 1 && _testElement.childNodes[0].nodeType === 1);
 	
 html5_elements = "|" + html5_elements + "|";
 
@@ -1407,7 +1408,7 @@ function shivedCreateElement(nodeName) {
 	if(!~html5_elements.indexOf("|" + nodeName + "|")) {
 		html5_elements_array.push(nodeName);
 		html5_elements += (nodeName + "|");
-		(safeFragment["__orig__createElement__"] || safeFragment.createElement)(nodeName);
+		(safeFragment["__orig__createElement__"] || safeFragment.createElement || function(){})(nodeName);
 		//node.document.createElement(nodeName);
 	}
 	
@@ -1451,7 +1452,7 @@ if(!supportsUnknownElements) {
 
 //Test for broken 'cloneNode'
 if(_Function_call.call(document_createElement, document, "x-x").cloneNode().outerHTML.indexOf("<:x-x>") === 0) {
-	safeElement = safeFragment.appendChild(safeFragment.createElement("div"));
+	safeElement = safeFragment.appendChild("createElement" in safeFragment && safeFragment.createElement("div") || safeFragment.ownerDocument.createElement("div"));
 	_nativeCloneNode = 
 		_browser_msie === 8 ?
 			_testElement["cloneNode"] :
@@ -1535,7 +1536,7 @@ if(document.querySelectorAll)extendNodeListPrototype(document.querySelectorAll("
 
 
 
-_testElement = _txtTextElement = boolean_tmp = string_tmp = number_tmp = function_tmp = object_tmp = nodeList_methods_fromArray = supportsUnknownElements = void 0;
+_testElement = _txtTextElement = tmp = function_tmp = nodeList_methods_fromArray = supportsUnknownElements = void 0;
 
 
 
