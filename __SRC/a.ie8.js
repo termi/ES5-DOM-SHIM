@@ -1,5 +1,4 @@
-﻿ /** @license MIT License (c) copyright Egor Halimonenko (termi1uc1@gmail.com) */
-
+ /** @license MIT License (c) copyright Egor Halimonenko (termi1uc1@gmail.com) */
 
 // ==ClosureCompiler==
 // @compilation_level ADVANCED_OPTIMIZATIONS
@@ -10,16 +9,22 @@
 // ==/ClosureCompiler==
 /**
  * ES5 and DOM shim for IE < 8
- * @version 4.4
+ * @version 5
+ * TODO::
+ * 1. http://www.positioniseverything.net/explorer.html
  */
  
 //GCC DEFINES START
 /** @define {boolean} */
 var IS_DEBUG = false;
+/** @define {boolean} */
+var JQUERY_COMPATIBLE = false;
+/** @define {boolean} */
+var UNSTABLE_FUNCTIONS = false;
 //GCC DEFINES END
 
 
-;(function(global) {
+;(function(global, _append) {
 
 
 /** @const @type {boolean} */
@@ -27,6 +32,7 @@ var DEBUG = IS_DEBUG;
 
 /** Browser sniffing
  * @type {boolean} */
+//isMSIE = eval("false;/*@cc_on@if(@\x5fwin32)isMSIE=true@end@*/");
 var _browser_msie;
 _browser_msie = (_browser_msie = /msie (\d+)/i.exec(navigator.userAgent)) && +_browser_msie[1] || void 0;
 
@@ -101,15 +107,6 @@ var _ = global["_"]["ielt9shims"]
 				}
 			}
 		}
-	}
-
-	/** @const */
-  , _append = function(obj, extention) {
-		for(var key in extention)
-			if(_hasOwnProperty(extention, key) && !_hasOwnProperty(obj, key))
-				obj[key] = extention[key];
-		
-		return obj;
 	}
 
 	/** @const */
@@ -197,7 +194,7 @@ var _ = global["_"]["ielt9shims"]
   , _Element_prototype = global["Element"].prototype
 
 	/** @const */
-  , _Node_contains = _Node_prototype.contains || _testElement.contains
+  , _Node_contains = _testElement.contains || _Node_prototype.contains//TODO:: massive testing
 
 	/** @const */
   , _Native_Date = Date
@@ -227,7 +224,7 @@ var _ = global["_"]["ielt9shims"]
 
   , _fake_Event_prototype = {
 	  	/** @const @type {function} */
-	  	"preventDefault" : function(){this.returnValue = false} ,
+	  	"preventDefault" : function(){this.returnValue = false; this["defaultPrevented"] = true} ,
 	  	/** @const @type {function} */
 	  	"stopPropagation" : function(){this.cancelBubble = true} ,
 	  	/** @const @type {function} */
@@ -251,6 +248,18 @@ var _ = global["_"]["ielt9shims"]
 	/** @const @type {string} */
   , _event_eventsUUID = "_e_8vj"
 
+	/** @const @type {Function */
+  , _event_emptyFunction = function(){}
+
+	/** @const @type {Object} */
+  , _event_needCapturing = {}
+
+	/** @type {boolean} */
+  , _event_globalIsCaptureIndicator = false
+
+	/** @type {Array.<Node>} */
+  , _event_captureHandlerNodes = []
+
 	// ------------------------------ ==================  HTML5 shiv  ================== ------------------------------
 
   , html5_elements = 'abbr|article|aside|audio|canvas|command|datalist|details|figure|figcaption|footer|header|hgroup|keygen|mark|meter|nav|output|progress|section|source|summary|time|video'
@@ -270,9 +279,149 @@ var _ = global["_"]["ielt9shims"]
   , safeElement
 
   , _nativeCloneNode
+
+  , _getScrollX
+
+  , _getScrollY
 ;
 
+document.compatMode === "CSS1Compat" ?
+	((_getScrollX = function(){return _document_documentElement.scrollLeft}), (_getScrollY = function(){return _document_documentElement.scrollTop}))
+	: 
+	((_getScrollX = function(){return document.body.scrollTop}), (_getScrollY = function(){return document.body.scrollLeft}))
+;
 
+/*
+TODO:: http://code.jquery.com/jquery-1.7.2.js:1537
+var support = {};
+
+// Run tests that need a body at doc ready
+document.addEventListener('DOMContentLoaded', function() {
+	var container, outer, inner, table, td, offsetSupport,
+		marginDiv, conMarginTop, style, html, positionTopLeftWidthHeight,
+		paddingMarginBorderVisibility, paddingMarginBorder,
+		body = document.getElementsByTagName("body")[0];
+
+	if ( !body ) {
+		// Return for frameset docs that don't have a body
+		return;
+	}
+
+	conMarginTop = 1;
+	paddingMarginBorder = "padding:0;margin:0;border:";
+	positionTopLeftWidthHeight = "position:absolute;top:0;left:0;width:1px;height:1px;";
+	paddingMarginBorderVisibility = paddingMarginBorder + "0;visibility:hidden;";
+	style = "style='" + positionTopLeftWidthHeight + paddingMarginBorder + "5px solid #000;";
+	html = "<div " + style + "display:block;'><div style='" + paddingMarginBorder + "0;display:block;overflow:hidden;'></div></div>" +
+		"<table " + style + "' cellpadding='0' cellspacing='0'>" +
+		"<tr><td></td></tr></table>";
+
+	container = document.createElement("div");
+	container.style.cssText = paddingMarginBorderVisibility + "width:0;height:0;position:static;top:0;margin-top:" + conMarginTop + "px";
+	body.insertBefore( container, body.firstChild );
+
+	// Construct the test element
+	div = document.createElement("div");
+	container.appendChild( div );
+
+	// Check if table cells still have offsetWidth/Height when they are set
+	// to display:none and there are still other visible table cells in a
+	// table row; if so, offsetWidth/Height are not reliable for use when
+	// determining if an element has been hidden directly using
+	// display:none (it is still safe to use offsets if a parent element is
+	// hidden; don safety goggles and see bug #4512 for more information).
+	// (only IE 8 fails this test)
+	div.innerHTML = "<table><tr><td style='" + paddingMarginBorder + "0;display:none'></td><td>t</td></tr></table>";
+	tds = div.getElementsByTagName( "td" );
+	isSupported = ( tds[ 0 ].offsetHeight === 0 );
+
+	tds[ 0 ].style.display = "";
+	tds[ 1 ].style.display = "none";
+
+	// Check if empty table cells still have offsetWidth/Height
+	// (IE <= 8 fail this test)
+	support.reliableHiddenOffsets = isSupported && ( tds[ 0 ].offsetHeight === 0 );
+
+	// Check if div with explicit width and no margin-right incorrectly
+	// gets computed margin-right based on width of container. For more
+	// info see bug #3333
+	// Fails in WebKit before Feb 2011 nightlies
+	// WebKit Bug 13343 - getComputedStyle returns wrong value for margin-right
+	if ( window.getComputedStyle ) {
+		div.innerHTML = "";
+		marginDiv = document.createElement( "div" );
+		marginDiv.style.width = "0";
+		marginDiv.style.marginRight = "0";
+		div.style.width = "2px";
+		div.appendChild( marginDiv );
+		support.reliableMarginRight =
+			( parseInt( ( window.getComputedStyle( marginDiv, null ) || { marginRight: 0 } ).marginRight, 10 ) || 0 ) === 0;
+	}
+
+	if ( typeof div.style.zoom !== "undefined" ) {
+		// Check if natively block-level elements act like inline-block
+		// elements when setting their display to 'inline' and giving
+		// them layout
+		// (IE < 8 does this)
+		div.innerHTML = "";
+		div.style.width = div.style.padding = "1px";
+		div.style.border = 0;
+		div.style.overflow = "hidden";
+		div.style.display = "inline";
+		div.style.zoom = 1;
+		support.inlineBlockNeedsLayout = ( div.offsetWidth === 3 );
+
+		// Check if elements with layout shrink-wrap their children
+		// (IE 6 does this)
+		div.style.display = "block";
+		div.style.overflow = "visible";
+		div.innerHTML = "<div style='width:5px;'></div>";
+		support.shrinkWrapBlocks = ( div.offsetWidth !== 3 );
+	}
+
+	div.style.cssText = positionTopLeftWidthHeight + paddingMarginBorderVisibility;
+	div.innerHTML = html;
+
+	outer = div.firstChild;
+	inner = outer.firstChild;
+	td = outer.nextSibling.firstChild.firstChild;
+
+	offsetSupport = {
+		doesNotAddBorder: ( inner.offsetTop !== 5 ),
+		doesAddBorderForTableAndCells: ( td.offsetTop === 5 )
+	};
+
+	inner.style.position = "fixed";
+	inner.style.top = "20px";
+
+	// safari subtracts parent border width here which is 5px
+	offsetSupport.fixedPosition = ( inner.offsetTop === 20 || inner.offsetTop === 15 );
+	inner.style.position = inner.style.top = "";
+
+	outer.style.overflow = "hidden";
+	outer.style.position = "relative";
+
+	offsetSupport.subtractsBorderForOverflowNotVisible = ( inner.offsetTop === -5 );
+	offsetSupport.doesNotIncludeMarginInBodyOffset = ( body.offsetTop !== conMarginTop );
+
+	if ( window.getComputedStyle ) {
+		div.style.marginTop = "1%";
+		support.pixelMargin = ( window.getComputedStyle( div, null ) || { marginTop: 0 } ).marginTop !== "1%";
+	}
+
+	if ( typeof container.style.zoom !== "undefined" ) {
+		container.style.zoom = 1;
+	}
+
+	body.removeChild( container );
+	marginDiv = div = container = null;
+
+	jQuery.extend( support, offsetSupport );
+});
+
+return support;
+});
+*/
 
 
 
@@ -281,7 +430,7 @@ var _ = global["_"]["ielt9shims"]
 //Emulating HEAD for ie < 9
 document.head || (document.head = document.getElementsByTagName('head')[0]);
 
-document.defaultView || (document.defaultView = global);
+"defaultView" in document || (document.defaultView = document.parentWindow);
 
 if(DEBUG) {
 	//test DOMElement is an ActiveXObject
@@ -471,9 +620,6 @@ if(!global["DOMException"]) {
 //http://javascript.gakaa.com/window-scrollx-2-0-scrolly.aspx
 if(!("pageXOffset" in global)) {
 	_.push(function() {
-		var _getScrollX = document.compatMode === "CSS1Compat" ? function(){return document.body.parentNode.scrollLeft} : function(){return document.body.scrollLeft};
-		var _getScrollY = document.compatMode === "CSS1Compat" ? function(){return document.body.parentNode.scrollTop} : function(){return document.body.scrollTop};
-
 		Object.defineProperty(global, "pageXOffset", {"get" : _getScrollX});
 		Object.defineProperty(global, "pageYOffset", {"get" : _getScrollY});
 	});
@@ -487,8 +633,9 @@ if(!("pageXOffset" in global)) {
 
 //fix [add|remove]EventListener & dispatchEvent for IE < 9
 
-// TODO: https://github.com/arexkun/Vine
-//		 https://github.com/kbjr/Events.js
+// See: https://github.com/arexkun/Vine
+//	    https://github.com/kbjr/Events.js
+//	    Use this for tests: http://ie.microsoft.com/testdrive/HTML5/ComparingEventModels/Default.html
 
 
 function fixEvent(event) {
@@ -505,14 +652,16 @@ function fixEvent(event) {
 	//indicates the current click count; the attribute value must be 1 when the user begins this action and increments by 1 for each click.
 	if(event.type === "click" || event.type === "dblclick") {
 		if(event.detail === void 0)event.detail = event.type === "click" ? 1 : 2;
-		if(!event.button && fixEvent["__b"] !== void 0)_button = fixEvent["__b"];
+		if(!event.button && fixEvent._clickButton !== void 0)_button = fixEvent._clickButton;
 	}
 
 	_append(event, _Event_prototype);
 
-	event.target || (event.target = event.srcElement || document);// добавить target для IE
+	if(!event["defaultPrevented"])event["defaultPrevented"] = false;
+
+	"target" in event || (event.target = event.srcElement || document);// добавить target для IE
 	/*
-	if ( event.target && (/3|4/).test( event.target.nodeType ) ) {
+	if ( event.target && event.target.nodeType in {3 : void 0, 4 : void 0} ) {
 		event.target = event.target.parentNode;
 	}
 	*/
@@ -527,24 +676,23 @@ function fixEvent(event) {
 	*/
 
 	// вычислить pageX/pageY для IE
-	if(event.pageX == null && event.clientX != null) {
-		var html = _document_documentElement, body = document.body;
-		/*event.pageX = event.clientX + (html && html.scrollLeft || body && body.scrollLeft || 0) - (html.clientLeft || 0);
-		event.pageY = event.clientY + (html && html.scrollTop || body && body.scrollTop || 0) - (html.clientTop || 0);*/
+	if("clientX" in event && event.pageX == null) {
+		/*event.pageX = event.clientX + (_document_documentElement.scrollLeft || body && body.scrollLeft || 0) - (_document_documentElement.clientLeft || 0);
+		event.pageY = event.clientY + (_document_documentElement.scrollTop || body && body.scrollTop || 0) - (_document_documentElement.clientTop || 0);*/
 		//Новая вервия нуждающаяся в проверки
-		event.pageX = event.clientX + (window.pageXOffset || html.scrollLeft || body.scrollLeft || 0) - (html.clientLeft || 0);
-		event.pageY = event.clientY + (window.pageYOffset || html.scrollTop || body.scrollTop || 0) - (html.clientTop || 0);
+		event.pageX = event.clientX + _getScrollX() - (_document_documentElement.clientLeft || 0);
+		event.pageY = event.clientY + _getScrollY() - (_document_documentElement.clientTop || 0);
 	}
 
 	//Add 'which' for click: 1 == left; 2 == middle; 3 == right
-	//Unfortunately the event.button property is not set for click events. It is however set for mouseup/down/move ... but not click | http://bugs.jquery.com/ticket/4164
+	//Unfortunately the event.button property is not set for click events. It is however set for mouseup/down/move ... but not click | http://bugs.jquery.com/ticket/4164 <- It is fixing now
 	if(!event.which && _button)event.which = _button & 1 ? 1 : _button & 2 ? 3 : _button & 4 ? 2 : 0;
 
-	if(!event.timeStamp)event.timeStamp = +new _Native_Date();
+	"timeStamp" in event || (event.timeStamp = +new _Native_Date());
 	
-	if(!event.eventPhase)event.eventPhase = (event.target == thisObj) ? 2 : 3; // "AT_TARGET" = 2, "BUBBLING_PHASE" = 3
+	"eventPhase" in event || (event.eventPhase = (event.target == thisObj) ? 2 : 3); // "AT_TARGET" = 2, "BUBBLING_PHASE" = 3
 	
-	if(!event.currentTarget)event.currentTarget = thisObj;
+	"currentTarget" in event || (event.currentTarget = thisObj);
 		
 		
 	// событие DOMAttrModified
@@ -552,7 +700,26 @@ function fixEvent(event) {
 	// TODO:: Привести event во всех случаях (для всех браузеров) в одинаковый вид с newValue, prevValue, propName и т.д.
 	if(!event.attrName && event.propertyName)event.attrName = _String_split.call(event.propertyName, '.')[0];//IE При изменении style.width в propertyName передаст именно style.width, а не style, как нам надо
 
-	return event
+	return event;
+}
+
+if(  UNSTABLE_FUNCTIONS ) {
+	function windowCaptureHandler(nativeEvent) {
+		var i,
+			l = _event_captureHandlerNodes.length,
+			k,
+			_node;
+
+		if(l) {
+			_event_globalIsCaptureIndicator = true;
+			nativeEvent.eventPhase = 1;
+			for(k = l - 1 ; k >= 0 ; --k)commonHandle.call(_event_captureHandlerNodes[k], nativeEvent);
+			nativeEvent.eventPhase = 3;
+			for(i = 0 ; i < l ; ++i)commonHandle.call(_event_captureHandlerNodes[i], nativeEvent);
+			_event_globalIsCaptureIndicator = false;
+			_event_captureHandlerNodes = [];
+		}
+	}
 }
 
 // вспомогательный универсальный обработчик. Вызывается в контексте элемента всегда this = element
@@ -562,77 +729,99 @@ function commonHandle(nativeEvent) {
 	}
 
 	var thisObj = this,
-		_ = thisObj["_"],
-		errors = [],//Инициализуется массив errors для исключений
-		errorsMessages = [],
-		event;
-	
-	if((!_ || !_[_event_eventsUUID])) {
-		if(!("__dom0__" in nativeEvent))return;
-		else {
-			_ || (_ = {});
-			_[_event_eventsUUID] || (_[_event_eventsUUID] = {});
-		}
+		_,
+		errors,
+		errorsMessages,
+		_event,
+		handlersKey;
+
+
+	if(    UNSTABLE_FUNCTIONS    && !_event_globalIsCaptureIndicator && nativeEvent.bubbles !== false && nativeEvent.type in _event_needCapturing && thisObj != global) {
+		_event_captureHandlerNodes.push(this);
+		_event = nativeEvent;
 	}
-	
-	// получить объект события и проверить, подготавливали мы его для IE или нет
-	nativeEvent || (nativeEvent = window.event);
-	if(!nativeEvent["__isFixed"])nativeEvent = fixEvent.call(thisObj, nativeEvent);
-
-	// save event properties in fake 'event' object to allow store 'event' and use it in future
-	if(!nativeEvent["__custom_event"])(event = _safeExtend(new Event(nativeEvent.type), nativeEvent))["__custom_event"] = true;
-	else event = nativeEvent;
-
-
-	var handlers = _[_event_eventsUUID][event.type];
-	if("__dom0__" in nativeEvent) {
-		(handlers || (handlers = []))[0] = nativeEvent["__dom0__"];
-	}
-
-	if(!handlers)return;
-
-	for(var g in handlers)if(_hasOwnProperty(handlers, g)) {
-		var handler = handlers[g],
-			context;
-
-		if(typeof handler === "object") {
-			context = handler;
-			handler = handler.handleEvent;
-		}
-
-		try {
-			//Передаём контекст и объект event, результат сохраним в event['result'] для передачи значения дальше по цепочке
-			if(
-				(
-					event['result'] = _Function_call.call(handler, context || thisObj, event)
-				)
-				=== false
-			  ) {//Если вернели false - остановим обработку функций
-				event.preventDefault();
-				event.stopPropagation();
+	else {
+		_ = thisObj["_"];
+		errors = [];
+		errorsMessages = [];
+		handlersKey = _event_eventsUUID + (_event_globalIsCaptureIndicator ? "-" : "");
+		
+		if((!_ || !_[handlersKey])) {
+			if(!("__dom0__" in nativeEvent))return;
+			else {
+				_ || (_ = {});
+				_[handlersKey] || (_[handlersKey] = {});
 			}
 		}
-		catch(e) {
-			errors.push(e);//Все исключения - добавляем в массив, при этом не прерывая цепочку обработчиков.
-			errorsMessages.push(e.message);
-			if(console)console.error(e);
+		
+		// получить объект события и проверить, подготавливали мы его для IE или нет
+		nativeEvent || (nativeEvent = window.event);
+		if(!("__isFixed" in nativeEvent))nativeEvent = fixEvent.call(thisObj, nativeEvent);
+		else {
+			nativeEvent.currentTarget = thisObj;
 		}
 
-		if(event["__stopNow"])break;//Мгновенная остановка обработки событий
+		// save event properties in fake 'event' object to allow store 'event' and use it in future
+		if(!("__custom_event" in nativeEvent))(_event = _safeExtend(new Event(nativeEvent.type), nativeEvent))["__custom_event"] = true;
+		else _event = nativeEvent;
+
+
+		var handlers = _[handlersKey][_event.type];
+		if("__dom0__" in nativeEvent) {
+			(handlers || (handlers = []))[0] = nativeEvent["__dom0__"];
+		}
+
+		if(handlers) {
+			for(var g in handlers)if(_hasOwnProperty(handlers, g)) {
+				var handler = handlers[g],
+					context;
+
+				if(typeof handler === "object") {
+					context = handler;
+					handler = handler.handleEvent;
+				}
+
+				try {
+					//Передаём контекст и объект event, результат сохраним в event['result'] для передачи значения дальше по цепочке
+					if(
+						(
+							_event['result'] = _Function_call.call(handler, context || thisObj, _event)
+						)
+						=== false
+					  ) {//Если вернели false - остановим обработку функций
+						_event.preventDefault();
+						_event.stopPropagation();
+					}
+				}
+				catch(e) {
+					errors.push(e);//Все исключения - добавляем в массив, при этом не прерывая цепочку обработчиков.
+					errorsMessages.push(e.message);
+					if(console)console.error(e);
+				}
+
+				if(_event["__stopNow"])break;//Мгновенная остановка обработки событий
+			}
+
+			//return changed properties in native 'event' object
+			nativeEvent.returnValue = _event.returnValue;
+			nativeEvent.cancelBubble = _event.cancelBubble;
+			//TODO:: check out that properties need to be returned in native 'event' object or _extend(nativeEvent, event);
+			
+			if(errors.length == 1) {//Если была только одна ошибка - кидаем ее дальше
+				throw errors[0]
+			}
+			else if(errors.length > 1) {//Иначе делаем общий объект Error со списком ошибок в свойстве errors и кидаем его
+				var e = new Error("Multiple errors thrown : " + _event.type + " : " + " : " + errorsMessages.join("|"));
+				e.errors = errors;
+				throw e;
+			}
+		}
 	}
 
-	//return changed properties in native 'event' object
-	nativeEvent.returnValue = event.returnValue;
-	nativeEvent.cancelBubble = event.cancelBubble;
-	//TODO:: check out that properties need to be returned in native 'event' object or _extend(nativeEvent, event);
-	
-	if(errors.length == 1) {//Если была только одна ошибка - кидаем ее дальше
-		throw errors[0]
-	}
-	else if(errors.length > 1) {//Иначе делаем общий объект Error со списком ошибок в свойстве errors и кидаем его
-		var e = new Error("Multiple errors thrown : " + event.type + " : " + " : " + errorsMessages.join("|"));
-		e.errors = errors;
-		throw e;
+	if(thisObj === document && !_event.cancelBubble && _event.eventPhase === 3) {
+		//Emelate bubbling from document to defaultView (window) | 2 from 2
+		commonHandle.call(thisObj.defaultView, _event);
+		nativeEvent.cancelBubble = true;//to prevent dubble event fire on window object. First emulated, second native bubbling
 	}
 }
 
@@ -646,6 +835,14 @@ if(!document.addEventListener) {
 		  ) {
 			return;
 		}
+
+		if(    UNSTABLE_FUNCTIONS     && useCapture) {
+			if(!_event_needCapturing[_type]) {
+				_event_needCapturing[_type] = true;
+				//window.addEventListener(_type, windowCaptureHandler, true);
+				window.addEventListener(_type, windowCaptureHandler);
+			}
+		}
 		
 		var /** @type {Node} */
 			thisObj = this,
@@ -654,10 +851,15 @@ if(!document.addEventListener) {
 			/** @type {Function} */
 			_callback,
 			/** @type {boolean} */
-			_useInteractive = false;
-			/* * @ type {number} 
-			_event_phase = useCapture ? 1 : 3;*/
-			
+			_useInteractive = false,
+			/** @type {string} */
+			handlersKey = _event_eventsUUID + (    UNSTABLE_FUNCTIONS     && useCapture ? "-" : "");
+
+		if(thisObj == global && (!("_" in document) || !(handlersKey in document["_"]) || !(_type in document["_"][handlersKey]))) {
+			//Emulate bubbling from document to defaultView (window) | 1 from 2
+			document.addEventListener(_type, _event_emptyFunction, useCapture);
+		}
+
 		if(!_)_ = thisObj["_"] = {};
 		//_ = _[_event_phase] || (_[_event_phase] = {});
 		
@@ -751,54 +953,67 @@ if(!document.addEventListener) {
 
 		//Если обработчиков такого типа событий не существует - инициализуем events[type] и вешаем
 		// commonHandle как обработчик на elem для запуска браузером по событию type.
-		if(!_[_event_eventsUUID])_[_event_eventsUUID] = {};
-		if(!_[_event_eventsUUID][_type]) {
-			_[_event_eventsUUID][_type] = {};
+		if(!_[handlersKey])_[handlersKey] = {};
+		if(!_[handlersKey][_type]) {
+			_[handlersKey][_type] = {};
 			
 			if(!_useInteractive)//[script:onload]
 				thisObj.attachEvent('on' + _type, _callback);
 		}
 		
-		//Добавляем пользовательский обработчик в список elem[_event_eventsUUID][type] под заданным номером. 
+		//Добавляем пользовательский обработчик в список elem[handlersKey][type] под заданным номером. 
 		//Так как номер устанавливается один раз, и далее не меняется - это приводит к ряду интересных фич.
 		// Например, запуск add с одинаковыми аргументами добавит событие только один раз.
-		_[_event_eventsUUID][_type][_handler[_event_UUID_prop_name]] = _handler;
+		_[handlersKey][_type][_handler[_event_UUID_prop_name]] = _handler;
 	};
+
+	_Node_prototype.addEventListener["__shim__"] = true;
 
 	_Node_prototype.removeEventListener = global.removeEventListener = document.removeEventListener = function(_type, _handler, useCapture) {
 		var /** @type {Node} */
 			thisObj = this,
 			/** @type {Object} */
-			_ = thisObj["_"];
-			/** @type {number} 
-			_event_phase = useCapture ? 1 : 3;*/
+			_ = thisObj["_"],
+			/** @type {string} */
+			handlersKey = _event_eventsUUID + (    UNSTABLE_FUNCTIONS     && useCapture ? "-" : ""),
+			/** @type {function} */
+			_callback,
+			/** @type {Array} */
+			handlers,
+			/** @type {String} */
+			any;
 		
-		if(typeof _handler != "function" || !_handler.guid || !_)return;
+		if(typeof _handler != "function" || !_handler[_event_UUID_prop_name] || !_)return;
+		if(    UNSTABLE_FUNCTIONS     && useCapture && !(_type in _event_needCapturing))return;
+		if(!(_callback = _[_event_handleUUID]))return;
 
 		//_ = _[_event_phase] || (_[_event_phase] = {});
 		//if(!_)return;
 
-		var handlers = _[_event_eventsUUID] && _[_event_eventsUUID][_type];//Получить список обработчиков
+		handlers = _[handlersKey] && _[handlersKey][_type];//Получить список обработчиков
 		
-		delete handlers[_handler.guid];//Удалить обработчик по его номеру
+		delete handlers[_handler[_event_UUID_prop_name]];//Удалить обработчик по его номеру
 
-		for(var any in handlers)if(_hasOwnProperty(handlers, any))return;//TODO: проверить, что тут делается. Глупость какая-то.Проверить, не пуст ли список обработчиков
+		for(any in handlers)if(_hasOwnProperty(handlers, any))return;//Проверить, не пуст ли список обработчиков
+
 		//Если пуст, то удалить служебный обработчик и очистить служебную структуру events[type]
-		thisObj.detachEvent("on" + _type, commonHandle);
+		thisObj.detachEvent("on" + _type, _callback);
 
-		delete _[_event_eventsUUID][_type];
+		delete _[handlersKey][_type];
 
 		//Если событий вообще не осталось - удалить events за ненадобностью.
-		for(var any in _[_event_eventsUUID])if(_hasOwnProperty(_[_event_eventsUUID], any))return;
+		for(any in _[handlersKey])if(_hasOwnProperty(_[handlersKey], any))return;
 		
-		delete _[_event_eventsUUID];
+		delete _[handlersKey];
 	};
 
+	_Node_prototype.removeEventListener["__shim__"] = true;
+
 	document.attachEvent("onmousedown", function(){
-		fixEvent["__b"] = event.button
+		fixEvent._clickButton = event.button;
 	});
 	document.attachEvent("onclick", function(){
-		fixEvent["__b"] = void 0
+		fixEvent._clickButton = void 0;
 	});
 }
 
@@ -819,42 +1034,52 @@ UNSPECIFIED_EVENT_TYPE_ERR: Raised if the Event's type was not specified by init
  * @this {Element} is the target of the event.
  * @return {boolean} The return value is false if at least one of the event handlers which handled this event called preventDefault. Otherwise it returns true.
  */
-if(!document.dispatchEvent)_Node_prototype.dispatchEvent = global.dispatchEvent = document.dispatchEvent = function(_event) {
-	if(!_event.type)return true;
-	/**
-	 * @type {Node}
-	 */
-	var thisObj = this;
-	
-	try {
-		return thisObj.fireEvent("on" + _event.type, _event);
-	}
-	catch(e) {
-		//Shim for Custome events in IE < 9
-		if(e["number"] === -2147024809 ||//"invalid argument."
-		   thisObj === global) {		 //window has not 'fireEvent' method
-			_event["__custom_event"] = true;
-			var node = _event.target = thisObj,
-				dom0event = "on" + _event.type,
-				result;
+if(!document.dispatchEvent) {
+	_Node_prototype.dispatchEvent = global.dispatchEvent = document.dispatchEvent = function(_event) {
+		if(!_event.type)return true;
 
-			//Всплываем событие
-			while(!_event.cancelBubble && node) {//Если мы вызвали stopPropogation() - больше не всплываем событие
-				if((dom0event in node && typeof node[dom0event] == "function" && (_event["__dom0__"] = node[dom0event])) ||
-				   ("_" in node && _event_eventsUUID in node["_"]))//Признак того, что на элемент могли навесить событие
-					commonHandle.call(node, _event);
-				//Если у события отключено всплытие - не всплываем его
-				node = _event.bubbles ? (node === document ? document.defaultView : node.parentNode) : null;
-				if("__dom0__" in _event)_event["__dom0__"] = void 0;
-			}
+		//reinit event
+		if(!_event.returnValue)_event.returnValue = true;
+	  	if(_event.cancelBubble)_event.cancelBubble = false;
 
-			result = !_event.cancelBubble;
-			_event = null;
-			
-			return result;
+		/**
+		 * @type {Node}
+		 */
+		var thisObj = this;
+		
+		try {
+			return thisObj.fireEvent("on" + _event.type, _event);
 		}
-		else throw e;
-	}
+		catch(e) {
+			//Shim for Custome events in IE < 9
+			if(e["number"] === -2147024809 ||//"invalid argument."
+			   thisObj === global ||	  	 //window has no 'fireEvent' method
+			   (e["number"] === -2146827850 && !(_event.bubbles = false))) {//has no such method ("fireEvent")
+				_event["__custom_event"] = true;
+				var node = _event.target = thisObj,
+					dom0event = "on" + _event.type,
+					result;
+
+				//Всплываем событие
+				while(!_event.cancelBubble && node) {//Если мы вызвали stopPropogation() - больше не всплываем событие
+					if((dom0event in node && typeof node[dom0event] == "function" && (_event["__dom0__"] = node[dom0event])) ||
+					   ("_" in node && _event_eventsUUID in node["_"]))//Признак того, что на элемент могли навесить событие
+						commonHandle.call(node, _event);
+					//Если у события отключено всплытие - не всплываем его
+					node = _event.bubbles ? (node === document ? document.defaultView : node.parentNode) : null;
+					if("__dom0__" in _event)_event["__dom0__"] = void 0;
+				}
+
+				result = !_event.cancelBubble;
+				_event = null;
+				
+				return result;
+			}
+			else throw e;
+		}
+	};
+
+	_Node_prototype.dispatchEvent["__shim__"] = true;
 };
 
 if(!document.createEvent) {/*IE < 9 ONLY*/
@@ -939,26 +1164,71 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 /*  ======================================================================================  */
 /*  ========================================  DOM  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
+/*  =======================================================================================  */
+/*  ================================  NodeList.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+function _NodeList() {}
+_NodeList.prototype = new Array;
+
+tmp = new _NodeList;
+tmp.push(1);
+if(tmp.length) {//IE8 standart mode
+	global["NodeList"] = _NodeList;//"NodeList" in global | Rewrite broken NodeList implimentation
+}
+else {//IE8 quirk mode, IE lt 8
+	//Internet Explorer refuses to maintain the length property of a subclass created like this | http://dean.edwards.name/weblog/2006/11/hooray/
+	// create an <iframe>
+	tmp = document.createElement("iframe");
+	tmp.style.display = "none";
+	document.body.appendChild(tmp);
+
+	// write a script into the <iframe> and steal its Array object
+	tmp.contentWindow.document.write(
+	"<script>parent.NodeList=Array;<\/script>"
+	);
+	_NodeList = global["NodeList"];
+}
+
+_NodeList.prototype["item"] = function(index) {
+	return this[index];
+}
+
+//Inherit NodeList from Array
+function extendNodeListPrototype(nodeListProto) {
+	if(nodeListProto && nodeListProto !== Array.prototype) {
+		for(var key in nodeList_methods_fromArray)if(_hasOwnProperty(key, nodeList_methods_fromArray)) {
+			if(!nodeListProto[key])nodeListProto[key] = function() {
+				return _Function_apply.call(Array.prototype[key], Array["from"](this), arguments);
+			}
+		}
+	}
+}
+if(document.querySelectorAll)extendNodeListPrototype(document.querySelectorAll("#z").constructor.prototype);
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  NodeList.prototype  ==================================  */
+/*  ======================================================================================  */
+
 /*  ================================ bug fixing  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
 
 // IE - contains fails if argument is textnode
-_txtTextElement = _Function_call.call(document_createTextNode, document, "");
-_testElement.appendChild(_txtTextElement);
+if(UNSTABLE_FUNCTIONS) {
+	_txtTextElement = _Function_call.call(document_createTextNode, document, "");
+	_testElement.appendChild(_txtTextElement);
 
-try {
-    _testElement.contains(_txtTextElement);
-    tmp = false;
-} catch (e) {
-	tmp = true;
-	_Node_prototype.contains = function contains(other) {
-    	if(other.nodeType === 3) {
-		    return _recursivelyWalk(this.childNodes, function (node) {
-		         if (node === other) return true;
-		    }) || false;
-		}
-		else return _Function_call.call(_Node_contains, this, other);
-	};
+	try {
+	    _testElement.contains(_txtTextElement);
+	    tmp = false;
+	} catch (e) {
+		tmp = true;
+		_Node_prototype.contains = function contains(other) {
+	    	if(other.nodeType === 3) {
+			    return _recursivelyWalk(this.childNodes, function (node) {
+			         if (node === other) return true;
+			    }) || false;
+			}
+			else return _Function_call.call(_Node_contains, this, other);
+		};
+	}
 }
 
 // IE8 hurr durr doctype is null
@@ -1012,21 +1282,25 @@ if(!("children" in _testElement) || _browser_msie < 9)_.push(function() {
 //[IE lt 9] Fix "offsetLeft" and "offsetTop" properties in IE < 9
 if(_browser_msie < 9)_.push(function() {
 	/**
+	 * http://javascript.ru/ui/offset#popytka-2:-getboundingclientrect
 	 * @param {Node} elem
 	 * @param {boolean=} X_else_Y
 	 * @return {number}
 	 */
 	function unsafeGetOffsetRect(elem, X_else_Y) {
 		var box = elem.getBoundingClientRect(),//It might be an error here
-			body = document.body,
-			docElem = _document_documentElement;
-	 
+			body = document.body;
+	 	 
+		if(!_document_documentElement.contains(elem))
+			return X_else_Y ? box.left : box.top;
+
 	 	return X_else_Y ?
-	 		Math.round(box.left + (window.pageXOffset || docElem.scrollLeft || body.scrollLeft) - (docElem.clientLeft || body.clientLeft || 0)) :
-	 		Math.round(box.top + (window.pageYOffset || docElem.scrollTop || body.scrollTop) - (docElem.clientTop || body.clientTop || 0));
+	 		box.left + _getScrollX() - (_document_documentElement.clientLeft || body.clientLeft || 0) :
+	 		box.top + _getScrollY() - (_document_documentElement.clientTop || body.clientTop || 0);
 	}
 
 	/**
+	 * http://javascript.ru/ui/offset#popytka-1-summiruem-offset-y
 	 * @param {Node} elem
 	 * @param {boolean=} X_else_Y
 	 * @return {number}
@@ -1057,6 +1331,57 @@ if(_browser_msie < 9)_.push(function() {
 			result = getOffsetSum(elem, X_else_Y);
 		}
 		return result;
+
+		//Broken impimintation up here
+		//Here right impl from jQuery
+		//TODO::
+
+		/*
+		jQuery.fn.extend({
+
+	position: function() {
+		if ( !this[0] ) {
+			return null;
+		}
+
+		var elem = this[0],
+
+		// Get *real* offsetParent
+		offsetParent = this.offsetParent(),
+
+		// Get correct offsets
+		offset       = this.offset(),
+		parentOffset = rroot.test(offsetParent[0].nodeName) ? { top: 0, left: 0 } : offsetParent.offset();
+
+		// Subtract element margins
+		// note: when an element has margin: auto the offsetLeft and marginLeft
+		// are the same in Safari causing offset.left to incorrectly be 0
+		offset.top  -= parseFloat( jQuery.css(elem, "marginTop") ) || 0;
+		offset.left -= parseFloat( jQuery.css(elem, "marginLeft") ) || 0;
+
+		// Add offsetParent borders
+		parentOffset.top  += parseFloat( jQuery.css(offsetParent[0], "borderTopWidth") ) || 0;
+		parentOffset.left += parseFloat( jQuery.css(offsetParent[0], "borderLeftWidth") ) || 0;
+
+		// Subtract the two offsets
+		return {
+			top:  offset.top  - parentOffset.top,
+			left: offset.left - parentOffset.left
+		};
+	},
+
+	offsetParent: function() {
+		return this.map(function() {
+			var offsetParent = this.offsetParent || document.body;
+			while ( offsetParent && (!rroot.test(offsetParent.nodeName) && jQuery.css(offsetParent, "position") === "static") ) {
+				offsetParent = offsetParent.offsetParent;
+			}
+			return offsetParent;
+		});
+	}
+});
+		*/
+
 	}
 	Object.defineProperties(_Element_prototype, {
 		"offsetLeft" : {
@@ -1285,44 +1610,7 @@ if(!document.importNode) {
 		return null;
 	};
 	document.importNode["shim"] = true;
-}
-
-//getElementsByClassName shim
-//based on https://gist.github.com/1383091
-tmp = "getElementsByClassName";
-function_tmp = _Element_prototype[tmp] || 
-	document.querySelectorAll ? //Here native querySelectorAll in IE8
-		function(names) {
-			if(!names || !(names = _String_trim.call(names)))return [];
-			return (this.querySelectorAll || document.querySelectorAll).call(this, names.replace(/\s+(?=\S)|^/g, "."))
-		}
-		:
-		function(klas) {
-
-			klas = new RegExp(klas.replace(RE__getElementsByClassName, STRING_FOR_RE__getElementsByClassName));
-
-			var magicTagName = arguments.callee["tagName"],//only for IE < 8 querySelector shim
-				nodes = magicTagName ? 
-			  		(
-			  		delete arguments.callee["tagName"], 
-			    	this.nodeType === 9 && magicTagName === "BODY" ? 
-			    		[this.body] :
-						this.getElementsByTagName(magicTagName)
-					) : this.all,
-				node,
-				i = -1,
-				result = [];
-
-			while(node = nodes[++i]) {
-				if(node.className && klas.test(node.className)) {
-					result.push(node);
-				}
-			}
-
-			return result;
-		};
-if(!(tmp in _testElement))_Element_prototype[tmp] = function_tmp;
-if(!document[tmp])_document_documentElement[tmp] = document[tmp] = function_tmp;
+};
 
 
 tmp = 'compareDocumentPosition';
@@ -1336,9 +1624,9 @@ if(!(tmp in document)) {
 		return a.contains ?
 				(a != b && a.contains(b) && 16) +
 				(a != b && b.contains(a) && 8) +
-				(a.sourceIndex >= 0 && b.sourceIndex >= 0 ?
-					(a.sourceIndex < b.sourceIndex && 4) +
-					(a.sourceIndex > b.sourceIndex && 2) :
+				(a["sourceIndex"] >= 0 && b["sourceIndex"] >= 0 ?
+					(a["sourceIndex"] < b["sourceIndex"] && 4) +
+					(a["sourceIndex"] > b["sourceIndex"] && 2) :
 				1) +
 			0 : 0;
 	};
@@ -1354,7 +1642,8 @@ if(!(tmp in document)) {
 	_document_documentElement[__n1 + __name] = document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x10;
 }
 
-if(!global.getComputedStyle) {//IE < 9
+if(!global.getComputedStyle && !JQUERY_COMPATIBLE) {//IE < 9
+// Problemm with jQuery:: jQuery using <currentStyle>.getPropertyValue and where is no such method in IE<9 and it can't be shimed
 /*
 TODO::
 var filter = elem.style['filter'];
@@ -1364,13 +1653,25 @@ var filter = elem.style['filter'];
 	/**
 	 * @link https://developer.mozilla.org/en/DOM/window.getComputedStyle
 	 * getCurrentStyle - функция возвращяет текущий стиль элемента
-	 * @param {?Node} obj HTML-Элемент
+	 * @param {?Node} element HTML-Элемент
 	 * @param {?string} pseudoElt A string specifying the pseudo-element to match. Must be null (or not specified) for regular elements.
 	 * @this {Window}
 	 * @return {CSSStyleDeclaration} Стиль элемента
 	 */
-	global.getComputedStyle = function(obj, pseudoElt) {
-		return obj.currentStyle;
+	global.getComputedStyle = function(element, pseudoElt) {
+		//TODO:: obj.currentStyle.getPropertyValue = function(propName) {obj.currentStyle[propName]}
+		//http://snipplr.com/view/13523/
+		/*if(!("getPropertyValue" in element.currentStyle))element.currentStyle.getPropertyValue = function(prop) {
+ 			var re = /(\-([a-z]){1})/g;
+            if (prop == 'float') prop = 'styleFloat';
+            if (re.test(prop)) {
+                prop = prop.replace(re, function () {
+                    return arguments[2].toUpperCase();
+                });
+            }
+            return element.currentStyle[prop] ? element.currentStyle[prop] : null;
+		}*/
+		return element.currentStyle;
 	}
 }
 
@@ -1408,12 +1709,13 @@ function shivedCreateElement(nodeName) {
 	if(!~html5_elements.indexOf("|" + nodeName + "|")) {
 		html5_elements_array.push(nodeName);
 		html5_elements += (nodeName + "|");
-		(safeFragment["__orig__createElement__"] || safeFragment.createElement || function(){})(nodeName);
+		(safeFragment["__orig__createElement__"] || safeFragment.createElement/* || function(){}*/)(nodeName);
 		//node.document.createElement(nodeName);
 	}
 	
 	return safeFragment.appendChild(node);
 }
+shivedCreateElement["ielt9"] = true;
 
 /** Making a document HTML5 element safe
  * Функция "включает" в IE < 9 HTML5 элементы
@@ -1428,7 +1730,7 @@ function html5_document(doc) { // pass in a document as an argument
 			doc.createElement(html5_elements_array[a]); // pass html5 element into createElement method on document
 		}
 		
-		if(doc.createElement !== shivedCreateElement) {
+		if(doc.createElement !== shivedCreateElement && !("ielt9" in doc.createElement)) {
 			doc["__orig__createElement__"] = doc.createElement;
 			doc.createElement = shivedCreateElement;
 		}
@@ -1513,32 +1815,85 @@ if(_Function_call.call(document_createElement, document, "x-x").cloneNode().oute
 /*  ======================================================================================  */
 
 
-/*  =======================================================================================  */
-/*  ================================  NodeList.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
-
-//Inherit NodeList from Array
-function extendNodeListPrototype(nodeListProto) {
-	if(nodeListProto && nodeListProto !== Array.prototype) {
-		for(var key in nodeList_methods_fromArray)if(_hasOwnProperty(key, nodeList_methods_fromArray)) {
-			if(!nodeListProto[key])nodeListProto[key] = function() {
-				_Function_apply.call(Array.prototype[key], Array["from"](this), arguments);
-			}
-		}
-	}
-}
-if(document.querySelectorAll)extendNodeListPrototype(document.querySelectorAll("#z").constructor.prototype);
-/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  NodeList.prototype  ==================================  */
-/*  ======================================================================================  */
-
-
 /*  ======================================================================================  */
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  DOM  =======================================  */
 
 
 
+//_testElement = _txtTextElement = tmp = function_tmp = nodeList_methods_fromArray = supportsUnknownElements = void 0;
+
+
+/*  ======================================================================================  */
+/*  ================================= Only for IE8 =======================================  */
+
+//getElementsByClassName shim
+tmp = "getElementsByClassName";
+if(!_Element_prototype[tmp] && document.querySelectorAll) {
+	_Element_prototype[tmp] = _document_documentElement[tmp] = document[tmp] = function(names) {
+		//Here native querySelectorAll in IE8
+		if(!names || !(names = _String_trim.call(names)))return new _NodeList;
+		return _call(this.querySelectorAll || document.querySelectorAll, this, names.replace(/\s+(?=\S)|^/g, "."))
+	};
+};
+
+if(!("opacity" in _document_documentElement.style))(function(RE_alpha) {
+	Object.defineProperty(CSSStyleDeclaration.prototype, "opacity", {
+		"get" : function() {
+			var val = (this.filter || "").match(RE_alpha);
+			
+			return val ? (parseInt(val[1]) / 100) + "" : "";//can't replace parseInt to '+(val[1])'
+		},
+		"set" : function(newVal) {
+			//DXImageTransform.Microsoft.Alpha(opacity=%d)
+			//progid:DXImageTransform.Microsoft.Alpha(Opacity=%d)
+			newVal = "alpha(opacity=" + (newVal >= 0.9999 ? "100" : newVal < 0 ? 0 : ~~(newVal * 100)) + ")";
+
+			if (RE_alpha.test(this.filter)) {
+				this.filter = this.filter.replace(RE_alpha, newVal)
+			}
+			else {
+				//this.zoom = 1; //need this???
+				this.filter += " " + newVal;
+			}
+		}
+	});
+})(/alpha\(opacity=([^\)]+)\)/);
+
+(function(_document_querySelectorAll, _document_querySelector, _Element_prototype_querySelectorAll, _Element_prototype_querySelector) {
+	function _NodeList_from(iterable) {
+      var length = iterable.length >>> 0,
+        result = new _NodeList;
+
+      for(var key = 0 ; key < length ; key++) {
+        if(key in iterable)
+          result.push(iterable[key]);
+      }
+
+      return result;
+    }
+
+	document.querySelectorAll = function() {
+		return _NodeList_from(_document_querySelectorAll.apply(this, arguments))
+	}
+	document.querySelector = function() {
+		return _document_querySelector.apply(this, arguments)
+	}
+	_Element_prototype.querySelectorAll = function() {
+		return _NodeList_from(_Element_prototype_querySelectorAll.apply(this, arguments))
+	}
+	_Element_prototype.querySelector = function() {
+		return _Element_prototype_querySelector.apply(this, arguments)
+	}
+})(document.querySelectorAll, document.querySelector, _Element_prototype.querySelectorAll, _Element_prototype.querySelector);
+
+
 _testElement = _txtTextElement = tmp = function_tmp = nodeList_methods_fromArray = supportsUnknownElements = void 0;
 
 
-
-
-})(window);
+})(window, /** @const */function(obj, extention) {
+		for(var key in extention)
+			if(Object.prototype.hasOwnProperty(extention, key) && !Object.prototype.hasOwnProperty(obj, key))
+				obj[key] = extention[key];
+		
+		return obj;
+	});

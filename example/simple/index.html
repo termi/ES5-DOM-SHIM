@@ -16,12 +16,12 @@
 </style>
 <!-- https://raw.github.com/termi/ES5-DOM-SHIM/master/__COMPILE/a.js -->
 <!--[if lt IE 8]>
-<script src="../../__COMPILE/a.ielt8.js"></script>
+<script src="../../__SRC/a.ielt8.js"></script>
 <![endif]-->
 <!--[if IE 8]>
-<script src="../../__COMPILE/a.ie8.js"></script>
+<script src="../../__SRC/a.ie8.js"></script>
 <![endif]-->
-<script src="../../__COMPILE/a.js"></script>
+<script src="../../__SRC/a.js"></script>
 <script>
 document.createElement("j");
 document.createElement("c");
@@ -104,19 +104,19 @@ function main() {
 	
 	var dosome1;
 	document.addEventListener("someEvent", dosome1 = function(event) {
-		console.log((this === document ? "document" : "window") + " someEvent " + (event.eventPhase === Event.BUBBLING_PHASE ? "bubble" : event.eventPhase === Event.AT_TARGET ? "target" : "capture") + "" + event.timeStamp)
+		console.log(1, (this === document ? "document" : "window") + " someEvent " + (event.eventPhase === Event.BUBBLING_PHASE ? "bubble" : event.eventPhase === Event.AT_TARGET ? "target" : "capture") + "" + event.timeStamp)
 	}, false);
 	document.addEventListener("someEvent", dosome1, true);
 	window.addEventListener("someEvent", dosome1, false);
-	document.addEventListener("someEvent", dosome1, false);
+	document.addEventListener("someEvent", dosome1, false);//the duplicate instances are discarde
 
 	var j = document.getElementsByClassName("test")[0];
 	j.addEventListener("someEvent", function(e) {
-		console.log("j someEvent bubble");
+		console.log(2, "j someEvent bubble | ", event.eventPhase == Event.AT_TARGET ? "at target" : "");
 	} , false);
 	
 	j = document.querySelector(".test");
-	j.addEventListener("someEvent", function(){console.log("j someEvent capture")}, true);
+	j.addEventListener("someEvent", function(){console.log(3, "j someEvent capture")}, true);
 	
 	//$("test2").addEventListener("someEvent", console.log.bind(null, "test2 someEvent capture"), true);
 	

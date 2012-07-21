@@ -9,16 +9,22 @@
 // ==/ClosureCompiler==
 /**
  * ES5 and DOM shim for IE < 8
- * @version 4.4
+ * @version 5
+ * TODO::
+ * 1. http://www.positioniseverything.net/explorer.html
  */
  
 //GCC DEFINES START
 /** @define {boolean} */
 var IS_DEBUG = false;
+/** @define {boolean} */
+var JQUERY_COMPATIBLE = false;
+/** @define {boolean} */
+var UNSTABLE_FUNCTIONS = false;
 //GCC DEFINES END
 
 
-;(function(global) {
+;(function(global, _append) {
 
 
 /** @const @type {boolean} */
@@ -26,6 +32,7 @@ var DEBUG = IS_DEBUG;
 
 /** Browser sniffing
  * @type {boolean} */
+//isMSIE = eval("false;/*@cc_on@if(@\x5fwin32)isMSIE=true@end@*/");
 var _browser_msie;
 _browser_msie = (_browser_msie = /msie (\d+)/i.exec(navigator.userAgent)) && +_browser_msie[1] || void 0;
 
@@ -100,15 +107,6 @@ var _ = global["_"]["ielt9shims"]
 				}
 			}
 		}
-	}
-
-	/** @const */
-  , _append = function(obj, extention) {
-		for(var key in extention)
-			if(_hasOwnProperty(extention, key) && !_hasOwnProperty(obj, key))
-				obj[key] = extention[key];
-		
-		return obj;
 	}
 
 	/** @const */
@@ -196,7 +194,7 @@ var _ = global["_"]["ielt9shims"]
   , _Element_prototype = global["Element"].prototype
 
 	/** @const */
-  , _Node_contains = _Node_prototype.contains || _testElement.contains
+  , _Node_contains = _testElement.contains || _Node_prototype.contains//TODO:: massive testing
 
 	/** @const */
   , _Native_Date = Date
@@ -226,7 +224,7 @@ var _ = global["_"]["ielt9shims"]
 
   , _fake_Event_prototype = {
 	  	/** @const @type {function} */
-	  	"preventDefault" : function(){this.returnValue = false} ,
+	  	"preventDefault" : function(){this.returnValue = false; this["defaultPrevented"] = true} ,
 	  	/** @const @type {function} */
 	  	"stopPropagation" : function(){this.cancelBubble = true} ,
 	  	/** @const @type {function} */
@@ -250,6 +248,18 @@ var _ = global["_"]["ielt9shims"]
 	/** @const @type {string} */
   , _event_eventsUUID = "_e_8vj"
 
+	/** @const @type {Function */
+  , _event_emptyFunction = function(){}
+
+	/** @const @type {Object} */
+  , _event_needCapturing = {}
+
+	/** @type {boolean} */
+  , _event_globalIsCaptureIndicator = false
+
+	/** @type {Array.<Node>} */
+  , _event_captureHandlerNodes = []
+
 	// ------------------------------ ==================  HTML5 shiv  ================== ------------------------------
 
   , html5_elements = 'abbr|article|aside|audio|canvas|command|datalist|details|figure|figcaption|footer|header|hgroup|keygen|mark|meter|nav|output|progress|section|source|summary|time|video'
@@ -269,10 +279,150 @@ var _ = global["_"]["ielt9shims"]
   , safeElement
 
   , _nativeCloneNode
+
+  , _getScrollX
+
+  , _getScrollY
+;
+
+document.compatMode === "CSS1Compat" ?
+	((_getScrollX = function(){return _document_documentElement.scrollLeft}), (_getScrollY = function(){return _document_documentElement.scrollTop}))
+	: 
+	((_getScrollX = function(){return document.body.scrollTop}), (_getScrollY = function(){return document.body.scrollLeft}))
 ;
 
 
+/*
+TODO:: http://code.jquery.com/jquery-1.7.2.js:1537
+var support = {};
 
+// Run tests that need a body at doc ready
+document.addEventListener('DOMContentLoaded', function() {
+	var container, outer, inner, table, td, offsetSupport,
+		marginDiv, conMarginTop, style, html, positionTopLeftWidthHeight,
+		paddingMarginBorderVisibility, paddingMarginBorder,
+		body = document.getElementsByTagName("body")[0];
+
+	if ( !body ) {
+		// Return for frameset docs that don't have a body
+		return;
+	}
+
+	conMarginTop = 1;
+	paddingMarginBorder = "padding:0;margin:0;border:";
+	positionTopLeftWidthHeight = "position:absolute;top:0;left:0;width:1px;height:1px;";
+	paddingMarginBorderVisibility = paddingMarginBorder + "0;visibility:hidden;";
+	style = "style='" + positionTopLeftWidthHeight + paddingMarginBorder + "5px solid #000;";
+	html = "<div " + style + "display:block;'><div style='" + paddingMarginBorder + "0;display:block;overflow:hidden;'></div></div>" +
+		"<table " + style + "' cellpadding='0' cellspacing='0'>" +
+		"<tr><td></td></tr></table>";
+
+	container = document.createElement("div");
+	container.style.cssText = paddingMarginBorderVisibility + "width:0;height:0;position:static;top:0;margin-top:" + conMarginTop + "px";
+	body.insertBefore( container, body.firstChild );
+
+	// Construct the test element
+	div = document.createElement("div");
+	container.appendChild( div );
+
+	// Check if table cells still have offsetWidth/Height when they are set
+	// to display:none and there are still other visible table cells in a
+	// table row; if so, offsetWidth/Height are not reliable for use when
+	// determining if an element has been hidden directly using
+	// display:none (it is still safe to use offsets if a parent element is
+	// hidden; don safety goggles and see bug #4512 for more information).
+	// (only IE 8 fails this test)
+	div.innerHTML = "<table><tr><td style='" + paddingMarginBorder + "0;display:none'></td><td>t</td></tr></table>";
+	tds = div.getElementsByTagName( "td" );
+	isSupported = ( tds[ 0 ].offsetHeight === 0 );
+
+	tds[ 0 ].style.display = "";
+	tds[ 1 ].style.display = "none";
+
+	// Check if empty table cells still have offsetWidth/Height
+	// (IE <= 8 fail this test)
+	support.reliableHiddenOffsets = isSupported && ( tds[ 0 ].offsetHeight === 0 );
+
+	// Check if div with explicit width and no margin-right incorrectly
+	// gets computed margin-right based on width of container. For more
+	// info see bug #3333
+	// Fails in WebKit before Feb 2011 nightlies
+	// WebKit Bug 13343 - getComputedStyle returns wrong value for margin-right
+	if ( window.getComputedStyle ) {
+		div.innerHTML = "";
+		marginDiv = document.createElement( "div" );
+		marginDiv.style.width = "0";
+		marginDiv.style.marginRight = "0";
+		div.style.width = "2px";
+		div.appendChild( marginDiv );
+		support.reliableMarginRight =
+			( parseInt( ( window.getComputedStyle( marginDiv, null ) || { marginRight: 0 } ).marginRight, 10 ) || 0 ) === 0;
+	}
+
+	if ( typeof div.style.zoom !== "undefined" ) {
+		// Check if natively block-level elements act like inline-block
+		// elements when setting their display to 'inline' and giving
+		// them layout
+		// (IE < 8 does this)
+		div.innerHTML = "";
+		div.style.width = div.style.padding = "1px";
+		div.style.border = 0;
+		div.style.overflow = "hidden";
+		div.style.display = "inline";
+		div.style.zoom = 1;
+		support.inlineBlockNeedsLayout = ( div.offsetWidth === 3 );
+
+		// Check if elements with layout shrink-wrap their children
+		// (IE 6 does this)
+		div.style.display = "block";
+		div.style.overflow = "visible";
+		div.innerHTML = "<div style='width:5px;'></div>";
+		support.shrinkWrapBlocks = ( div.offsetWidth !== 3 );
+	}
+
+	div.style.cssText = positionTopLeftWidthHeight + paddingMarginBorderVisibility;
+	div.innerHTML = html;
+
+	outer = div.firstChild;
+	inner = outer.firstChild;
+	td = outer.nextSibling.firstChild.firstChild;
+
+	offsetSupport = {
+		doesNotAddBorder: ( inner.offsetTop !== 5 ),
+		doesAddBorderForTableAndCells: ( td.offsetTop === 5 )
+	};
+
+	inner.style.position = "fixed";
+	inner.style.top = "20px";
+
+	// safari subtracts parent border width here which is 5px
+	offsetSupport.fixedPosition = ( inner.offsetTop === 20 || inner.offsetTop === 15 );
+	inner.style.position = inner.style.top = "";
+
+	outer.style.overflow = "hidden";
+	outer.style.position = "relative";
+
+	offsetSupport.subtractsBorderForOverflowNotVisible = ( inner.offsetTop === -5 );
+	offsetSupport.doesNotIncludeMarginInBodyOffset = ( body.offsetTop !== conMarginTop );
+
+	if ( window.getComputedStyle ) {
+		div.style.marginTop = "1%";
+		support.pixelMargin = ( window.getComputedStyle( div, null ) || { marginTop: 0 } ).marginTop !== "1%";
+	}
+
+	if ( typeof container.style.zoom !== "undefined" ) {
+		container.style.zoom = 1;
+	}
+
+	body.removeChild( container );
+	marginDiv = div = container = null;
+
+	jQuery.extend( support, offsetSupport );
+});
+
+return support;
+});
+*/
 
 
 
@@ -280,7 +430,7 @@ var _ = global["_"]["ielt9shims"]
 //Emulating HEAD for ie < 9
 document.head || (document.head = document.getElementsByTagName('head')[0]);
 
-document.defaultView || (document.defaultView = global);
+"defaultView" in document || (document.defaultView = document.parentWindow);
 
 if(DEBUG) {
 	//test DOMElement is an ActiveXObject
@@ -470,9 +620,6 @@ if(!global["DOMException"]) {
 //http://javascript.gakaa.com/window-scrollx-2-0-scrolly.aspx
 if(!("pageXOffset" in global)) {
 	_.push(function() {
-		var _getScrollX = document.compatMode === "CSS1Compat" ? function(){return document.body.parentNode.scrollLeft} : function(){return document.body.scrollLeft};
-		var _getScrollY = document.compatMode === "CSS1Compat" ? function(){return document.body.parentNode.scrollTop} : function(){return document.body.scrollTop};
-
 		Object.defineProperty(global, "pageXOffset", {"get" : _getScrollX});
 		Object.defineProperty(global, "pageYOffset", {"get" : _getScrollY});
 	});
@@ -486,8 +633,9 @@ if(!("pageXOffset" in global)) {
 
 //fix [add|remove]EventListener & dispatchEvent for IE < 9
 
-// TODO: https://github.com/arexkun/Vine
-//		 https://github.com/kbjr/Events.js
+// See: https://github.com/arexkun/Vine
+//	    https://github.com/kbjr/Events.js
+//	    Use this for tests: http://ie.microsoft.com/testdrive/HTML5/ComparingEventModels/Default.html
 
 
 function fixEvent(event) {
@@ -504,14 +652,16 @@ function fixEvent(event) {
 	//indicates the current click count; the attribute value must be 1 when the user begins this action and increments by 1 for each click.
 	if(event.type === "click" || event.type === "dblclick") {
 		if(event.detail === void 0)event.detail = event.type === "click" ? 1 : 2;
-		if(!event.button && fixEvent["__b"] !== void 0)_button = fixEvent["__b"];
+		if(!event.button && fixEvent._clickButton !== void 0)_button = fixEvent._clickButton;
 	}
 
 	_append(event, _Event_prototype);
 
-	event.target || (event.target = event.srcElement || document);// добавить target для IE
+	if(!event["defaultPrevented"])event["defaultPrevented"] = false;
+
+	"target" in event || (event.target = event.srcElement || document);// добавить target для IE
 	/*
-	if ( event.target && (/3|4/).test( event.target.nodeType ) ) {
+	if ( event.target && event.target.nodeType in {3 : void 0, 4 : void 0} ) {
 		event.target = event.target.parentNode;
 	}
 	*/
@@ -526,24 +676,23 @@ function fixEvent(event) {
 	*/
 
 	// вычислить pageX/pageY для IE
-	if(event.pageX == null && event.clientX != null) {
-		var html = _document_documentElement, body = document.body;
-		/*event.pageX = event.clientX + (html && html.scrollLeft || body && body.scrollLeft || 0) - (html.clientLeft || 0);
-		event.pageY = event.clientY + (html && html.scrollTop || body && body.scrollTop || 0) - (html.clientTop || 0);*/
+	if("clientX" in event && event.pageX == null) {
+		/*event.pageX = event.clientX + (_document_documentElement.scrollLeft || body && body.scrollLeft || 0) - (_document_documentElement.clientLeft || 0);
+		event.pageY = event.clientY + (_document_documentElement.scrollTop || body && body.scrollTop || 0) - (_document_documentElement.clientTop || 0);*/
 		//Новая вервия нуждающаяся в проверки
-		event.pageX = event.clientX + (window.pageXOffset || html.scrollLeft || body.scrollLeft || 0) - (html.clientLeft || 0);
-		event.pageY = event.clientY + (window.pageYOffset || html.scrollTop || body.scrollTop || 0) - (html.clientTop || 0);
+		event.pageX = event.clientX + _getScrollX() - (_document_documentElement.clientLeft || 0);
+		event.pageY = event.clientY + _getScrollY() - (_document_documentElement.clientTop || 0);
 	}
 
 	//Add 'which' for click: 1 == left; 2 == middle; 3 == right
-	//Unfortunately the event.button property is not set for click events. It is however set for mouseup/down/move ... but not click | http://bugs.jquery.com/ticket/4164
+	//Unfortunately the event.button property is not set for click events. It is however set for mouseup/down/move ... but not click | http://bugs.jquery.com/ticket/4164 <- It is fixing now
 	if(!event.which && _button)event.which = _button & 1 ? 1 : _button & 2 ? 3 : _button & 4 ? 2 : 0;
 
-	if(!event.timeStamp)event.timeStamp = +new _Native_Date();
+	"timeStamp" in event || (event.timeStamp = +new _Native_Date());
 	
-	if(!event.eventPhase)event.eventPhase = (event.target == thisObj) ? 2 : 3; // "AT_TARGET" = 2, "BUBBLING_PHASE" = 3
+	"eventPhase" in event || (event.eventPhase = (event.target == thisObj) ? 2 : 3); // "AT_TARGET" = 2, "BUBBLING_PHASE" = 3
 	
-	if(!event.currentTarget)event.currentTarget = thisObj;
+	"currentTarget" in event || (event.currentTarget = thisObj);
 		
 		
 	// событие DOMAttrModified
@@ -551,7 +700,26 @@ function fixEvent(event) {
 	// TODO:: Привести event во всех случаях (для всех браузеров) в одинаковый вид с newValue, prevValue, propName и т.д.
 	if(!event.attrName && event.propertyName)event.attrName = _String_split.call(event.propertyName, '.')[0];//IE При изменении style.width в propertyName передаст именно style.width, а не style, как нам надо
 
-	return event
+	return event;
+}
+
+if(  UNSTABLE_FUNCTIONS ) {
+	function windowCaptureHandler(nativeEvent) {
+		var i,
+			l = _event_captureHandlerNodes.length,
+			k,
+			_node;
+
+		if(l) {
+			_event_globalIsCaptureIndicator = true;
+			nativeEvent.eventPhase = 1;
+			for(k = l - 1 ; k >= 0 ; --k)commonHandle.call(_event_captureHandlerNodes[k], nativeEvent);
+			nativeEvent.eventPhase = 3;
+			for(i = 0 ; i < l ; ++i)commonHandle.call(_event_captureHandlerNodes[i], nativeEvent);
+			_event_globalIsCaptureIndicator = false;
+			_event_captureHandlerNodes = [];
+		}
+	}
 }
 
 // вспомогательный универсальный обработчик. Вызывается в контексте элемента всегда this = element
@@ -561,77 +729,99 @@ function commonHandle(nativeEvent) {
 	}
 
 	var thisObj = this,
-		_ = thisObj["_"],
-		errors = [],//Инициализуется массив errors для исключений
-		errorsMessages = [],
-		event;
-	
-	if((!_ || !_[_event_eventsUUID])) {
-		if(!("__dom0__" in nativeEvent))return;
-		else {
-			_ || (_ = {});
-			_[_event_eventsUUID] || (_[_event_eventsUUID] = {});
-		}
+		_,
+		errors,
+		errorsMessages,
+		_event,
+		handlersKey;
+
+
+	if(    UNSTABLE_FUNCTIONS    && !_event_globalIsCaptureIndicator && nativeEvent.bubbles !== false && nativeEvent.type in _event_needCapturing && thisObj != global) {
+		_event_captureHandlerNodes.push(this);
+		_event = nativeEvent;
 	}
-	
-	// получить объект события и проверить, подготавливали мы его для IE или нет
-	nativeEvent || (nativeEvent = window.event);
-	if(!nativeEvent["__isFixed"])nativeEvent = fixEvent.call(thisObj, nativeEvent);
-
-	// save event properties in fake 'event' object to allow store 'event' and use it in future
-	if(!nativeEvent["__custom_event"])(event = _safeExtend(new Event(nativeEvent.type), nativeEvent))["__custom_event"] = true;
-	else event = nativeEvent;
-
-
-	var handlers = _[_event_eventsUUID][event.type];
-	if("__dom0__" in nativeEvent) {
-		(handlers || (handlers = []))[0] = nativeEvent["__dom0__"];
-	}
-
-	if(!handlers)return;
-
-	for(var g in handlers)if(_hasOwnProperty(handlers, g)) {
-		var handler = handlers[g],
-			context;
-
-		if(typeof handler === "object") {
-			context = handler;
-			handler = handler.handleEvent;
-		}
-
-		try {
-			//Передаём контекст и объект event, результат сохраним в event['result'] для передачи значения дальше по цепочке
-			if(
-				(
-					event['result'] = _Function_call.call(handler, context || thisObj, event)
-				)
-				=== false
-			  ) {//Если вернели false - остановим обработку функций
-				event.preventDefault();
-				event.stopPropagation();
+	else {
+		_ = thisObj["_"];
+		errors = [];
+		errorsMessages = [];
+		handlersKey = _event_eventsUUID + (_event_globalIsCaptureIndicator ? "-" : "");
+		
+		if((!_ || !_[handlersKey])) {
+			if(!("__dom0__" in nativeEvent))return;
+			else {
+				_ || (_ = {});
+				_[handlersKey] || (_[handlersKey] = {});
 			}
 		}
-		catch(e) {
-			errors.push(e);//Все исключения - добавляем в массив, при этом не прерывая цепочку обработчиков.
-			errorsMessages.push(e.message);
-			if(console)console.error(e);
+		
+		// получить объект события и проверить, подготавливали мы его для IE или нет
+		nativeEvent || (nativeEvent = window.event);
+		if(!("__isFixed" in nativeEvent))nativeEvent = fixEvent.call(thisObj, nativeEvent);
+		else {
+			nativeEvent.currentTarget = thisObj;
 		}
 
-		if(event["__stopNow"])break;//Мгновенная остановка обработки событий
+		// save event properties in fake 'event' object to allow store 'event' and use it in future
+		if(!("__custom_event" in nativeEvent))(_event = _safeExtend(new Event(nativeEvent.type), nativeEvent))["__custom_event"] = true;
+		else _event = nativeEvent;
+
+
+		var handlers = _[handlersKey][_event.type];
+		if("__dom0__" in nativeEvent) {
+			(handlers || (handlers = []))[0] = nativeEvent["__dom0__"];
+		}
+
+		if(handlers) {
+			for(var g in handlers)if(_hasOwnProperty(handlers, g)) {
+				var handler = handlers[g],
+					context;
+
+				if(typeof handler === "object") {
+					context = handler;
+					handler = handler.handleEvent;
+				}
+
+				try {
+					//Передаём контекст и объект event, результат сохраним в event['result'] для передачи значения дальше по цепочке
+					if(
+						(
+							_event['result'] = _Function_call.call(handler, context || thisObj, _event)
+						)
+						=== false
+					  ) {//Если вернели false - остановим обработку функций
+						_event.preventDefault();
+						_event.stopPropagation();
+					}
+				}
+				catch(e) {
+					errors.push(e);//Все исключения - добавляем в массив, при этом не прерывая цепочку обработчиков.
+					errorsMessages.push(e.message);
+					if(console)console.error(e);
+				}
+
+				if(_event["__stopNow"])break;//Мгновенная остановка обработки событий
+			}
+
+			//return changed properties in native 'event' object
+			nativeEvent.returnValue = _event.returnValue;
+			nativeEvent.cancelBubble = _event.cancelBubble;
+			//TODO:: check out that properties need to be returned in native 'event' object or _extend(nativeEvent, event);
+			
+			if(errors.length == 1) {//Если была только одна ошибка - кидаем ее дальше
+				throw errors[0]
+			}
+			else if(errors.length > 1) {//Иначе делаем общий объект Error со списком ошибок в свойстве errors и кидаем его
+				var e = new Error("Multiple errors thrown : " + _event.type + " : " + " : " + errorsMessages.join("|"));
+				e.errors = errors;
+				throw e;
+			}
+		}
 	}
 
-	//return changed properties in native 'event' object
-	nativeEvent.returnValue = event.returnValue;
-	nativeEvent.cancelBubble = event.cancelBubble;
-	//TODO:: check out that properties need to be returned in native 'event' object or _extend(nativeEvent, event);
-	
-	if(errors.length == 1) {//Если была только одна ошибка - кидаем ее дальше
-		throw errors[0]
-	}
-	else if(errors.length > 1) {//Иначе делаем общий объект Error со списком ошибок в свойстве errors и кидаем его
-		var e = new Error("Multiple errors thrown : " + event.type + " : " + " : " + errorsMessages.join("|"));
-		e.errors = errors;
-		throw e;
+	if(thisObj === document && !_event.cancelBubble && _event.eventPhase === 3) {
+		//Emelate bubbling from document to defaultView (window) | 2 from 2
+		commonHandle.call(thisObj.defaultView, _event);
+		nativeEvent.cancelBubble = true;//to prevent dubble event fire on window object. First emulated, second native bubbling
 	}
 }
 
@@ -645,6 +835,14 @@ if(!document.addEventListener) {
 		  ) {
 			return;
 		}
+
+		if(    UNSTABLE_FUNCTIONS     && useCapture) {
+			if(!_event_needCapturing[_type]) {
+				_event_needCapturing[_type] = true;
+				//window.addEventListener(_type, windowCaptureHandler, true);
+				window.addEventListener(_type, windowCaptureHandler);
+			}
+		}
 		
 		var /** @type {Node} */
 			thisObj = this,
@@ -653,9 +851,14 @@ if(!document.addEventListener) {
 			/** @type {Function} */
 			_callback,
 			/** @type {boolean} */
-			_useInteractive = false;
-			/* * @ type {number} 
-			_event_phase = useCapture ? 1 : 3;*/
+			_useInteractive = false,
+			/** @type {string} */
+			handlersKey = _event_eventsUUID + (    UNSTABLE_FUNCTIONS     && useCapture ? "-" : "");
+
+		if(thisObj == global && (!("_" in document) || !(handlersKey in document["_"]) || !(_type in document["_"][handlersKey]))) {
+			//Emulate bubbling from document to defaultView (window) | 1 from 2
+			document.addEventListener(_type, _event_emptyFunction, useCapture);
+		}
 			
 		if(!_)_ = thisObj["_"] = {};
 		//_ = _[_event_phase] || (_[_event_phase] = {});
@@ -750,54 +953,67 @@ if(!document.addEventListener) {
 
 		//Если обработчиков такого типа событий не существует - инициализуем events[type] и вешаем
 		// commonHandle как обработчик на elem для запуска браузером по событию type.
-		if(!_[_event_eventsUUID])_[_event_eventsUUID] = {};
-		if(!_[_event_eventsUUID][_type]) {
-			_[_event_eventsUUID][_type] = {};
+		if(!_[handlersKey])_[handlersKey] = {};
+		if(!_[handlersKey][_type]) {
+			_[handlersKey][_type] = {};
 			
 			if(!_useInteractive)//[script:onload]
 				thisObj.attachEvent('on' + _type, _callback);
 		}
 		
-		//Добавляем пользовательский обработчик в список elem[_event_eventsUUID][type] под заданным номером. 
+		//Добавляем пользовательский обработчик в список elem[handlersKey][type] под заданным номером. 
 		//Так как номер устанавливается один раз, и далее не меняется - это приводит к ряду интересных фич.
 		// Например, запуск add с одинаковыми аргументами добавит событие только один раз.
-		_[_event_eventsUUID][_type][_handler[_event_UUID_prop_name]] = _handler;
+		_[handlersKey][_type][_handler[_event_UUID_prop_name]] = _handler;
 	};
+
+	_Node_prototype.addEventListener["__shim__"] = true;
 
 	_Node_prototype.removeEventListener = global.removeEventListener = document.removeEventListener = function(_type, _handler, useCapture) {
 		var /** @type {Node} */
 			thisObj = this,
 			/** @type {Object} */
-			_ = thisObj["_"];
-			/** @type {number} 
-			_event_phase = useCapture ? 1 : 3;*/
+			_ = thisObj["_"],
+			/** @type {string} */
+			handlersKey = _event_eventsUUID + (    UNSTABLE_FUNCTIONS     && useCapture ? "-" : ""),
+			/** @type {function} */
+			_callback,
+			/** @type {Array} */
+			handlers,
+			/** @type {String} */
+			any;
 		
-		if(typeof _handler != "function" || !_handler.guid || !_)return;
+		if(typeof _handler != "function" || !_handler[_event_UUID_prop_name] || !_)return;
+		if(    UNSTABLE_FUNCTIONS     && useCapture && !(_type in _event_needCapturing))return;
+		if(!(_callback = _[_event_handleUUID]))return;
 
 		//_ = _[_event_phase] || (_[_event_phase] = {});
 		//if(!_)return;
 
-		var handlers = _[_event_eventsUUID] && _[_event_eventsUUID][_type];//Получить список обработчиков
+		handlers = _[handlersKey] && _[handlersKey][_type];//Получить список обработчиков
 		
-		delete handlers[_handler.guid];//Удалить обработчик по его номеру
+		delete handlers[_handler[_event_UUID_prop_name]];//Удалить обработчик по его номеру
 
-		for(var any in handlers)if(_hasOwnProperty(handlers, any))return;//TODO: проверить, что тут делается. Глупость какая-то.Проверить, не пуст ли список обработчиков
+		for(any in handlers)if(_hasOwnProperty(handlers, any))return;//Проверить, не пуст ли список обработчиков
+
 		//Если пуст, то удалить служебный обработчик и очистить служебную структуру events[type]
-		thisObj.detachEvent("on" + _type, commonHandle);
+		thisObj.detachEvent("on" + _type, _callback);
 
-		delete _[_event_eventsUUID][_type];
+		delete _[handlersKey][_type];
 
 		//Если событий вообще не осталось - удалить events за ненадобностью.
-		for(var any in _[_event_eventsUUID])if(_hasOwnProperty(_[_event_eventsUUID], any))return;
+		for(any in _[handlersKey])if(_hasOwnProperty(_[handlersKey], any))return;
 		
-		delete _[_event_eventsUUID];
+		delete _[handlersKey];
 	};
 
+	_Node_prototype.removeEventListener["__shim__"] = true;
+
 	document.attachEvent("onmousedown", function(){
-		fixEvent["__b"] = event.button
+		fixEvent._clickButton = event.button;
 	});
 	document.attachEvent("onclick", function(){
-		fixEvent["__b"] = void 0
+		fixEvent._clickButton = void 0;
 	});
 }
 
@@ -818,42 +1034,52 @@ UNSPECIFIED_EVENT_TYPE_ERR: Raised if the Event's type was not specified by init
  * @this {Element} is the target of the event.
  * @return {boolean} The return value is false if at least one of the event handlers which handled this event called preventDefault. Otherwise it returns true.
  */
-if(!document.dispatchEvent)_Node_prototype.dispatchEvent = global.dispatchEvent = document.dispatchEvent = function(_event) {
-	if(!_event.type)return true;
-	/**
-	 * @type {Node}
-	 */
-	var thisObj = this;
-	
-	try {
-		return thisObj.fireEvent("on" + _event.type, _event);
-	}
-	catch(e) {
-		//Shim for Custome events in IE < 9
-		if(e["number"] === -2147024809 ||//"invalid argument."
-		   thisObj === global) {		 //window has not 'fireEvent' method
-			_event["__custom_event"] = true;
-			var node = _event.target = thisObj,
-				dom0event = "on" + _event.type,
-				result;
+if(!document.dispatchEvent) {
+	_Node_prototype.dispatchEvent = global.dispatchEvent = document.dispatchEvent = function(_event) {
+		if(!_event.type)return true;
 
-			//Всплываем событие
-			while(!_event.cancelBubble && node) {//Если мы вызвали stopPropogation() - больше не всплываем событие
-				if((dom0event in node && typeof node[dom0event] == "function" && (_event["__dom0__"] = node[dom0event])) ||
-				   ("_" in node && _event_eventsUUID in node["_"]))//Признак того, что на элемент могли навесить событие
-					commonHandle.call(node, _event);
-				//Если у события отключено всплытие - не всплываем его
-				node = _event.bubbles ? (node === document ? document.defaultView : node.parentNode) : null;
-				if("__dom0__" in _event)_event["__dom0__"] = void 0;
-			}
+		//reinit event
+		if(!_event.returnValue)_event.returnValue = true;
+	  	if(_event.cancelBubble)_event.cancelBubble = false;
 
-			result = !_event.cancelBubble;
-			_event = null;
-			
-			return result;
+		/**
+		 * @type {Node}
+		 */
+		var thisObj = this;
+		
+		try {
+			return thisObj.fireEvent("on" + _event.type, _event);
 		}
-		else throw e;
-	}
+		catch(e) {
+			//Shim for Custome events in IE < 9
+			if(e["number"] === -2147024809 ||//"invalid argument."
+			   thisObj === global ||	  	 //window has no 'fireEvent' method
+			   (e["number"] === -2146827850 && !(_event.bubbles = false))) {//has no such method ("fireEvent")
+				_event["__custom_event"] = true;
+				var node = _event.target = thisObj,
+					dom0event = "on" + _event.type,
+					result;
+
+				//Всплываем событие
+				while(!_event.cancelBubble && node) {//Если мы вызвали stopPropogation() - больше не всплываем событие
+					if((dom0event in node && typeof node[dom0event] == "function" && (_event["__dom0__"] = node[dom0event])) ||
+					   ("_" in node && _event_eventsUUID in node["_"]))//Признак того, что на элемент могли навесить событие
+						commonHandle.call(node, _event);
+					//Если у события отключено всплытие - не всплываем его
+					node = _event.bubbles ? (node === document ? document.defaultView : node.parentNode) : null;
+					if("__dom0__" in _event)_event["__dom0__"] = void 0;
+				}
+
+				result = !_event.cancelBubble;
+				_event = null;
+				
+				return result;
+			}
+			else throw e;
+		}
+	};
+
+	_Node_prototype.dispatchEvent["__shim__"] = true;
 };
 
 if(!document.createEvent) {/*IE < 9 ONLY*/
@@ -938,26 +1164,71 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 /*  ======================================================================================  */
 /*  ========================================  DOM  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
+/*  =======================================================================================  */
+/*  ================================  NodeList.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+function _NodeList() {}
+_NodeList.prototype = new Array;
+
+tmp = new _NodeList;
+tmp.push(1);
+if(tmp.length) {//IE8 standart mode
+	global["NodeList"] = _NodeList;//"NodeList" in global | Rewrite broken NodeList implimentation
+}
+else {//IE8 quirk mode, IE lt 8
+	//Internet Explorer refuses to maintain the length property of a subclass created like this | http://dean.edwards.name/weblog/2006/11/hooray/
+	// create an <iframe>
+	tmp = document.createElement("iframe");
+	tmp.style.display = "none";
+	document.body.appendChild(tmp);
+
+	// write a script into the <iframe> and steal its Array object
+	tmp.contentWindow.document.write(
+	"<script>parent.NodeList=Array;<\/script>"
+	);
+	_NodeList = global["NodeList"];
+}
+
+_NodeList.prototype["item"] = function(index) {
+	return this[index];
+}
+
+//Inherit NodeList from Array
+function extendNodeListPrototype(nodeListProto) {
+	if(nodeListProto && nodeListProto !== Array.prototype) {
+		for(var key in nodeList_methods_fromArray)if(_hasOwnProperty(key, nodeList_methods_fromArray)) {
+			if(!nodeListProto[key])nodeListProto[key] = function() {
+				return _Function_apply.call(Array.prototype[key], Array["from"](this), arguments);
+			}
+		}
+	}
+}
+if(document.querySelectorAll)extendNodeListPrototype(document.querySelectorAll("#z").constructor.prototype);
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  NodeList.prototype  ==================================  */
+/*  ======================================================================================  */
+
 /*  ================================ bug fixing  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
 
 // IE - contains fails if argument is textnode
-_txtTextElement = _Function_call.call(document_createTextNode, document, "");
-_testElement.appendChild(_txtTextElement);
+if(UNSTABLE_FUNCTIONS) {
+	_txtTextElement = _Function_call.call(document_createTextNode, document, "");
+	_testElement.appendChild(_txtTextElement);
 
-try {
-    _testElement.contains(_txtTextElement);
-    tmp = false;
-} catch (e) {
-	tmp = true;
-	_Node_prototype.contains = function contains(other) {
-    	if(other.nodeType === 3) {
-		    return _recursivelyWalk(this.childNodes, function (node) {
-		         if (node === other) return true;
-		    }) || false;
-		}
-		else return _Function_call.call(_Node_contains, this, other);
-	};
+	try {
+	    _testElement.contains(_txtTextElement);
+	    tmp = false;
+	} catch (e) {
+		tmp = true;
+		_Node_prototype.contains = function contains(other) {
+	    	if(other.nodeType === 3) {
+			    return _recursivelyWalk(this.childNodes, function (node) {
+			         if (node === other) return true;
+			    }) || false;
+			}
+			else return _Function_call.call(_Node_contains, this, other);
+		};
+	}
 }
 
 // IE8 hurr durr doctype is null
@@ -1011,21 +1282,25 @@ if(!("children" in _testElement) || _browser_msie < 9)_.push(function() {
 //[IE lt 9] Fix "offsetLeft" and "offsetTop" properties in IE < 9
 if(_browser_msie < 9)_.push(function() {
 	/**
+	 * http://javascript.ru/ui/offset#popytka-2:-getboundingclientrect
 	 * @param {Node} elem
 	 * @param {boolean=} X_else_Y
 	 * @return {number}
 	 */
 	function unsafeGetOffsetRect(elem, X_else_Y) {
 		var box = elem.getBoundingClientRect(),//It might be an error here
-			body = document.body,
-			docElem = _document_documentElement;
+			body = document.body;
 	 
+		if(!_document_documentElement.contains(elem))
+			return X_else_Y ? box.left : box.top;
+
 	 	return X_else_Y ?
-	 		Math.round(box.left + (window.pageXOffset || docElem.scrollLeft || body.scrollLeft) - (docElem.clientLeft || body.clientLeft || 0)) :
-	 		Math.round(box.top + (window.pageYOffset || docElem.scrollTop || body.scrollTop) - (docElem.clientTop || body.clientTop || 0));
+	 		box.left + _getScrollX() - (_document_documentElement.clientLeft || body.clientLeft || 0) :
+	 		box.top + _getScrollY() - (_document_documentElement.clientTop || body.clientTop || 0);
 	}
 
 	/**
+	 * http://javascript.ru/ui/offset#popytka-1-summiruem-offset-y
 	 * @param {Node} elem
 	 * @param {boolean=} X_else_Y
 	 * @return {number}
@@ -1056,6 +1331,57 @@ if(_browser_msie < 9)_.push(function() {
 			result = getOffsetSum(elem, X_else_Y);
 		}
 		return result;
+
+		//Broken impimintation up here
+		//Here right impl from jQuery
+		//TODO::
+
+		/*
+		jQuery.fn.extend({
+
+	position: function() {
+		if ( !this[0] ) {
+			return null;
+		}
+
+		var elem = this[0],
+
+		// Get *real* offsetParent
+		offsetParent = this.offsetParent(),
+
+		// Get correct offsets
+		offset       = this.offset(),
+		parentOffset = rroot.test(offsetParent[0].nodeName) ? { top: 0, left: 0 } : offsetParent.offset();
+
+		// Subtract element margins
+		// note: when an element has margin: auto the offsetLeft and marginLeft
+		// are the same in Safari causing offset.left to incorrectly be 0
+		offset.top  -= parseFloat( jQuery.css(elem, "marginTop") ) || 0;
+		offset.left -= parseFloat( jQuery.css(elem, "marginLeft") ) || 0;
+
+		// Add offsetParent borders
+		parentOffset.top  += parseFloat( jQuery.css(offsetParent[0], "borderTopWidth") ) || 0;
+		parentOffset.left += parseFloat( jQuery.css(offsetParent[0], "borderLeftWidth") ) || 0;
+
+		// Subtract the two offsets
+		return {
+			top:  offset.top  - parentOffset.top,
+			left: offset.left - parentOffset.left
+		};
+	},
+
+	offsetParent: function() {
+		return this.map(function() {
+			var offsetParent = this.offsetParent || document.body;
+			while ( offsetParent && (!rroot.test(offsetParent.nodeName) && jQuery.css(offsetParent, "position") === "static") ) {
+				offsetParent = offsetParent.offsetParent;
+			}
+			return offsetParent;
+		});
+	}
+});
+		*/
+
 	}
 	Object.defineProperties(_Element_prototype, {
 		"offsetLeft" : {
@@ -1286,44 +1612,6 @@ if(!document.importNode) {
 	document.importNode["shim"] = true;
 }
 
-//getElementsByClassName shim
-//based on https://gist.github.com/1383091
-tmp = "getElementsByClassName";
-function_tmp = _Element_prototype[tmp] || 
-	document.querySelectorAll ? //Here native querySelectorAll in IE8
-		function(names) {
-			if(!names || !(names = _String_trim.call(names)))return [];
-			return (this.querySelectorAll || document.querySelectorAll).call(this, names.replace(/\s+(?=\S)|^/g, "."))
-		}
-		:
-		function(klas) {
-
-			klas = new RegExp(klas.replace(RE__getElementsByClassName, STRING_FOR_RE__getElementsByClassName));
-
-			var magicTagName = arguments.callee["tagName"],//only for IE < 8 querySelector shim
-				nodes = magicTagName ? 
-			  		(
-			  		delete arguments.callee["tagName"], 
-			    	this.nodeType === 9 && magicTagName === "BODY" ? 
-			    		[this.body] :
-						this.getElementsByTagName(magicTagName)
-					) : this.all,
-				node,
-				i = -1,
-				result = [];
-
-			while(node = nodes[++i]) {
-				if(node.className && klas.test(node.className)) {
-					result.push(node);
-				}
-			}
-
-			return result;
-		};
-if(!(tmp in _testElement))_Element_prototype[tmp] = function_tmp;
-if(!document[tmp])_document_documentElement[tmp] = document[tmp] = function_tmp;
-
-
 tmp = 'compareDocumentPosition';
 if(!(tmp in document)) {
 	var __name,
@@ -1335,9 +1623,9 @@ if(!(tmp in document)) {
 		return a.contains ?
 				(a != b && a.contains(b) && 16) +
 				(a != b && b.contains(a) && 8) +
-				(a.sourceIndex >= 0 && b.sourceIndex >= 0 ?
-					(a.sourceIndex < b.sourceIndex && 4) +
-					(a.sourceIndex > b.sourceIndex && 2) :
+				(a["sourceIndex"] >= 0 && b["sourceIndex"] >= 0 ?
+					(a["sourceIndex"] < b["sourceIndex"] && 4) +
+					(a["sourceIndex"] > b["sourceIndex"] && 2) :
 				1) +
 			0 : 0;
 	};
@@ -1353,7 +1641,8 @@ if(!(tmp in document)) {
 	_document_documentElement[__n1 + __name] = document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x10;
 }
 
-if(!global.getComputedStyle) {//IE < 9
+if(!global.getComputedStyle && !JQUERY_COMPATIBLE) {//IE < 9
+// Problemm with jQuery:: jQuery using <currentStyle>.getPropertyValue and where is no such method in IE<9 and it can't be shimed
 /*
 TODO::
 var filter = elem.style['filter'];
@@ -1363,16 +1652,27 @@ var filter = elem.style['filter'];
 	/**
 	 * @link https://developer.mozilla.org/en/DOM/window.getComputedStyle
 	 * getCurrentStyle - функция возвращяет текущий стиль элемента
-	 * @param {?Node} obj HTML-Элемент
+	 * @param {?Node} element HTML-Элемент
 	 * @param {?string} pseudoElt A string specifying the pseudo-element to match. Must be null (or not specified) for regular elements.
 	 * @this {Window}
 	 * @return {CSSStyleDeclaration} Стиль элемента
 	 */
-	global.getComputedStyle = function(obj, pseudoElt) {
-		return obj.currentStyle;
+	global.getComputedStyle = function(element, pseudoElt) {
+		//TODO:: obj.currentStyle.getPropertyValue = function(propName) {obj.currentStyle[propName]}
+		//http://snipplr.com/view/13523/
+		/*if(!("getPropertyValue" in element.currentStyle))element.currentStyle.getPropertyValue = function(prop) {
+ 			var re = /(\-([a-z]){1})/g;
+            if (prop == 'float') prop = 'styleFloat';
+            if (re.test(prop)) {
+                prop = prop.replace(re, function () {
+                    return arguments[2].toUpperCase();
+                });
+            }
+            return element.currentStyle[prop] ? element.currentStyle[prop] : null;
+		}*/
+		return element.currentStyle;
 	}
 }
-
 
 //Исправляем для IE<9 создание DocumentFragment, для того, чтобы функция работала с HTML5
 if(_browser_msie < 9) {
@@ -1421,8 +1721,7 @@ shivedCreateElement["ielt9"] = true;
  */
 function html5_document(doc) { // pass in a document as an argument
 	// create an array of elements IE does not support
-	var a = -1,
-		_doc;
+	var a = -1;
 
 	if(doc.createElement) {
 		while (++a < html5_elements_array.length) { // loop through array
@@ -1514,24 +1813,6 @@ if(_Function_call.call(document_createElement, document, "x-x").cloneNode().oute
 /*  ======================================================================================  */
 
 
-/*  =======================================================================================  */
-/*  ================================  NodeList.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
-
-//Inherit NodeList from Array
-function extendNodeListPrototype(nodeListProto) {
-	if(nodeListProto && nodeListProto !== Array.prototype) {
-		for(var key in nodeList_methods_fromArray)if(_hasOwnProperty(key, nodeList_methods_fromArray)) {
-			if(!nodeListProto[key])nodeListProto[key] = function() {
-				_Function_apply.call(Array.prototype[key], Array["from"](this), arguments);
-			}
-		}
-	}
-}
-if(document.querySelectorAll)extendNodeListPrototype(document.querySelectorAll("#z").constructor.prototype);
-/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  NodeList.prototype  ==================================  */
-/*  ======================================================================================  */
-
-
 /*  ======================================================================================  */
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  DOM  =======================================  */
 
@@ -1602,9 +1883,6 @@ var /** @type {boolean} */
 
   , __ielt8_Node_behavior_apply
 
-	/** @const */
-  , _Element_getElementsByClassName = document.getElementsByClassName
-
 	// ------------------------------ ==================  Window  ================== ------------------------------
   , _emulate_scrollX_scrollY
   
@@ -1615,40 +1893,133 @@ var /** @type {boolean} */
   , originalScrollBy = global.scrollBy
 
 	// ------------------------------ ==================  querySelector  ================== ------------------------------
-	/** @type {RegExp} @const */
+  /** @type {RegExp} @const */
   , RE__getElementsByClassName = /\s*(\S+)\s*/g
-  	/** @type {String} @const */
+  /** @type {string} @const */
   , STRING_FOR_RE__getElementsByClassName = '(?=(^|.*\\s)$1(\\s|$))'
-  	/** @type {RegExp} @const */
-  , RE__selector__easySelector = /^(\w+)?((?:\.(?:[\w\-]+))+)?$|^#([\w\-]+$)/
-  	/** @type {RegExp} @const */
+  /** @type {RegExp} @const */
+  , RE__selector__easySelector = /^([\w-\|]+)?((?:\.(?:[\w-]+))+)?$|^#([\w-]+$)/
+  /** @type {RegExp} @const */
   , RE__queryManySelector__doubleSpaces = /\s*([,>+~ ])\s*/g//Note: Use with "$1"
-  	/** @type {RegExp} @const */
-  , RE__querySelector__arrtSpaceSeparated_toSafe = /\~\=/g
-  	/** @type {RegExp} @const */
-  , RE__querySelector__arrtSpaceSeparated_fromSafe = /\|\-\|/g
-  	/** @type {RegExp} @const */
-  , RE__queryManySelector__selectorsMatcher = /(^[+> ~]?|,|\>|\+|~| ).*?(?=[,>+~ ]|$)/g
-  	/** @type {RegExp} @const */
+  /** @type {RegExp} @const */
+  , RE__querySelector__arrtSpaceSeparated_toSafe = /\~\=/g//Note: Use with "@="
+  /** @type {RegExp} @const */
+  , RE__queryManySelector__selectorsMatcher = /(^[>+~ ]?|,|\>|\+|~| ).*?(?=[,>+~ ]|$)/g
+  /** @type {RegExp} @const */
   , RE__querySelector__dottes = /\./g
-  	/** @type {RegExp} @const */
+  /** @type {RegExp} @const */
   , RE__queryOneSelector__spaces = /\s/g
-  	/** @type {RegExp} @const */
-  , RE__queryOneSelector__attrMatcher = /^\[?(.*?)(?:([\*~&\^\$\|!]?=)(.*?))?\]?$/
-  	/** @type {RegExp} @const */
-  , RE__queryOneSelector__selectorMatch = /^([,>+~ ])?(\w*)(?:|\*)\#?([\w\-]*)((?:\.?[\w\-])*)(.*?)$/
-
-  , RE__queryOneSelector__selectorMatch2 = /^(\[.+\])?(?:\:(.+))?$/
-  	/** @type {RegExp} @const */
+  /** @type {RegExp} @const */
+  , RE__queryOneSelector__selectorMatch = /^([,>+~ ])?([\w-\|\*]*)\#?([\w-]*)((?:\.?[\w-])*)(\[.+\])?(?:\:(.+))?$/
+  /** @type {RegExp} @const */
+  , RE__queryOneSelector__attrMatcher = /^\[?(.*?)(?:([\*~&\^\$\@!]?=)(.*?))?\]?$/
+  /** @type {RegExp} @const */
   , RE__queryOneSelector__pseudoMatcher = /^([^(]+)(?:\(([^)]+)\))?$//* regexpt from jass 0.3.9 (http://yass.webo.in/) rev. 371 line 166 from right */
-  	/** @type {RegExp} @const */
-  , RE__queryOneSelector__pseudoNthChildPlus = /\((\dn)\+(\d)\)/
-  	/** @type {RegExp} @const */
+  /** @type {RegExp} @const */
+  , RE__queryOneSelector__pseudoNthChildPlus = /\-child\((\dn)\+(\d)\)/g//Note: Use with "-child\($1%$2\)"
+  /** @type {RegExp} @const */
   , RE__queryOneSelector__pseudoNthChildMatcher = /(?:([-]?\d*)n)?(?:(%|-)(\d*))?//* regexpt from jass 0.3.9 (http://yass.webo.in/) rev. 371 line 181 ( mod === 'nth-last-child' ?...) */
-
+  /** @type {RegExp} @const */
   , RE_matchSelector__isSimpleSelector = /([,>+~ ])/
+  /** @type {Object} @const */
+  , selectorCombinatorTypeMap = {
+    "" : 1,
+    " " : 1,
+    "," : 1,
+    ">" : 2,
+    "~" : 3,
+    "+" : 4
+  }
+  /** @type {Object} @const */
+  , selectorAttrOperatorsMap = {
+    "" : 1,
+    '=' : 2,
+    '&=' : 3,
+    '^=' : 4,
+    '$=' : 5,
+    '*=' : 6,
+    '|=' : 7,
+    '!=' : 8,
+    '@=' : 9//this is '~='
+  }
+  /** @type {Object} @const */
+  , selectorPseudosMap = {
+    'nth-child' : 0,
+    'nth-last-child' : 1,
+    'only-child' : 2,
+    'first-child' : 3,
+    'last-child' : 4,
+    'root' : 5,
+    'empty' : 6,
+    'checked' : 7,
+    'lang' : 8,
+    'enabled' : 9,
+    'disabled' : 10,
+    'selected' : 11,
+    'contains' : 12,
+    'not' : 13,
+    'matches' : 14,//:-moz-any, :-webkit-any
+    'read-only' : 15,       //http://www.w3.org/TR/selectors4/#rw-pseudos
+    'read-write' : 16      //http://www.w3.org/TR/selectors4/#rw-pseudos
+    /*
+    TODO::   http://css4-selectors.com/selector/css4/
+    'scope' : 17,
+    'dir' ???
+    'nth-match'//nth-match(n of selector) | an E element, the n-th sibling matching selector
+    'nth-last-match'//nth-last-match(n of selector) | an E element, the n-th sibling matching selector, counting from the last one
+    'indeterminate' : 16,
+    'default' : 17,
+    'valid': 18,
+    'invalid' : 19,
+    'in-range' : 20,        //http://www.w3.org/TR/selectors4/#range-pseudos
+    'out-of-range' : 20,    //http://www.w3.org/TR/selectors4/#range-pseudos
+    'required' : 20,        //http://www.w3.org/TR/selectors4/#opt-pseudos
+    'optional' : 20,        //http://www.w3.org/TR/selectors4/#opt-pseudos
+    'column' : 20,          //http://www.w3.org/TR/selectors4/#column-pseudo
+    'nth-column' :20,       //http://www.w3.org/TR/selectors4/#nth-column-pseudo
+    'nth-last-column' : 20, //http://www.w3.org/TR/selectors4/#nth-last-column-pseudo
+    'current' : 20,         //http://www.w3.org/TR/selectors4/#current-pseudo
+    'past' : 20,            //http://www.w3.org/TR/selectors4/#past-pseudo
+    'future' : 20           //http://www.w3.org/TR/selectors4/#future-pseudo
+    */
+  }
+  /** @type {Object} @const */
+  , attributeSpecialCase = {
+    "href" : function(node) {
+      return node.getAttribute("href", 2);
+    }
+  }
+  /** @type {Object} @const */
+  , attributeSpecialSpecified = {"coords" : 1, "id" : 1, "name" : 1}
 
+  , _NodeList_from = function(iterable) {
+      var length = iterable.length >>> 0,
+        result = new _NodeList;
+
+      for(var key = 0 ; key < length ; key++) {
+        if(key in iterable)
+          result.push(iterable[key]);
+      }
+
+      return result;
+    }
+
+  , getNextElement = function(node) {
+		while((node = node.nextSibling) && node.nodeType != 1) {}
+		return node;
+	}
 ;
+
+/*
+(tmp = document_createElement("br")).id = "_" + Math.random();
+_document_documentElement.appendChild(tmp);
+try {
+  _can_useGetElementsByName_as_getElementById = document.getElementsByName(uiid)[0].id === tmp.id;
+}
+catch(e) { }
+finally {
+  _document_documentElement.removeChild(tmp);
+};*/
 
 
 tmp = ieltbehaviorRules.length;
@@ -1686,608 +2057,504 @@ global["__ielt8__wontfix"] = __ielt8__wontfix;
 
 
 /**
- * @param {(string|undefined)} classes
- * @param {(string|undefined)=} tag
- * @param {Object=} resultKeys
- * @param {Array=} resultArray
- * @param {boolean=} onlyOne
- * @this {Node}
- * @return {Array.<HTMLElement>}
- */
-function getElementsBy_ClassName_Tag(classes, tag, resultKeys, resultArray, onlyOne) {
-	var el = this,
-		result,
-		nodes,
-		node,
-		i = -1;
-
-	if(tag)tag = tag.toUpperCase();
-
-	if(classes) {
-		classes = classes.replace(RE__querySelector__dottes, " ");
-		
-		_shim_getElementsByClassName["tagName"] = tag;
-		nodes = _shim_getElementsByClassName.call(el, classes)
-		tag = void 0;
-	}
-	else {
-		if(el.nodeType === 9 && tag === "BODY")nodes = [el.body];
-		else nodes = el.getElementsByTagName(tag || "*");
-			
-		tag = void 0;
-	}
-
-	if(!tag && !resultKeys && !resultArray)return nodes;
-
-	result = resultArray || [];
-
-	while(node = nodes[++i]) {
-		if((!tag || node.tagName === tag) && (!resultKeys || !((node.sourceIndex || (node.sourceIndex = ++UUID)) in resultKeys))) {
-			resultKeys && (resultKeys[node.sourceIndex] = true);
-			result.push(node);
-
-			if(onlyOne)return result;
-		}
-	}
-		
-	return result;
-}
-
-
-/**
  * @param {!string} selector CSS3-selector
- * @param {Node|Array.<Node>} roots
- * @param {Array.<HTMLElement>=} checkeElements Pre-results
+ * @param {Node|Array.<Node>|Object} roots
+ * @param {Array.<Node>} globalResult
+ * @param {boolean} globalResultAsSparseArray 
+ * @param {Node|Array.<HTMLElement>=} preResult
  * @param {boolean=} onlyOne only one need
- * @param {(Object|boolean)=} resultKeys
- * @return {Array.<HTMLElement>}
+ * {(Object|boolean)=} resultKeys
+ * @return {Array.<Node>}
  */
-function queryOneSelector(selector, roots, checkeElements, onlyOne, resultKeys) {
-	var /** @type {Node} */root = !roots ? document : 
-		"length" in roots ? //fast and unsafe isArray
-			roots[0] :
-			roots
-	;
-	if(root === roots)roots = [];
-	
-	var /** @type {boolean} */isCheckeElements = !!checkeElements,
-		/** @type {Array.<string>} */selectorArr = selector.match(RE__queryOneSelector__selectorMatch);
+function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArray, preResult, onlyOne/*, resultKeys*/) {
+  var /** @type {Array.<string>} */selectorArr = selector.match(RE__queryOneSelector__selectorMatch);
+  //if(selector === "," || !selectorArr)_throwDOMException("SYNTAX_ERR");
 
-	if(selector === "," || !selectorArr)_throwDOMException("SYNTAX_ERR");
+  var result = globalResult || [];
 
-	//Cache object for nore unique id (sourceIndex) for non-dublication
-	//resultKeys = resultKeys || {};
+  var /** @type {boolean} */isMatchesSelector = !!preResult
+    , /** @type {Node} */root = isMatchesSelector && (roots = {}) || (!roots ? document : 
+                                "length" in roots ? //fast and unsafe isArray
+                                  roots[0] :
+                                  roots)
+    , /** @type {Node} */nextRoot
+    , /** @type {number} */rootIndex = 0
+    , /** @type {(Node|undefined)} */child
+    , /** @type {string} */child_nodeName
+    , /** @type {number} */childrenIndex
+    , /** @type {Node} */brother
+    , /** @type {number} */combinatorType = selectorCombinatorTypeMap[selectorArr[1] || ""] || 0
+    , /** @type {boolean} */combinatorTypeMoreThen_2 = combinatorType > 2
+    , /** @type {(string|undefined)} */tag = selectorArr[2]
+    , /** @type {boolean} */needCheck_tag = !!tag
+    , /** @type {(string|undefined)} */id = selectorArr[3]
+    , /** @type {boolean} */needCheck_id = !!id
+    , /** @type {(string|Array.<string>|undefined)} */classes = selectorArr[4]
+    , /** @type {boolean} */needCheck_classes = !!classes
+    , /** @type {boolean} */needCheck_nodeType = tag === "*"
+    , /** @type {number} */kr
+    , /** @type {number} */indexIn_resultKeys
+    , /** @type {boolean} */match
+    , /** @type {boolean} */canWeReturnUnsafeArray
+    , /** @type {Array.<string>} */css3Attr_add
+    , /** @type {Array.<string>} */css3Pseudo_add
+    , /** @type {number} */css3PseudoOperatorType
+    , /** @type {string} */nodeAttrCurrent_value
+    , /** @type {string} */nodeAttrExpected_value
+    , /** @type {(RegExp|string)} */klas
+    //,  {(string|Array.<string>|boolean)} css3AttrAndcss3Pseudo
+    , /** @type {(string|Array.<string>)} */ css3Attr
+    , /** @type {(string|Array.<string>)} */ css3Pseudo
+    , /** @type {Array} */elementsById_Cache
+    , a, b, c, u
+    , A, B, C
+  ;
 
-	var 
-		result = checkeElements || [],
-		/** @type {Object} */rootKeys = {},
-		/** @type {Node} */child,
+  if(needCheck_tag) {
+    tag = (needCheck_nodeType ? void 0 : tag.replace("|", ":").toUpperCase());
+  }
+  
+  if(needCheck_classes) {
+    classes = classes.replace(RE__querySelector__dottes, " ");
+    klas = new RegExp(classes.replace(RE__getElementsByClassName, STRING_FOR_RE__getElementsByClassName));
+  }
 
-		/** @type {(string|undefined)} */combinator = selectorArr[1],
-		/** @type {(string|undefined)} */tag = selectorArr[2].toUpperCase(),
-		/** @type {(string|undefined)} */id = selectorArr[3],
-		/** @type {(string|Array.<string>|undefined)} */classes = selectorArr[4],
-		/** @type {(string|Array.<string>)} */css3AttrAndcss3Pseudo,
-		/** @type {string} */_curClass,
-		/** @type {number} */kr = -1,
-		/** @type {number} */k,
+  if(isMatchesSelector)combinatorType = 0;
 
-		/** @type {Node} */brother,
+  if(css3Attr = selectorArr[5]) {
+    css3Attr = _String_split.call(css3Attr, "][");
+    kr = -1;
+    while(css3Attr_add = css3Attr[++kr]) {
+      css3Attr_add = css3Attr[kr] = css3Attr_add.match(RE__queryOneSelector__attrMatcher);
+      
+      selectorAttrOperatorsMap
 
-		/** @type {number} */i = 0,
-		/** @type {boolean} */match = false,
-		klas;
-	
-	if(classes) {
-		selectorArr[4] = classes.replace(RE__querySelector__dottes, " ");
-		klas = new RegExp(selectorArr[4].replace(RE__getElementsByClassName, STRING_FOR_RE__getElementsByClassName));
-		classes = _String_split.call(classes.slice(1), RE__querySelector__dottes);
-	}
-	
-	//if(css3Pseudo === ":root")isCheckeElements = true, result = [~roots.indexOf(document) ? _document_documentElement : null];//TODO:: tests
+      b = css3Attr_add[1];
+      if((a = b.charAt(0)) === "\'" || a === "\""  && b.substr(-1) === a) {//Note: original IE substr not allowed negative value as first param
+        b = css3Attr_add[1] = _String_substr.call(b, 1, b.length - 2);
+      }
 
-	if(!isCheckeElements) {// ! matchesSelector
-		
-		switch(combinator) {
-			default://combinator == ' ' || combinator == ','
-				if(id) {
-					do {
-						if((root.sourceIndex || (root.sourceIndex = ++UUID)) in rootKeys)continue;
-						rootKeys[root.sourceIndex] = true;
+      css3Attr_add[2] = selectorAttrOperatorsMap[css3Attr_add[2]];
 
-						match = "getElementById" in root;
-						if(match && (child = root.getElementById(id)) || ((child = document.getElementById(id)) && (match = root.contains(child))))result.push(child);
-					}
-					while(!match && (root = roots[++i]));
+      b = css3Attr_add[3];
+      if(b) {
+	      if(b.substr(-2) == " i") {
+	        //http://css4-selectors.com/selector/css4/attribute-case-sensitivity/
+	        b = b.substr(0, b.length - 2);
+	        css3Attr_add[4] = true;
+	      }
+
+	      if((a = b.charAt(0)) === "\'" || a === "\""  && b.substr(-1) === a) {
+	        css3Attr_add[3] = _String_substr.call(b, 1, b.length - 2);
+	      }
+	  }
+    }
+    b = a = void 0;
+  }
+
+  if(css3Pseudo = selectorArr[6]) {
+    css3Pseudo = css3Pseudo.match(RE__queryOneSelector__pseudoMatcher);
+    css3PseudoOperatorType = selectorPseudosMap[css3Pseudo[1]];
+    if(css3PseudoOperatorType < 2 && css3Pseudo[2]) {// 'nth-child':0 and 'nth-last-child':1
+      if(!/\D/.test(css3Pseudo[2]))css3Pseudo_add = [null, 0, '%', css3Pseudo[2]];
+      else if(css3Pseudo[2] === 'even')css3Pseudo_add = [null, 2];
+      else if(css3Pseudo[2] === 'odd')css3Pseudo_add = [null, 2, '%', 1];
+      else css3Pseudo_add = css3Pseudo[2].match(RE__queryOneSelector__pseudoNthChildMatcher);
+      A = css3PseudoOperatorType ? "nodeIndexLast" : "nodeIndex";
+      B = css3PseudoOperatorType ? "lastChild" : "firstChild";
+      C = css3PseudoOperatorType ? "previousSibling" : "nextSibling";
+    }
+  }
+  
+  selectorArr = selector = void 0; 
+
+  //prepear
+  if(combinatorType == 1) {
+    if(!needCheck_id) {
+      needCheck_tag = false;
+    }
+    else {
+        preResult = document.getElementsByName(id);
+        elementsById_Cache = [];
+        kr = -1;
+        while(child = preResult[++kr]) {
+          if(child.id == id) {
+            elementsById_Cache.push(child);
+          }
+        };
+
+      preResult = needCheck_id = void 0;
+    }
+  }
+
+  canWeReturnUnsafeArray = (!("length" in roots) || roots.length === 1) && !globalResultAsSparseArray && !css3Attr && !css3Pseudo && !needCheck_tag && !needCheck_classes && !needCheck_id;
+
+  do {
+    child = void 0;
+    switch(combinatorType) {
+      case 1://" " or ""
+        //if("all" in root && !root.all.length)continue;
+        if(!id) {//tagName or/and class
+          if(tag === "BODY" && root.nodeType === 9) {
+            preResult = [root.body];
+            needCheck_classes = !!classes;
+            canWeReturnUnsafeArray = canWeReturnUnsafeArray && !needCheck_classes;
+          }
+          else {
+            preResult = root.getElementsByTagName(tag || "*");
+          }
+        }
+        else {//id
+          preResult = [];
+          if(elementsById_Cache.length) {
+            kr = -1;
+            while(child = elementsById_Cache[++kr]) {
+              if(root === document || root.contains(child)){
+                preResult.push(child);
+                elementsById_Cache.splice(kr--, 1);
+              }
+            };
+          }
+          else return result;
+        }
+        child = preResult[0];
+      break;
+      case 2://">" W3C: "an F element preceded by an E element"
+        preResult = root.children;
+        child = preResult[0];
+      break;
+      case 3://"~" W3C: "an F element preceded by an E element"
+        nextRoot = roots[rootIndex + 1];
+      case 4://"+"
+        if(!(child = getNextElement(root)))continue;
+      default:
+    }
+
+    if(canWeReturnUnsafeArray)return preResult;
+
+    childrenIndex = 0;
+
+    if(child) do {
+        if((!needCheck_nodeType || child.nodeType === 1) && !(globalResultAsSparseArray && (indexIn_resultKeys = child["sourceIndex"]) in globalResult)) {
+          if(match = !(needCheck_tag && (child_nodeName = child.nodeName.toUpperCase()) !== tag || needCheck_id && child.id !== id || needCheck_classes && !(child.className && klas.test(child.className)))) {
+            if(css3Attr) {
+              kr = -1;
+              u = child.attributes;
+
+              while(match && (css3Attr_add = css3Attr[++kr]) && (match = (c = css3Attr_add[1]) in u)) {
+                if(c in attributeSpecialCase)nodeAttrCurrent_value = attributeSpecialCase[c](child);
+                else {
+                  nodeAttrCurrent_value = u[c];
+                  nodeAttrCurrent_value = (nodeAttrCurrent_value && (nodeAttrCurrent_value.specified || c in attributeSpecialSpecified) && nodeAttrCurrent_value.nodeValue !== "") ? nodeAttrCurrent_value.nodeValue : null;
+                }
+                
+                a = css3Attr_add[2];
+
+                if(nodeAttrCurrent_value === null) {
+                  if(!(match = a == 8))
+                  match = false;
+                  continue;
+                }
+
+				if(css3Attr_add[4]) {//Attribute case-sensitivity
+					nodeAttrCurrent_value = nodeAttrCurrent_value.toUpperCase();
 				}
-				else {
-					do {
-						if((root.sourceIndex || (root.sourceIndex = ++UUID)) in rootKeys)continue;
-						
-						rootKeys[root.sourceIndex] = true;
-						
-						
-						/*if(combinator === " ") {
-							a = root.compareDocumentPosition
-						}*/
 
-						getElementsBy_ClassName_Tag.call(root, selectorArr[4], tag, resultKeys, result, onlyOne);
-					}
-					while(root = roots[++i]);
-				}
-				if(id) {
-					id = void 0;
-				}
-				else {
-					tag = classes = void 0;
-				}
-			break;
-			case '+':
-				do {
-					if((root.sourceIndex || (root.sourceIndex = ++UUID)) in rootKeys)continue;
-					rootKeys[root.sourceIndex] = true;
-					while((root = root.nextSibling) && root.nodeType != 1){}
+                nodeAttrExpected_value = css3Attr_add[3];
+				
+				/* from yass 0.3.9 http://yass.webo.in/
+                 and edited by me :) */
+                /* function calls for CSS2/3 attributes selectors */
+                switch(a) {
+                  /* W3C "an E element with a "nodeAttrCurrent_value" attribute" */
+                  case 1://css3Attr[2] == ''
+                    match = !!nodeAttrCurrent_value || nodeAttrCurrent_value === "";
+                  break;
 
-					match = root && (root.sourceIndex || (root.sourceIndex = ++UUID)) && (!tag || root.tagName.toUpperCase() === tag) &&
-						(!resultKeys || !(root.sourceIndex in resultKeys));
-						
-					if(match && classes) {
-						match = root.className && klas.test(root.className);
-					}
-					if(match) {
-						result.push(root);
+                  /*
+                  W3C "an E element whose "nodeAttrCurrent_value" attribute nodeAttrExpected_value is
+                  exactly equal to "nodeAttrExpected_value"
+                  */
+                  case 2://'='
+                    match = /*nodeAttrCurrent_value && */nodeAttrCurrent_value === nodeAttrExpected_value;
+                  break;
 
-						if(resultKeys)resultKeys[root.sourceIndex] = true;
-					}
-				}
-				while(root = roots[++i]);
-				classes = tag = void 0;
-			break;
-			case '~'://W3C: "an F element preceded by an E element"
-				do {
-					if((root.sourceIndex || (root.sourceIndex = ++UUID)) in rootKeys)continue;
-					rootKeys[root.sourceIndex] = true;
+                  /*
+                  from w3.prg "an E element whose "nodeAttrCurrent_value" attribute nodeAttrExpected_value is
+                  a list of space-separated nodeAttrExpected_value's, one of which is exactly
+                  equal to "nodeAttrExpected_value"
+                  */
+                  case 3://'&='
+                  /* nodeAttrCurrent_value doesn't contain given nodeAttrExpected_value */
+                  case 8://'!='
+                    match = /*nodeAttrCurrent_value && */(new RegExp('(^| +)' + nodeAttrExpected_value + '($| +)').test(nodeAttrCurrent_value));
+                    if(a == 8)match = !match;
+                  break;
 
-					child = roots[i + 1];//next root
+                  /*
+                  from w3.prg "an E element whose "nodeAttrCurrent_value" attribute nodeAttrExpected_value
+                  begins exactly with the string "nodeAttrExpected_value"
+                  */
+                  case 4://'^='
+                  /*
+                  W3C "an E element whose "nodeAttrCurrent_value" attribute nodeAttrExpected_value
+                  ends exactly with the string "nodeAttrExpected_value"
+                  */
+                  case 5://'$='
+                  /*
+                  W3C "an E element whose "nodeAttrCurrent_value" attribute nodeAttrExpected_value
+                  contains the substring "nodeAttrExpected_value"
+                  */
+                  case 6://'*='
+                    b = nodeAttrCurrent_value.indexOf(nodeAttrExpected_value);
+                    match = a === 6 ? ~b : a === 5 ? (b == nodeAttrCurrent_value.length - nodeAttrExpected_value.length) : !b;
+                  break;
 
-					while (root = root.nextSibling) {
-						if(root === child)break;
+                  /*
+                  W3C "an E element whose "nodeAttrCurrent_value" attribute has
+                  a hyphen-separated list of nodeAttrExpected_value's beginning (from the
+                  left) with "nodeAttrExpected_value"
+                  */
+                  case 7://'|='
+                    match = (/*nodeAttrCurrent_value && */(nodeAttrCurrent_value === nodeAttrExpected_value || !!~nodeAttrCurrent_value.indexOf(nodeAttrExpected_value + '-')));
+                  break;
 
-						match = root.nodeType == 1 && (root.sourceIndex || (root.sourceIndex = ++UUID)) && (!tag || root.tagName.toUpperCase() === tag) &&
-							(!resultKeys || !(root.sourceIndex in resultKeys));
-							
-						if(match && classes) {
-							match = root.className && klas.test(root.className);
-						}
-						if(match) {
-							result.push(root);
+                  case 9://'~='
+                    match = /*nodeAttrCurrent_value && */!!~(" " + nodeAttrCurrent_value.replace(RE__queryOneSelector__spaces, " ") + " ").indexOf(" " + nodeAttrExpected_value + " ");
+                  break;
+                }
+              }
+            }
+        
+            if(match && css3Pseudo) {
+              /*
+              function calls for CSS2/3 modificatos. Specification taken from
+              http://www.w3.org/TR/2005/WD-css3-selectors-20051215/
+              on success return negative result.
+              */
+              switch(css3PseudoOperatorType) {
+                /* W3C: "an E element, the n-th child of its parent" */
+                case 0://'nth-child':
+                /* W3C: "an E element, the n-th rs of its parent, counting from the last one" */
+                case 1://'nth-last-child':
+                  if(!css3Pseudo_add[1] && !css3Pseudo_add[3])break;
+                  c = child[A] || 0;
+                  a = css3Pseudo_add[3] ? (css3Pseudo_add[2] === '%' ? -1 : 1) * css3Pseudo_add[3] : 0;
+                  b = css3Pseudo_add[1];
+                  if (c) {//check if we have already looked into siblings, using exando - very bad
+                    match = !b ? !(c + a) : !((c + a) % b);
+                  }
+                  else {//in the other case just reverse logic for n and loop siblings
+                    match = false;
+                    brother = child.parentNode[B];
+                    //c++;
+                    do {//looping in rs to find if nth expression is correct
+                      //nodeIndex expando used from Peppy / Sizzle/ jQuery
+                      if (brother.nodeType == 1 &&
+                        (brother[A] = ++c) &&
+                        child === brother &&
+                        (!b ? !(c + a) : !((c + a) % b))) {
+                        match = true;
+                      }
+                    } while (!match && (brother = brother[C]));
+                  }
+                break;
 
-							if(resultKeys)resultKeys[root.sourceIndex] = true;
-						}
-					}
-				}
-				while(root = roots[++i]);
-				classes = tag = void 0;
-			break;
-			case '>'://W3C: "an F element preceded by an E element"
-				do {
-					if((root.sourceIndex || (root.sourceIndex = ++UUID)) in rootKeys)continue;
-					rootKeys[root.sourceIndex] = true;
-					k = -1;
-					while(child = root.childNodes[++k]) {
-						match = child.nodeType == 1 && (child.sourceIndex || (child.sourceIndex = ++UUID)) && (!tag || child.tagName.toUpperCase() === tag) &&
-							(!resultKeys || !(child.sourceIndex in resultKeys));
-							
-						if(match && classes) {
-							match = child.className && klas.test(child.className);
-						}
-						if(match) {
-							result.push(child);
+                /* W3C: "an E element, only child of its parent" */
+                case 2://'only-child':
+                /* implementation was taken from jQuery.1.7 */
+                /* W3C: "an E element, first rs of its parent" */
+                case 3://'first-child':
+                /* implementation was taken from jQuery.1.7 */
+                  brother = child;
+                  while ((brother = brother.previousSibling) && brother.nodeType !== 1) {}
+                /* Check for node's existence */
+                  match = !brother;
 
-							if(resultKeys)resultKeys[child.sourceIndex] = true;
-						}
-					}
-				}
-				while(root = roots[++i]);
-				classes = tag = void 0;
-			break;
-		}
-		
-		
-		combinator = void 0;
-	
-	}
+                  if(!match || css3PseudoOperatorType == 3)break;
+                /* W3C: "an E element, last rs of its parent" */
+                case 4://'last-child'://In this block we lose "rs" value
+                /* Check for node's existence */
+                  match = !getNextElement(child);
+                break;
 
-	if(result.length && (tag || classes || (css3AttrAndcss3Pseudo = selectorArr[5]) || id)) {
-		css3AttrAndcss3Pseudo = css3AttrAndcss3Pseudo && css3AttrAndcss3Pseudo.match(RE__queryOneSelector__selectorMatch2) || [];
-		return checkNodeAttributes(result, tag , classes , css3AttrAndcss3Pseudo[1] , css3AttrAndcss3Pseudo[2] , id, onlyOne)
-	}
-	else 
-		return result;
+                /* W3C: "an E element, root of the document" */
+                case 5://'root':
+                  match = (child_nodeName || child.nodeName.toUpperCase()) == "HTML";
+                break;             
+                /*
+                Rrom w3.org: "an E element that has no rsren (including text nodes)".
+                Thx to John, from Sizzle, 2008-12-05, line 416
+                */
+                case 6://'empty':
+                  match = !child.firstChild;
+                  /*
+                  var n, i;
+                  for (i = 0;
+                  (n = e.childNodes[i]); i++) {
+                    if (n.nodeType == 1 || n.nodeType == 3) return false
+                  }
+                  return true
+                  */
+                break;
+                /*
+                W3C: "a user interface element E which is checked
+                (for instance a radio-button or checkbox)"
+                */
+                case 7://'checked':
+                  match = !!child.checked;
+                break;
+                /*
+                W3C: "an element of type E in language "fr"
+                (the document language specifies how language is determined)"
+                */
+                case 8://'lang':
+                  match = (child.lang == css3Pseudo_add || _document_documentElement.lang == css3Pseudo_add);
+                break;
+
+                case 9://'enabled':
+                case 10://'disabled':
+                  match = ("disabled" in child && "form" in child/*filter only form elements TODO::check it*/) && (css3PseudoOperatorType == 10 ? child.disabled === true && child.type !== 'hidden' : child.disabled === false);
+                break;
+
+                /* thx to John, from Sizzle, 2008-12-05, line 407 */
+                case 11://'selected':
+                // Accessing this property makes selected-by-default options in Safari work properly.
+                  match = child.parentNode.selectedIndex && !!child.selected;//Тут уже Closure Compiler не удаляет нужный вызов
+                break;
+
+                case 12://'contains':
+                  match = !!~(child.textContent || child.data || child.innerText || child.nodeValue || child.value || "").indexOf(css3Pseudo[2]);
+                break;
+
+                case 13://'not':
+                case 14://'matches':
+                  match = _matchesSelector.call(child, css3Pseudo[2]);
+                  if(css3PseudoOperatorType == 13)match = !match;
+                break;
+
+                case 15://'read-only':
+                case 16://'read-write':
+                  child_nodeName || (child_nodeName = child.nodeName.toUpperCase());
+                  match = (child_nodeName == "INPUT" || child_nodeName == "TEXTAREA" || child.getAttribute("contenteditable") !== null) && !child.readonly;
+                  if(css3PseudoOperatorType == 16)match = !match;
+                break;
+                /*TODO::
+                default:
+                  //Non-standart pseudo-classes
+                  var f = $$N.nonStandartPseudoClasses[css3Pseudo[1]];
+                  if(f)match = f(child);*/
+              }
+            }
+          }
+
+          if(match) {
+            if(onlyOne)return [child];
+
+            if(globalResultAsSparseArray) {
+              result[indexIn_resultKeys] = child;
+            }
+            else {
+              result.push(child);
+            }
+          }
+
+          child_nodeName = void 0;
+    }
+  }
+    while( child = combinatorTypeMoreThen_2 ? (combinatorType === 4 ? void 0 : child === nextRoot ? void 0 : getNextElement(child) ) : preResult[ ++childrenIndex ] );
+    
+
+  }
+  while(root = roots[++rootIndex]);
+
+  return result;
 }
-
-function checkNodeAttributes(result, tag , classes , css3Attr , css3Pseudo , id, onlyOne) {
-	
-		var 
-		/** @type {Node} */child,
-		/** @type {number} */kr,
-		/** @type {string} */_curClass,
-		/** @type {(Array.<number>)} */ind,
-		/** @type {number} */a,
-		/** @type {string} */b,
-		/** @type {number} */c,
-		/** @type {Node} */brother,
-
-		/** @type {number} */i = -1,
-		/** @type {boolean} */match = false,
-		/** @type {boolean} */isLast,
-		/** @type {Array.<string>} */css3Attr_add,
-		/** @type {Array.<string>} */css3Pseudo_add,
-
-		/** @type {string} */nodeAttrCurrent_value,
-		/** @type {string} */nodeAttrExpected_value;
-
-		//if(classes)classes = _String_split.call(classes.slice(1), RE__queryOneSelector__spaces);
-
-		while(child = result[++i]) {
-			match = !(id && child.id != id);
-			c = child.tagName.toUpperCase();
-			
-			if(match && classes) {
-				kr = -1;
-				_curClass = ' ' + child.className + ' ';
-				while(classes[++kr] && match)
-					match = !!~_curClass.indexOf(classes[kr]);
-			}
-			if(match && tag) {
-				match = c === tag;
-			}
-			if(match && css3Attr) {
-				kr = -1;
-				
-				if(typeof css3Attr == 'string') {//Check, if we not analys css3Attr yet
-					css3Attr = _String_split.call(css3Attr, "][");
-					while(css3Attr_add = css3Attr[++kr]) {
-						css3Attr_add = css3Attr[kr] = css3Attr_add.replace(RE__querySelector__arrtSpaceSeparated_fromSafe, "~=").match(RE__queryOneSelector__attrMatcher);
-						
-						b = css3Attr_add[1];
-						if((a = b.charAt(0)) === "\'" || a === "\""	&& b.substr(-1) === a) {//Note: original IE substr not allowed negative value as first param
-							b = css3Attr_add[1] = _String_substr.call(b, 1, b.length - 2);
-						}
-						/*if("all" in document) {//IE
-							if(b == "class")css3Attr_add[1] = "className";
-							else if(b == "for")css3Attr_add[1] = "htmlFor";
-						}*/
-						b = css3Attr_add[3];
-						if(b && ((a = b.charAt(0)) === "\'" || a === "\""	&& b.substr(-1) === a)) {
-							b = css3Attr_add[3] = _String_substr.call(b, 1, b.length - 2);
-						}
-					}
-					kr = -1;
-				}
-
-				while(match && (css3Attr_add = css3Attr[++kr])) {
-					var a123 = child.attributes[css3Attr_add[1]];
-					if(a123 === void 0 && css3Attr_add[2] !== '!=') {
-						match = false;
-						continue;
-					}
-					
-					nodeAttrCurrent_value = a123.specified && a123.value;//child.getAttribute(css3Attr_add[1]);
-					if(c/*child.tagName*/ === "A" && nodeAttrCurrent_value && css3Attr_add[1] === "href") {
-						nodeAttrCurrent_value = nodeAttrCurrent_value.replace(location.protocol + "//" + location.host + location.pathname, "");
-					}
-					nodeAttrExpected_value = css3Attr_add[3];
-					
-					// TODO: Проверить, что все опреации ^=, !=, *= и т.д. работают или ввести nodeAttrCurrent_value = child.getattribute(); if(nodeAttrCurrent_value)nodeAttrCurrent_value = nodeAttrCurrent_value + ''
-					/* from yass 0.3.9 http://yass.webo.in/
-						 and edited by me :) */
-					/* function calls for CSS2/3 attributes selectors */
-					switch(css3Attr_add[2]) {
-					/* W3C "an E element with a "nodeAttrCurrent_value" attribute" */
-						default://css3Attr[2] == ''
-							match = !!nodeAttrCurrent_value || nodeAttrCurrent_value === "";
-						break;
-					/*
-					W3C "an E element whose "nodeAttrCurrent_value" attribute nodeAttrExpected_value is
-					exactly equal to "nodeAttrExpected_value"
-					*/
-						case '=':
-							match = nodeAttrCurrent_value && nodeAttrCurrent_value === nodeAttrExpected_value;
-						break;
-					/*
-					from w3.prg "an E element whose "nodeAttrCurrent_value" attribute nodeAttrExpected_value is
-					a list of space-separated nodeAttrExpected_value's, one of which is exactly
-					equal to "nodeAttrExpected_value"
-					*/
-						case '&=':
-							match = nodeAttrCurrent_value && (new RegExp('(^| +)' + nodeAttrExpected_value + '($| +)').test(nodeAttrCurrent_value));
-						break;
-					/*
-					from w3.prg "an E element whose "nodeAttrCurrent_value" attribute nodeAttrExpected_value
-					begins exactly with the string "nodeAttrExpected_value"
-					*/
-						case '^=':
-							match = nodeAttrCurrent_value && !nodeAttrCurrent_value.indexOf(nodeAttrExpected_value);
-						break;
-					/*
-					W3C "an E element whose "nodeAttrCurrent_value" attribute nodeAttrExpected_value
-					ends exactly with the string "nodeAttrExpected_value"
-					*/
-						case '$=':
-							match = (nodeAttrCurrent_value && nodeAttrCurrent_value.indexOf(nodeAttrExpected_value) == nodeAttrCurrent_value.length - nodeAttrExpected_value.length);
-						break;
-					/*
-					W3C "an E element whose "nodeAttrCurrent_value" attribute nodeAttrExpected_value
-					contains the substring "nodeAttrExpected_value"
-					*/
-						case '*=':
-							match = (nodeAttrCurrent_value && ~nodeAttrCurrent_value.indexOf(nodeAttrExpected_value));
-						break;
-					/*
-					W3C "an E element whose "nodeAttrCurrent_value" attribute has
-					a hyphen-separated list of nodeAttrExpected_value's beginning (from the
-					left) with "nodeAttrExpected_value"
-					*/
-						case '|=':
-							match = (nodeAttrCurrent_value && (nodeAttrCurrent_value === nodeAttrExpected_value || !!~nodeAttrCurrent_value.indexOf(nodeAttrExpected_value + '-')));
-						break;
-					/* nodeAttrCurrent_value doesn't contain given nodeAttrExpected_value */
-						case '!=':
-							match = (!nodeAttrCurrent_value || !(new RegExp('(^| +)' + nodeAttrExpected_value + '($| +)').test(nodeAttrCurrent_value)));
-						break;
-
-						case '~=':
-							match = nodeAttrCurrent_value && !!~(" " + nodeAttrCurrent_value.replace(RE__queryOneSelector__spaces, " ") + " ").indexOf(" " + nodeAttrExpected_value + " ");
-						break;
-					}
-				}
-			}
-			if(match && css3Pseudo) {
-				//In this block we lose "child" value
-				if(typeof css3Pseudo == 'string') {
-					css3Pseudo = css3Pseudo.match(RE__queryOneSelector__pseudoMatcher);
-					//TODO:: Не работает nth-child и nth-last-child - путаница с nodeIndex
-					if(css3Pseudo[1].substr(0, 3) == 'nth' && css3Pseudo[2]) {
-						if(!/\D/.test(css3Pseudo[2]))css3Pseudo_add = [null, 0, '%', css3Pseudo[2]];
-						else if(css3Pseudo[2] === 'even')css3Pseudo_add = [null, 2];
-						else if(css3Pseudo[2] === 'odd')css3Pseudo_add = [null, 2, '%', 1];
-						else css3Pseudo_add = css3Pseudo[2].match(RE__queryOneSelector__pseudoNthChildMatcher);
-					}
-				}
-				//TODO:: Не работает nth-child и nth-last-child - путаница с nodeIndex
-				/* from yass 0.3.9 http://yass.webo.in/ */
-				/*
-				function calls for CSS2/3 modificatos. Specification taken from
-				http://www.w3.org/TR/2005/WD-css3-selectors-20051215/
-				on success return negative result.
-				*/
-				switch(css3Pseudo[1]) {
-				/* W3C: "an E element, only child of its parent" */
-					case 'only-child':
-				/* W3C: "an E element, first rs of its parent" */
-
-					case 'first-child':
-				/* implementation was taken from jQuery.1.7 */
-						brother = child;
-						while ((brother = brother.previousSibling) && brother.nodeType != 1) {}
-				/* Check for node's existence */
-						match = !brother;
-
-						if(!match || css3Pseudo[1] == 'first-child')break;
-
-				/* W3C: "an E element, last rs of its parent" */
-					case 'last-child'://In this block we lose "rs" value
-						brother = child;
-				/* loop in lastrss while nodeType isn't element */
-						while ((brother = brother.nextSibling) && brother.nodeType != 1) {}
-				/* Check for node's existence */
-						match = !brother;
-					break;
-
-				/* W3C: "an E element, root of the document" */
-					case 'root':
-						match = c/*child.tagName*/ == "HTML";
-					break;
-
-				/* W3C: "an E element, the n-th child of its parent" */
-				case 'nth-child':
-				/* W3C: "an E element, the n-th rs of its parent, counting from the last one" */
-				case 'nth-last-child':
-						if(!css3Pseudo_add[1] && !css3Pseudo_add[3])break;
-
-						//In this moment "match" MUST be true
-						isLast = css3Pseudo[1] != 'nth-child';
-						c = child[isLast ? "nodeIndexLast" : "nodeIndex"] || 0,
-						a = css3Pseudo_add[3] ? (css3Pseudo_add[2] === '%' ? -1 : 1) * css3Pseudo_add[3] : 0,
-						b = css3Pseudo_add[1];
-						if (c) {//check if we have already looked into siblings, using exando - very bad
-							match = !b ? !(c + a) : !((c + a) % b);
-						}
-						else {//in the other case just reverse logic for n and loop siblings
-							match = false;
-							brother = child.parentNode[isLast ? "lastChild" : "firstChild"];
-							//c++;
-							do {//looping in rs to find if nth expression is correct
-								//nodeIndex expando used from Peppy / Sizzle/ jQuery
-								if (brother.nodeType == 1 &&
-									(brother[isLast ? "nodeIndexLast" : "nodeIndex"] = ++c) &&
-									child === brother &&
-									(!b ? !(c + a) : !((c + a) % b))) {
-									match = true;
-								}
-							} while (!match && (brother = brother[isLast ? "previousSibling" : "nextSibling"]));
-						}
-					break;
-					
-				/*
-				Rrom w3.org: "an E element that has no rsren (including text nodes)".
-				Thx to John, from Sizzle, 2008-12-05, line 416
-				*/
-					case 'empty':
-						match = !child.firstChild;
-					break;
-				/*
-				W3C: "a user interface element E which is checked
-				(for instance a radio-button or checkbox)"
-				*/
-					case 'checked':
-						match = !!child.checked;
-					break;
-				/*
-				W3C: "an element of type E in language "fr"
-				(the document language specifies how language is determined)"
-				*/
-					case 'lang':
-						match = (child.lang == css3Pseudo_add || _document_documentElement.lang == css3Pseudo_add);
-					break;
-				/* thx to John, from Sizzle, 2008-12-05, line 398 */
-					case 'enabled':
-						match = !child.disabled && child.type !== 'hidden';
-					break;
-				/* thx to John, from Sizzle, 2008-12-05, line 401 */
-					case 'disabled':
-						match = !!child.disabled;
-					break;
-				/* thx to John, from Sizzle, 2008-12-05, line 407 */
-					case 'selected':
-				/*
-				Accessing this property makes selected-by-default
-				options in Safari work properly.
-				*/
-						//TODO: Проверить новый алгоритм
-						//Старый: child.parentNode.selectedIndex;//NOTE:: Add this string manual to compile by Closure Compiler script/Добавить это строчку в откомпилированый скрипт
-						//				match = !!child.selected;
-						match = child.parentNode.selectedIndex && !!child.selected;//Тут уже Closure Compiler не удаляет нужный вызов
-					break;
-
-					case 'contains':
-						match = !!~(child.textContent || child.data || child.innerText).indexOf(css3Pseudo[2]);
-					break;
-
-					case 'not':
-						match = queryOneSelector(css3Pseudo[2], null, [child], true).length === 0;
-					break;
-					/*TODO::
-					default:
-						//Non-standart pseudo-classes
-						var f = $$N.nonStandartPseudoClasses[css3Pseudo[1]];
-						if(f)match = f(child);*/
-				}
-				
-			}
-		
-			if(!match)_Array_splice.call(result, i--, 1);
-			else if(onlyOne) {
-				result = null;
-				return [child];
-			}
-		}
-	
-	return result;
-};
-
 
 
 /**
  * @param {!string} selector Строка с CSS3-selector
  * @param {boolean=} onlyOne only one need
+ * @param {(Node|Array.<Node>)=} root
  * @this {Document|HTMLElement|Node} root
  * @return {Array.<HTMLElement>}
  * @version 4.0
  */
-var queryManySelector = function queryManySelector(selector, onlyOne) {
-	//var rules = selector.replace(/ *([,>+~. ]) */g, "$1").match(/[^,]\w*/g),
+var queryManySelector = function queryManySelector(selector, onlyOne, root) {
+  root || (root = this);
 
-	var root = this,
-		rt,
-		rules;
+  var rt,
+    rules,
+    timeStamp;
 
-	selector = _String_trim.call(selector.replace(RE__queryManySelector__doubleSpaces, "$1"));
+  selector = _String_trim.call(selector.replace(RE__queryManySelector__doubleSpaces, "$1"));
 
-	if(rules = selector.match(RE__selector__easySelector)) {//quick result
-		if(rules[3]) {
-			selector = selector.slice(1);
-			rt = root.getElementById ? root.getElementById(selector) : document.getElementById(selector);
-			//workaround with IE bug about returning element by name not by ID.
-			//Solution completely changed, thx to deerua.
-			//Get all matching elements with this id
-			if (rt && _browser_msie < 9 && rt.id !== selector) {
-				rt = root.ownerDocument.all[selector];
-			}
-			return rt && [rt] || [];
-		}
-		else {
-		 return getElementsBy_ClassName_Tag.call(root, rules[2], rules[1]);
-		}
-	}
+  var result = new _NodeList,
+    rule,
+    i = -1,
+    selElements = root,
+    el,
+    k,
+    l,
+    //resultKeys,
+    nextRule,
+    lastRule,
+    firstRule = true,
+    fail = false,
+    need_SparseArray,
+    result_isSparseArray;
 
-	var result = [],
-		rule,
-		i = -1,
-		selElements = root,
-		hightRoot = root,
-		k,
-		resultKeys,
-		nextRule,
-		lastRule,
-		firstRule = true;
-			
-	rules = (selector + ",")
-		.replace(RE__querySelector__arrtSpaceSeparated_toSafe, "|-|")
-		.replace(RE__queryOneSelector__pseudoNthChildPlus, "\($1%$2\)")
-		.match(RE__queryManySelector__selectorsMatcher);
+      
+  rules = selector
+    .replace(RE__querySelector__arrtSpaceSeparated_toSafe, "@=")
+    .replace(RE__queryOneSelector__pseudoNthChildPlus, "-child\($1%$2\)")
+    .match(RE__queryManySelector__selectorsMatcher);
 
-	while((rule = rules[++i])) {
-		/*if(lastRule) {
-			lastRule = false;
-			continue;
-		}*/
+  while((rule = rules[++i])) {
+    
+    nextRule = rules[i + 1];
+    lastRule = !nextRule || nextRule.charAt(0) === ',';
 
-		nextRule = rules[i + 1];
-		lastRule = !nextRule || nextRule.charAt(0) === ',';
+    //if(nextRule && nextRule.length > 1 && !resultKeys)resultKeys = {};
 
-		
-		if(selElements && (!(root = selElements) || selElements.length === 0)) {//No result in previous rule -> Nothing to do
-			selElements = null;
-		}
-		else if(firstRule && rule === ":root") {
-			selElements = [_document_documentElement];
-		}
-		else if(rule !== ",") {//CSS3 selector
-			selElements = queryOneSelector(rule, root, null, onlyOne && lastRule, resultKeys || !firstRule && root.length > 1 && {});
-		}
+    if(!fail) {
+      if(firstRule && ("nodeType" in root) && root.nodeType === 9 && rule.toUpperCase() === "BODY") {
+        //"Boris Zbarsky <bzbarsky@MIT.EDU>": Mapping selector == "body" to document.body. This isn't a valid optimization for querySelector, since there can in fact be multiple <body> tags and since furthermore document.body can be a <frameset>. A UA could try to optimize this case by keeping track of the <body> tags and such, at some cost on every DOM mutation.
+        selElements = [root.body];
+        lastRule ? (result = selElements) : result.concat(selElements);
+      }
+      else if(firstRule && rule === ":root") {
+        selElements = [_document_documentElement];
+        lastRule && (result = selElements);
+      }
+      else if(selElements && (!(root = selElements) || selElements.length === 0)) {//No result in previous rule -> Nothing to do
+        selElements = null;
+        fail = true;
+      }
+      else if(!fail) {//CSS3 selector
+        if(need_SparseArray = !!(lastRule && (result_isSparseArray || nextRule || root.length > 1)))result_isSparseArray = true;
+        selElements = queryOneSelector(rule, root, lastRule ? result : [], need_SparseArray, null, onlyOne && lastRule/*, lastRule && resultKeys || !firstRule && root.length > 1 && {}*/);
+      }
+    }
 
-
-		//If last rule in this selector
-		if(firstRule = lastRule) {
-			if(selElements) {//Save result
-			
-				if(onlyOne && selElements.length)return selElements;
-
-				if(nextRule && nextRule.length > 1)resultKeys = {};
-
-				result = result.concat(selElements);
-			}
-
-			selElements = null;
-			root = hightRoot;
-		}
-		
-	}
-	
-	return result;
+    //If last rule in this selector
+    if(firstRule = lastRule) {
+      if(!result.length && selElements) {
+        result_isSparseArray = false;
+        result = _NodeList_from(selElements);
+      }
+      selElements = null;
+      root = this;
+      fail = false;
+    }
+    
+    if(!nextRule || nextRule === ",")break;
+  }
+   
+  return result_isSparseArray ?
+    _NodeList_from(result) :
+    result;
 };
-
-
-/**
- * @param {!string} selector
- * @this {Document|HTMLElement|Node}
- * @return {HTMLElement|Node}
- */
-function queryOneManySelector(selector) {
-	return queryManySelector.call(this, selector, true)[0] || null;
-}
 
 /**
  * @param {!string} selector
@@ -2295,51 +2562,109 @@ function queryOneManySelector(selector) {
  * @return {boolean}
  */
 function _matchesSelector(selector) {
-	if(!selector)return false;
-	if(selector === "*")return true;
-	if(selector === ":root" && this === _document_documentElement)return true;
-	if(selector === "body" && this === document.body)return true;
+  if(!selector)return false;
+  if(selector === "*")return true;
+  if(selector === ":root" && this === _document_documentElement)return true;
+  if(selector === "body" && this === document.body)return true;
 
-	selector = _String_trim.call(selector.replace(RE__queryManySelector__doubleSpaces, "$1"));
+  //selector = _String_trim.call(selector.replace(RE__queryManySelector__doubleSpaces, "$1"));
 
-	var thisObj = this,
-		isSimpleSelector,
-		tmp,
-		match = false,
-		i,
-		str;
+  var thisObj = this,
+    isSimpleSelector,
+    tmp,
+    match = false,
+    i,
+    str;
 
-	selector = _String_trim.call(selector);
+  selector = _String_trim.call(selector);
 
-	if(isSimpleSelector = selector.match(RE__selector__easySelector)) {
-		switch (selector.charAt(0)) {
-			case '#':
-				return thisObj.id === selector.slice(1);
-			break;
-			default:
-				match = !(tmp = isSimpleSelector[2]) || thisObj.className && (new RegExp(tmp.replace(RE__querySelector__dottes, " ").replace(RE__getElementsByClassName, STRING_FOR_RE__getElementsByClassName))).test(thisObj.className);
-				return match && !(tmp = isSimpleSelector[1]) || (thisObj.tagName && thisObj.tagName.toUpperCase() === tmp.toUpperCase());
-			break;
-		}
-	}
-	else if(!RE_matchSelector__isSimpleSelector.test(selector)) {//easy selector
-		tmp = queryOneSelector(selector, null, [thisObj]);
-		
-		return tmp[0] === thisObj;
-	}
-	else {
-		tmp = queryManySelector.call(thisObj.ownerDocument, selector);
+  if(isSimpleSelector = selector.match(RE__selector__easySelector)) {
+    switch (selector.charAt(0)) {
+      case '#':
+        return thisObj.id === selector.slice(1);
+      break;
+      default:
+        match = !(tmp = isSimpleSelector[2]) || thisObj.className && (new RegExp(tmp.replace(RE__querySelector__dottes, " ").replace(RE__getElementsByClassName, STRING_FOR_RE__getElementsByClassName))).test(thisObj.className);
+        return match && !(tmp = isSimpleSelector[1]) || (thisObj.tagName && thisObj.tagName.toUpperCase() === tmp.toUpperCase());
+      break;
+    }
+  }
+  else if(!RE_matchSelector__isSimpleSelector.test(selector)) {//easy selector
+    tmp = queryOneSelector(selector, null, false, null, thisObj, true);
+    
+    return tmp[0] === thisObj;
+  }
+  else {
+    tmp = queryManySelector.call(thisObj.ownerDocument, selector);
 
-		for ( i in tmp ) if(Object.prototype.hasOwnProperty.call(tmp, i)) {
-					match = tmp[i] === thisObj;
-					if(match)return true;
-			}
-			return false;
+    for ( i in tmp ) if(Object.prototype.hasOwnProperty.call(tmp, i)) {
+          match = tmp[i] === thisObj;
+          if(match)return true;
+      }
+      return false;
+  }
+}
+
+//SHIM export
+tmp = "matchesSelector";
+if(!_document_documentElement[tmp]) {
+	_Element_prototype[tmp] = _document_documentElement[tmp] = _matchesSelector;
+}
+tmp = "matches";
+if(!_document_documentElement[tmp]) {
+	_Element_prototype[tmp] = _document_documentElement[tmp] = _matchesSelector;
+}
+
+tmp = "querySelectorAll";
+if(!document[tmp]) {
+	/**
+	* @param {!string} selector
+	* @param {(Node|Array.<Node>)=} nodesRef
+	* @this {Document|Node}
+	* @return {Array.<Node>}
+	*/
+	_Element_prototype[tmp] = _document_documentElement[tmp] = document[tmp] = function(selector, nodesRef) {
+		return queryManySelector.call(this, selector, false, nodesRef);
 	}
 }
-if(!document.querySelectorAll)document.querySelectorAll = queryManySelector;
-if(!document.querySelector)document.querySelector = queryOneManySelector;
-if(!_document_documentElement.matchesSelector)_document_documentElement.matchesSelector = _matchesSelector;
+
+tmp = "querySelector";
+if(!document[tmp]) {
+	/**
+	* @param {!string} selector
+	* @param {(Node|Array.<Node>)=} nodesRef
+	* @this {Document|Node}
+	* @return {Node}
+	*/
+	_Element_prototype[tmp] = _document_documentElement[tmp] = document[tmp] = function(selector, nodesRef) {
+		return queryManySelector.call(this, selector, true, nodesRef)[0] || null;
+	}
+}
+
+tmp = "getElementsByClassName";
+if(!document[tmp]) {
+	//getElementsByClassName shim
+	//based on https://gist.github.com/1383091
+	_Element_prototype[tmp] = _document_documentElement[tmp] = document[tmp] = function(klas) {
+		klas = new RegExp(klas.replace(RE__getElementsByClassName, STRING_FOR_RE__getElementsByClassName));
+
+		var nodes = this.all,
+			node,
+			i = -1,
+			result = [];
+
+		while(node = nodes[++i]) {
+			if(node.className && klas.test(node.className)) {
+				result.push(node);
+			}
+		}
+
+		return result;
+	};
+}
+//SHIM export
+
+
 
 if(!_Node_prototype.hasAttribute)_Node_prototype.hasAttribute = function(name) {
 	return this.getAttribute(name) !== null;
@@ -2368,27 +2693,31 @@ _Node_prototype["__ielt8__element_init__"] = function __ielt8__element_init__() 
 	var thisObj = this;
 	if(thisObj["element"])thisObj = thisObj["element"];//¬_¬ only if the save `this` to local variable
 	
-	if(!thisObj["after"])thisObj["after"] = _Element_prototype["after"];
-	if(!thisObj["before"])thisObj["before"] = _Element_prototype["before"];
-	if(!thisObj["append"])thisObj["append"] = _Element_prototype["append"];
-	if(!thisObj["prepend"])thisObj["prepend"] = _Element_prototype["prepend"];
-	if(!thisObj["replace"])thisObj["replace"] = _Element_prototype["replace"];
-	if(!thisObj["remove"])thisObj["remove"] = _Element_prototype["remove"];
+	if(!("prepend" in thisObj)) {//DOM4 API
+		thisObj["after"] = _Element_prototype["after"];
+		thisObj["before"] = _Element_prototype["before"];
+		thisObj["append"] = _Element_prototype["append"];
+		thisObj["prepend"] = _Element_prototype["prepend"];
+		thisObj["replace"] = _Element_prototype["replace"];
+		thisObj["remove"] = _Element_prototype["remove"];
+	}
 
-	if(!thisObj.isEqualNode)thisObj.isEqualNode = _Node_prototype.isEqualNode;
-	if(!thisObj.compareDocumentPosition)thisObj.compareDocumentPosition = _Node_prototype.compareDocumentPosition;
-	if(!thisObj.getElementsByClassName)thisObj.getElementsByClassName = _Element_prototype.getElementsByClassName;
-	/*@requared: window.addEventListener, window.removeEventListener, window.dispatchEvent */
-	if(!thisObj.addEventListener)thisObj.addEventListener = window.addEventListener;
-	if(!thisObj.removeEventListener)thisObj.removeEventListener = window.removeEventListener;
-	if(!thisObj.dispatchEvent)thisObj.dispatchEvent = window.dispatchEvent;
+	"isEqualNode" in thisObj || (thisObj.isEqualNode = _Node_prototype.isEqualNode);
+	"compareDocumentPosition" in thisObj || (thisObj.compareDocumentPosition = _Node_prototype.compareDocumentPosition);
+	"getElementsByClassName" in thisObj || (thisObj.getElementsByClassName = _Element_prototype.getElementsByClassName);
+
+	"addEventListener" in thisObj || ((thisObj.addEventListener = global.addEventListener), 
+									  (thisObj.removeEventListener = global.removeEventListener),
+									  (thisObj.dispatchEvent = global.dispatchEvent));
 
 
-	if(!thisObj.querySelectorAll)thisObj.querySelectorAll = queryManySelector;
-	if(!thisObj.querySelector)thisObj.querySelector = queryOneManySelector;
-	if(!thisObj.matchesSelector)thisObj.matchesSelector = _matchesSelector;
+	"querySelector" in thisObj || ((thisObj.querySelectorAll = _Element_prototype.querySelectorAll),
+								   (thisObj.querySelector = _Element_prototype.querySelector));
+
+	"matchesSelector" in thisObj || ((thisObj.matchesSelector = _matchesSelector), 
+								     (thisObj["matches"] = _matchesSelector));
 	
-	if(!thisObj.hasAttribute)thisObj.hasAttribute = _Element_prototype.hasAttribute;
+	"hasAttribute" in thisObj || (thisObj.hasAttribute = _Element_prototype.hasAttribute);
 
 	//Unsafe (with "OBJECT" tag, for example) set's
 	try {
@@ -2400,11 +2729,9 @@ _Node_prototype["__ielt8__element_init__"] = function __ielt8__element_init__() 
 	}
 	catch(e) {
 		//console.error(e.message)
+		__ielt8__wontfix.push(thisObj);
 	}
-	if(thisObj.cloneNode !== _Node_prototype.cloneNode)__ielt8__wontfix.push(thisObj);
 }
-//__ielt8__element_init__["plugins"] = [];
-
 
 
 __ielt8_Node_behavior_apply = _Node_prototype["__ielt8_Node_behavior_apply"] = function (el) {
@@ -2451,8 +2778,23 @@ document.createElement = function(tagName) {
 /*  ======================================  Network  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
 if(!global.XMLHttpRequest)global.XMLHttpRequest = function() {
+	//TODO:: http://code.jquery.com/jquery-1.7.2.js:8138// #5280: Internet Explorer will keep connections alive if we don't abort on unload http://bugs.jquery.com/ticket/5280
+	//TODO:: http://code.jquery.com/jquery-1.7.2.js:7587// Add protocol if not provided (#5866: IE7 issue with protocol-less urls) http://bugs.jquery.com/ticket/5866
 	//TODO:: full XMLHttpRequest shim
-	return ActiveXObject("Microsoft.XMLHTTP");
+	var xhr;
+	try {
+		xhr = new ActiveXObject("Msxml2.XMLHTTP");
+	}
+	catch (ex) {
+		xhr = new ActiveXObject("Microsoft.XMLHTTP");
+	}
+	var _xhr_send = xhr.send;
+	
+	xhr.send = function() {
+		//Fixes IE Caching problem
+        this.setRequestHeader("If-Modified-Since", "Sat, 1 Jan 2000 00:00:00 GMT");//TODO:: tests
+        _xhr_send.apply(this, arguments);
+	}
 }
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Network  ======================================  */
@@ -2489,7 +2831,7 @@ if(!("pageXOffset" in global) && global.attachEvent) {
 
 
 function _DOMContentLoaded() {
-	document.removeEventListener('DOMContentLoaded', _DOMContentLoaded, false);
+	document.removeEventListener('DOMContentLoaded', _DOMContentLoaded);
 
 	if(noDocumentReadyState)document.readyState = "interactive";
 	
@@ -2507,7 +2849,7 @@ function _onload() {
 	if(_emulate_scrollX_scrollY)_emulate_scrollX_scrollY();
 }
 
-document.addEventListener('DOMContentLoaded', _DOMContentLoaded, false);//Emulated method
+document.addEventListener('DOMContentLoaded', _DOMContentLoaded);//Emulated method
 global.attachEvent('onload', _onload);//Native method
 
 
@@ -2520,4 +2862,10 @@ createBehaviorStyle(__STYLE_ID, __SUPPORTED__TAG_NAMES__, ielt9BehaviorRule);
 noDocumentReadyState = ielt9BehaviorRule = tmp = void 0;
 
 
-})(window);
+})(window, /** @const */function(obj, extention) {
+		for(var key in extention)
+			if(Object.prototype.hasOwnProperty(extention, key) && !Object.prototype.hasOwnProperty(obj, key))
+				obj[key] = extention[key];
+		
+		return obj;
+	});

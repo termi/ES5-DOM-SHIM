@@ -8,9 +8,19 @@
 // @check_types
 // ==/ClosureCompiler==
 /**
- * @version 6.4
- * TODO:: eng comments
- *        dateTime prop for IE < 8
+ * @version 6.5
+ * TODO::
+ * 0. eng comments
+ * 1. HTMLCanvasElement.toBlob (https://developer.mozilla.org/en/DOM/HTMLCanvasElement | http://stackoverflow.com/questions/4998908/convert-data-uri-to-file-then-append-to-formdata#answer-5100158)
+ * 2. http://www.w3.org/TR/2007/WD-DOM-Level-3-Events-20071221/keyset.html#KeySet-Set
+ * 4. dateTime prop for IE < 8
+ * 5. offset[Top/Left/Width/Height] for IE from https://raw.github.com/yui/yui3/master/src/dom/js/dom-style-ie.js
+ * 6. MutationObserver http://hacks.mozilla.org/2012/05/dom-mutationobserver-reacting-to-dom-changes-without-killing-browser-performance/
+ *                     http://updates.html5rocks.com/2012/02/Detect-DOM-changes-with-Mutation-Observers
+ * 7. Web Animation API http://people.mozilla.org/~bbirtles/web-animations/web-animations.html#the-mediaitem-interface
+ * 8. XHR Level2:
+ *        1. http://stackoverflow.com/questions/1919972/how-do-i-access-xhr-responsebody-for-binary-data-from-javascript-in-ie/4330882#4330882
+ * 9. window.innerWidth for IE < 9 https://developer.mozilla.org/en/DOM/window.innerWidth
  */
 
 //GCC DEFINES START
@@ -18,6 +28,10 @@
 var IS_DEBUG = true;
 /** @define {boolean} */
 var INCLUDE_EXTRAS = true;
+/** @define {boolean} */
+var UNSTABLE_FUNCTIONS = false;
+/** @define {boolean} */
+var JQUERY_COMPATIBLE = false;
 //GCC DEFINES END
 
 /*
@@ -201,6 +215,8 @@ var _browser_msie
 	/** @type {RegExp} @const */
   , RE__matchSelector__doubleSpaces = /\s*([,>+~ ])\s*/g//Note: Use with "$1"
 
+  , elementId_prefix
+
   // ------------------------------ ==================  Events  ================== ------------------------------
     /** @type {number} some unique identifire. must inc after use */
   , UUID
@@ -214,8 +230,6 @@ var _browser_msie
   , _Custom_Event_prototype
 
   , implementation_stopImmediatePropagation
-
-  , implementation_stopImmediatePropagation_listeners = {}
 
 	// ------------------------------ ==================  Utils.Dom  ================== ------------------------------
   , DOMStringCollection
@@ -1474,7 +1488,9 @@ try {
  * @param {Object=} dict
  */
 _CustomEvent = function (type, dict) {// CustomEvent constructor
-	var e;
+	var e
+	  , _detail
+	;
 	try {
 		e = document.createEvent("CustomEvent");
 	}
@@ -1483,9 +1499,9 @@ _CustomEvent = function (type, dict) {// CustomEvent constructor
 	}
 
 	dict = dict || {};
-	dict.detail = (dict.detail !== void 0) ? dict.detail : null;
-	(e.initCustomEvent || (e.detail = dict.detail, e.initEvent)).call
-		(e, type, dict.bubbles || false, dict.cancelable || false, dict.detail);
+	_detail = dict.detail !== void 0 ? dict.detail : null;
+	(e.initCustomEvent || (e.detail = _detail, e.initEvent)).call
+		(e, type, dict.bubbles || false, dict.cancelable || false, _detail);
 	if(!("isTrusted" in e))e.isTrusted = false;
 
 	return e;
@@ -1525,19 +1541,23 @@ if(!_Event_prototype["stopImmediatePropagation"]) {
 	}
 }
 
-//fix [add|remove]EventListener for all browsers that support it
-if(document.addEventListener &&
-	_testElement.addEventListener//[ielt9] IE < 9 has no `addEventListener` in _testElement
+//fix [add|remove]EventListener for all browsers that support it natively
+if("addEventListener" in _testElement && 
+	!_testElement.addEventListener["__shim__"]//Indicator that this is not native implementation
   ) {
-	// FF fails when you "forgot" the optional parameter for addEventListener and removeEventListener
-	// Agr!!! FF 3.6 Unable to override addEventListener https://bugzilla.mozilla.org/show_bug.cgi?id=428229
+  	// FF fails when you "forgot" the optional parameter for addEventListener and removeEventListener
+	// Arg!!! FF 3.6 Unable to override addEventListener https://bugzilla.mozilla.org/show_bug.cgi?id=428229
 	// Opera didn't do anything without optional parameter
-	_tmp_ = false;
+	// Opera do not discarded multiple identical EventListeners are registered on the same EventTarget with the same parameters
+	_tmp_ = 0;
 
 	try {
-		_testElement.addEventListener("click", function () {
-			_tmp_ = true
-		});
+		//we can use "dom4_mutationMacro" var here :]
+		dom4_mutationMacro = function () {
+			_tmp_++
+		};
+		_testElement.addEventListener("click", dom4_mutationMacro);
+		_testElement.addEventListener("click", dom4_mutationMacro);
 		if(_testElement.click)// NO: Opera 10.10
 			_testElement.click();//testing
 		else
@@ -1545,42 +1565,70 @@ if(document.addEventListener &&
 	} catch (e) {
 
 	} finally {
-		if(!_tmp_ || implementation_stopImmediatePropagation) {//fixEventListenerAll
-			implementation_stopImmediatePropagation && (UUID = 1);
+		if(_tmp_ == 0 || _tmp_ == 2 || implementation_stopImmediatePropagation) {//fixEventListenerAll
+			(function() {//closure
+				var _addEventListener_dublicate_bug = _tmp_ == 2
+					/** @const @type {string} */
+				  , _event_handleUUID = "_h_9e2"
+				  	/** @const @type {string} */
+				  , _event_eventsUUID = "_e_8vj";
 
-			_forEach(
-				[global["HTMLDocument"] && global["HTMLDocument"].prototype || global["document"],
-				 global["Window"] && global["Window"].prototype || global,
-				 _Element_prototype],
-				function (elementToFix) {
-					if(elementToFix) {
-						var old_addEventListener = elementToFix.addEventListener,
-							old_removeEventListener = elementToFix.removeEventListener;
+				implementation_stopImmediatePropagation && (UUID = 1);
 
-						if(old_addEventListener)elementToFix.addEventListener = function (type, listener, optional) {
-							optional = optional || false;
+				_forEach(
+					[global["HTMLDocument"] && global["HTMLDocument"].prototype || global["document"],
+					 global["Window"] && global["Window"].prototype || global,
+					 _Element_prototype],
+					function (elementToFix) {
+						if(elementToFix) {
+							var old_addEventListener = elementToFix.addEventListener,
+								old_removeEventListener = elementToFix.removeEventListener;
 
-							listener = implementation_stopImmediatePropagation ? (
-								implementation_stopImmediatePropagation_listeners[listener["uuid"] || (listener["uuid"] = ++UUID)] = _unSafeBind.call(implementation_stopImmediatePropagation, {_listener : listener, _this : this})
-							) : listener;
+							if(old_addEventListener) {
+								elementToFix.addEventListener = function(type, listener, useCapture) {
+									var _,
+										_eventsUUID;
 
-							return old_addEventListener.call(this, type, listener, optional);
-						};
-						//elementToFix.addEventListener.shim = true;
-						if(old_removeEventListener)elementToFix.removeEventListener = function (type, listener, optional) {
-							optional = optional || false;
+									useCapture = useCapture || false;
 
-							if(listener["uuid"] && implementation_stopImmediatePropagation_listeners[listener["uuid"]]) {
-								listener = implementation_stopImmediatePropagation_listeners[listener["uuid"]];
-								delete implementation_stopImmediatePropagation_listeners[listener["uuid"]];
+									if(_addEventListener_dublicate_bug || implementation_stopImmediatePropagation) {
+										_eventsUUID = _event_eventsUUID + (useCapture ? "-" : "") + (listener[_event_handleUUID] || (listener[_event_handleUUID] = ++UUID)) + type
+									
+										if(!(_ = this["_"]))_ = this["_"] = {};
+										//If multiple identical EventListeners are registered on the same EventTarget with the same parameters, the duplicate instances are discarded. They do not cause the EventListener to be called twice, and since the duplicates are discarded, they do not need to be removed manually with the removeEventListener method.
+										if(_eventsUUID in _)return;
+
+										listener = implementation_stopImmediatePropagation ? (
+											_[_eventsUUID] = _unSafeBind.call(implementation_stopImmediatePropagation, {_listener : listener, _this : this})
+										) : (_[_eventsUUID] = void 0), listener;
+									}
+
+									return old_addEventListener.call(this, type, listener, useCapture);
+								};
+
+								//elementToFix.addEventListener.__shim__ = true;
+								if(old_removeEventListener)elementToFix.removeEventListener = function(type, listener, useCapture) {
+									var _,
+										_eventsUUID;
+
+									useCapture = useCapture || false;
+
+									if(_addEventListener_dublicate_bug || implementation_stopImmediatePropagation) {
+										_ = this["_"];
+										if(_ && _[_eventsUUID = _event_eventsUUID + (useCapture ? "-" : "") + listener[_event_handleUUID] + type]) {
+											listener = _[_eventsUUID];
+											delete _[_eventsUUID];
+										}
+									}
+
+									return old_removeEventListener.call(this, type, listener, useCapture);
+								};
+								//elementToFix.removeEventListener.__shim__ = true;
 							}
-
-							return old_removeEventListener.call(this, type, listener, optional);
-						};
-						//elementToFix.removeEventListener.shim = true;
+						}
 					}
-				}
-			);
+				);
+ 			})();
 		}
 	}
 }
@@ -1723,6 +1771,130 @@ if(INCLUDE_EXTRAS) {//Export DOMStringCollection
 /*  =======================================================================================  */
 
 
+/*  ======================================================================================  */
+/*  ========================================  DOM  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+//[Opera lt 12]
+if(!_Event_prototype["AT_TARGET"]) {
+	_Event_prototype["AT_TARGET"] = 2;
+	_Event_prototype["BUBBLING_PHASE"] = 3;
+	_Event_prototype["CAPTURING_PHASE"] = 1;/*,
+		"BLUR": 8192,
+		"CHANGE": 32768,
+		"CLICK": 64,
+		"DBLCLICK": 128,
+		"DRAGDROP": 2048,
+		"FOCUS": 4096,
+		"KEYDOWN": 256,
+		"KEYPRESS": 1024,
+		"KEYUP": 512,
+		"MOUSEDOWN": 1,
+		"MOUSEDRAG": 32,
+		"MOUSEMOVE": 16,
+		"MOUSEOUT": 8,
+		"MOUSEOVER": 4,
+		"MOUSEUP": 2,
+		"SELECT": 16384*/
+}
+if(!Event["AT_TARGET"]) {
+	Event["AT_TARGET"] = 2;
+	Event["BUBBLING_PHASE"] = 3;
+	Event["CAPTURING_PHASE"] = 1;
+}
+
+
+if(!JQUERY_COMPATIBLE) {
+	// Problemm with jQuery:: jQuery using <currentStyle>.getPropertyValue and where is no such method in IE<9 and it can't be shimed
+
+	// window.getComputedStyle fix
+	//FF say that pseudoElt param is required
+	try {
+		global.getComputedStyle(_testElement)
+	}
+	catch(e) {
+		global.getComputedStyle = _unSafeBind(function(obj, pseudoElt) {
+			return this.call(global, obj, pseudoElt || null)
+		}, global.getComputedStyle);
+	}
+}
+
+if(INCLUDE_EXTRAS) {
+/**
+ * querySelector alias
+ * @param {!string|Node} selector or element
+ * @param {Node|Array.<Node>} roots or element
+ * @return {Node} founded element
+ */
+$ = function(selector, roots) {
+	if(typeof selector == 'string' || typeof selector == 'number')return $$(selector, roots, true);
+	return selector;
+};
+if(!global["$"])global["$"] = $;//Do not rewrite jQuery
+global["$$0"] = $;
+
+/**
+ * document.querySelector with `roots` as Array and special selector (">*", "~*", "+*") support
+ * @param {!string} selector CSS3-selector
+ * @param {Document|HTMLElement|Node|Array.<HTMLElement>=} roots Array of root element
+ * @param {boolean=} onlyOne return only first element (ie <root>.querySelector)
+ * @return {Array.<HTMLElement>} result
+ * @version 2
+ */
+$$ = global["$$"] = function(selector, roots, onlyOne) {
+	//$$N.test = $$N["test"];//$$N["test"] TODO:: добавить в $$N["test"] проверку на нестандартные селекторы
+	//TODO:: вернуть назад поддержку нестандартных псевдо-классов
+	//if(document.querySelector && !($$N.test && $$N.test.test(selector)) {
+	roots = roots || [document];
+	if(!Array.isArray(roots))roots = [roots];
+
+	/* replace not quoted args with quoted one -- Safari doesn't understand either */
+	//if(browser.safary)//[termi 30.01.12]commented it due not actual for now
+	//	selector = selector.replace(/=([^\]]+)/, '="$1"');
+
+	selector = _String_trim.call(selector || "");
+	if(!selector)return [];
+
+	var isSpecialMod = /[>\+\~]/.test(selector.charAt(0)) || /(\,>)|(\,\+)|(\,\~)/.test(selector),
+		i = -1,
+		root,
+		result = [],
+		tmp;
+
+	while(root = roots[++i]) {
+		if(document.querySelector) {
+			if(isSpecialMod) {//spetial selectors like ">*", "~div", "+a"
+				if("id" in root) {
+					//Мы надеемся :(, что в селекторе не будет [attrName=","]
+					//TODO:: переделать сплитер, чтобы он правильно работал даже для [attrName=","]
+					selector = selector.split(",")["unique"]();
+
+					if(!root.id)root.id = $$.str_for_id + $$.uid_for_id++;
+
+					tmp = "#" + root.id;
+
+					result = result.concat(_Array_from(root.querySelectorAll(tmp + selector.join("," + tmp))));
+				}
+			}
+			else {
+				result = result.concat(_Array_from(root.querySelectorAll(selector)));
+			}
+			
+			if(onlyOne && result.length)return result[0];
+		}
+		else throw new Error("querySelector not supported");
+	}
+
+	return onlyOne ? result[0] : result;
+};
+/** @type {string} unique prefix (HTMLElement.id) */
+$$.str_for_id = "r" + String.random(6);
+/** @type {number} unique identificator с $$N.str_for_id */
+$$.uid_for_id = 0;
+
+}//if(INCLUDE_EXTRAS)
+
+/*  ======================================================================================  */
+/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  DOM  =======================================  */
 
 /*  ======================================================================================  */
 /*  ================================  Element.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
@@ -1787,7 +1959,7 @@ if(!("insertAdjacentHTML" in _testElement)) {
 			nodes,
 			translate = {
 				"beforebegin" : "before",
-				"afterbegin" : "preppend",
+				"afterbegin" : "prepend",
 				"beforeend" : "append",
 				"afterend" : "after"
 			},
@@ -1798,7 +1970,7 @@ if(!("insertAdjacentHTML" in _testElement)) {
 
 		if(nodes && nodes.length && 
 			(func = ref[translate[position]])) {
-			func(nodes)
+			func.apply(this, nodes)
 		}
 
 		nodes = container = void 0;
@@ -1878,9 +2050,13 @@ function fixNodeOnProto(proto) {
 }
 
 //New DOM4 API
-if(!_testElement["after"]) {
+if(!_testElement["prepend"]) {
 	dom4_mutationMacro = function(nodes) {
-		var resultNode = null;
+		var resultNode = null
+		  , i = 0
+		  , maxLength = nodes.length
+		  , curLength
+		;
 		
 		nodes = _Array_map.call(nodes, function (node) {
 			return typeof node === "string" ?
@@ -1888,11 +2064,16 @@ if(!_testElement["after"]) {
 				node;
 		});
 		
-		if (nodes.length === 1) {
+		if (maxLength === 1) {
 			resultNode = nodes[0];
 		} else {
 			resultNode = document.createDocumentFragment();
-			nodes.forEach(resultNode.appendChild, resultNode);
+
+			//nodes can be a live NodeList so we can't use forEach and need to check nodes.length after each appendChild
+			for(var i = 0, maxLength = nodes.length, curLength ; i < (curLength = nodes.length) ; ++i) {
+				i -= (maxLength - curLength);
+				resultNode.appendChild(nodes[i]);
+			}			
 		}
 		
 		return resultNode;
@@ -1921,6 +2102,15 @@ if(!_testElement["after"]) {
 	_Element_prototype["remove"] = function () {
 		this.parentNode && this.parentNode.removeChild(this);
 	};
+
+	if(!("prepend" in document)) {
+		document["prepend"] = function() {
+			_Element_prototype["prepend"].apply(this.documentElement, arguments)
+		}
+		document["append"] = function() {
+			_Element_prototype["append"].apply(this.documentElement, arguments)
+		}
+	}
 }
 
 if(!_Element_prototype.matchesSelector) {
@@ -1928,56 +2118,116 @@ if(!_Element_prototype.matchesSelector) {
 		_Element_prototype["webkitMatchesSelector"] ||
 		_Element_prototype["mozMatchesSelector"] ||
 		_Element_prototype["msMatchesSelector"] ||
-		_Element_prototype["oMatchesSelector"] || function(selector) {
+		_Element_prototype["oMatchesSelector"] || function(selector, refNodes) {
 			if(!selector)return false;
 			if(selector === "*")return true;
-			if(selector === ":root" && this === document.documentElement)return true;
-			if(selector === "body" && this === document.body)return true;
 
-			var thisObj = this,
+			var thisObj,
 				parent,
 				i,
+				k = 0,
 				str,
 				rules,
 				tmp,
+				match;
+
+			if(refNodes) {
+				if("length" in refNodes) {//fast and unsafe isArray
+					thisObj = refNodes[0];
+				}
+				else {
+					thisObj = refNodes;
+					refNodes = void 0;
+				}
+			} 
+			else thisObj = this;
+
+			do {
 				match = false;
+				if(thisObj === document.documentElement)match = selector === ":root";
+	  			else if(thisObj === document.body)match = selector.toUpperCase() === "BODY";
 
-			selector = _String_trim.call(selector.replace(RE__matchSelector__doubleSpaces, "$1"));
+				if(!match) {
+					selector = _String_trim.call(selector.replace(RE__matchSelector__doubleSpaces, "$1"));
 
-			if(rules = selector.match(RE__selector__easySelector)) {
-				switch (selector.charAt(0)) {
-					case '#':
-						return thisObj.id === selector.slice(1);
-					break;
-					default:
-						match = !rules[1] || (!("tagName" in thisObj) || thisObj.tagName.toUpperCase() === rules[1].toUpperCase());
-						if(match && rules[2]) {
-							i = -1;
-							tmp = rules[2].slice(1).split(".");
-							str = " " + thisObj.className + " ";
-							while(tmp[++i] && match) {
-								match = _String_contains.call(str, " " + tmp[i] + " ");
-							}
+					if(rules = selector.match(RE__selector__easySelector)) {
+						switch (selector.charAt(0)) {
+							case '#':
+								match = thisObj.id === selector.slice(1);
+							break;
+							default:
+								match = !rules[1] || (!("tagName" in thisObj) || thisObj.tagName.toUpperCase() === rules[1].toUpperCase());
+								if(match && rules[2]) {
+									i = -1;
+									tmp = rules[2].slice(1).split(".");
+									str = " " + thisObj.className + " ";
+									while(tmp[++i] && match) {
+										match = _String_contains.call(str, " " + tmp[i] + " ");
+									}
+								}
 						}
-						return match;
+					}
+					
+					if(!/([,>+~ ])/.test(selector) && (parent = thisObj.parentNode) && parent.querySelector) {
+						match = parent.querySelector(selector) === thisObj;
+					}
+
+					if(!match && (parent = thisObj.ownerDocument)) {
+						tmp = parent.querySelectorAll(selector);
+						i = -1;
+						while(!match && tmp[++i]) {
+					        match = tmp[i] === thisObj;
+					    }
+					}
 				}
 			}
-			
-			if(!/([,>+~ ])/.test(selector) && (parent = thisObj.parentNode) && parent.querySelector) {
-				match = parent.querySelector(selector) === thisObj;
-			}
+			while(match && refNodes && (thisObj = refNodes[++k]));
 
-			if(!match && (parent = thisObj.ownerDocument)) {
-				tmp = parent.querySelectorAll(selector);
-				i = -1;
-				while(!match && tmp[++i]) {
-			        match = tmp[i] === thisObj;
-			    }
-			}
-		    return match;
+		    return refNodes && "length" in refNodes ? match && refNodes.length == k : match;
 		}
 }
 if(!document.documentElement.matchesSelector)document.documentElement.matchesSelector = _Element_prototype.matchesSelector;
+if(!("matches" in _Element_prototype))_Element_prototype["matches"] = document.documentElement["matches"] = _Element_prototype.matchesSelector;
+
+if(UNSTABLE_FUNCTIONS) {
+	if(!("find" in document)) {
+		document["find"] = DocumentFragment.prototype["find"] = function(selector, refNodes) {
+			refNodes && ("length" in refNodes || (refNodes = [refNodes])) || (refNodes = [this]);
+
+			var result,
+				i = 0,
+				l = refNodes.length;
+
+			do {
+				result = refNodes[i].querySelector(selector);
+				i++;
+			}
+			while(!result && i < l);
+
+			return result || null;
+		}
+		document["findAll"] = DocumentFragment.prototype["findAll"] = function(selector, refNodes) {
+			refNodes && ("length" in refNodes || (refNodes = [refNodes])) || (refNodes = [this]);
+
+			var result = [],
+				i = 0,
+				l = refNodes.length;
+
+			do {
+				result = Array.prototype.concat.apply(result, refNodes[i].querySelectorAll(selector));
+				i++;
+			}
+			while(i < l);
+			//TODO:: result.unique()
+
+			return result;
+		}
+	}
+	if(!("find" in _Element_prototype)) {
+		_Element_prototype["find"] = _Element_prototype.querySelector;
+		_Element_prototype["findAll"] = _Element_prototype.querySelectorAll;
+	}
+}
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Element.prototype  ==================================  */
 /*  ======================================================================================  */
@@ -2162,15 +2412,18 @@ if(INCLUDE_EXTRAS && !('reversed' in document_createElement("ol"))) {
 /*  ================================  NodeList.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
 //Inherit NodeList from Array
-function extendNodeListPrototype(nodeListProto) {
+function extendNodeListPrototype(nodeList_proto) {
+	//in old FF nodeList_proto.__proto__ != nodeList_proto.constructor.prototype
+	nodeList_proto = nodeList_proto.__proto__ || nodeList_proto.constructor.prototype;
+
 	if(nodeListProto && nodeListProto !== Array.prototype) {
 		nodeList_methods_fromArray.forEach(function(key) {
 			if(!nodeListProto[key])nodeListProto[key] = Array.prototype[key];
 		})
 	}
 }
-if(document.getElementsByClassName)extendNodeListPrototype(document.getElementsByClassName("").constructor.prototype);
-if(document.querySelectorAll)extendNodeListPrototype(document.querySelectorAll("#z").constructor.prototype);
+if(document.getElementsByClassName)extendNodeListPrototype(document.getElementsByClassName(""));
+if(document.querySelectorAll)extendNodeListPrototype(document.querySelectorAll("#z"));
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  NodeList.prototype  ==================================  */
 /*  ======================================================================================  */
@@ -2231,126 +2484,12 @@ XHR.defaults = {
 
 }//if(INCLUDE_EXTRAS)
 
+
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Network  ======================================  */
 /*  =======================================================================================  */
 
 /*  ======================================================================================  */
 
-/*  ======================================================================================  */
-/*  ========================================  DOM  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
-
-//[Opera lt 12]
-if(!_Event_prototype["AT_TARGET"]) {
-	_Event_prototype["AT_TARGET"] = 2;
-	_Event_prototype["BUBBLING_PHASE"] = 3;
-	_Event_prototype["CAPTURING_PHASE"] = 1;/*,
-		"BLUR": 8192,
-		"CHANGE": 32768,
-		"CLICK": 64,
-		"DBLCLICK": 128,
-		"DRAGDROP": 2048,
-		"FOCUS": 4096,
-		"KEYDOWN": 256,
-		"KEYPRESS": 1024,
-		"KEYUP": 512,
-		"MOUSEDOWN": 1,
-		"MOUSEDRAG": 32,
-		"MOUSEMOVE": 16,
-		"MOUSEOUT": 8,
-		"MOUSEOVER": 4,
-		"MOUSEUP": 2,
-		"SELECT": 16384*/
-}
-
-
-// window.getComputedStyle fix
-//FF say that pseudoElt param is required
-try {
-	global.getComputedStyle(_testElement)
-}
-catch(e) {
-	global.getComputedStyle = _unSafeBind(function(obj, pseudoElt) {
-		return this.call(global, obj, pseudoElt || null)
-	}, global.getComputedStyle);
-}
-
-if(INCLUDE_EXTRAS) {
-/**
- * querySelector alias
- * @param {!string|Node} selector or element
- * @param {Node|Array.<Node>} roots or element
- * @return {Node} founded element
- */
-$ = function(selector, roots) {
-	if(typeof selector == 'string' || typeof selector == 'number')return $$(selector, roots, true);
-	return selector;
-};
-if(!global["$"])global["$"] = $;//Do not rewrite jQuery
-global["$$0"] = $;
-
-/**
- * document.querySelector with `roots` as Array and special selector (">*", "~*", "+*") support
- * @param {!string} selector CSS3-selector
- * @param {Document|HTMLElement|Node|Array.<HTMLElement>=} roots Array of root element
- * @param {boolean=} onlyOne return only first element (ie <root>.querySelector)
- * @return {Array.<HTMLElement>} result
- * @version 2
- */
-$$ = global["$$"] = function(selector, roots, onlyOne) {
-	//$$N.test = $$N["test"];//$$N["test"] TODO:: добавить в $$N["test"] проверку на нестандартные селекторы
-	//TODO:: вернуть назад поддержку нестандартных псевдо-классов
-	//if(document.querySelector && !($$N.test && $$N.test.test(selector)) {
-	roots = roots || [document];
-	if(!Array.isArray(roots))roots = [roots];
-
-	/* replace not quoted args with quoted one -- Safari doesn't understand either */
-	//if(browser.safary)//[termi 30.01.12]commented it due not actual for now
-	//	selector = selector.replace(/=([^\]]+)/, '="$1"');
-
-	selector = _String_trim.call(selector || "");
-	if(!selector)return [];
-
-	var isSpecialMod = /[>\+\~]/.test(selector.charAt(0)) || /(\,>)|(\,\+)|(\,\~)/.test(selector),
-		i = -1,
-		root,
-		result = [],
-		tmp;
-
-	while(root = roots[++i]) {
-		if(document.querySelector) {
-			if(isSpecialMod) {//spetial selectors like ">*", "~div", "+a"
-				if("id" in root) {
-					//Мы надеемся :(, что в селекторе не будет [attrName=","]
-					//TODO:: переделать сплитер, чтобы он правильно работал даже для [attrName=","]
-					selector = selector.split(",")["unique"]();
-
-					if(!root.id)root.id = $$.str_for_id + $$.uid_for_id++;
-
-					tmp = "#" + root.id;
-
-					result = result.concat(_Array_from(root.querySelectorAll(tmp + selector.join("," + tmp))));
-				}
-			}
-			else {
-				result = result.concat(_Array_from(root.querySelectorAll(selector)));
-			}
-			
-			if(onlyOne && result.length)return result[0];
-		}
-		else throw new Error("querySelector not supported");
-	}
-
-	return onlyOne ? result[0] : result;
-};
-/** @type {string} unique prefix (HTMLElement.id) */
-$$.str_for_id = "r" + String.random(6);
-/** @type {number} unique identificator с $$N.str_for_id */
-$$.uid_for_id = 0;
-
-}//if(INCLUDE_EXTRAS)
-
-/*  ======================================================================================  */
-/*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  DOM  =======================================  */
 
 /*  =======================================================================================  */
 /*  ========================================  Date  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
@@ -2654,7 +2793,7 @@ if((_tmp_ = global["_"]) && _tmp_["ielt9shims"]) {
 // no need any more
 _append = _tmp_ = _testElement = nodeList_methods_fromArray = document_createElement = _Event =
 	_CustomEvent = _Event_prototype = _Custom_Event_prototype = 
-	_Element_prototype = _Shimed_Date = functionReturnFalse = functionReturnFirstParam = void 0;
+	_Element_prototype = _Shimed_Date = functionReturnFalse = void 0;
 
 if(!INCLUDE_EXTRAS) {
 	if(!definePropertyWorksOnObject) {
