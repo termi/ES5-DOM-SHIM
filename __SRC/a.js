@@ -1649,13 +1649,12 @@ else if(DEBUG && !document.addEventListener) {
  * Utils.Dom.DOMStringCollection
  * DOMSettableTokenList like object
  * http://www.w3.org/TR/html5/common-dom-interfaces.html#domsettabletokenlist-0
- * @param {string} string initial string
  * @param {Function} getter callback for onchange event
  * @param {Function} setter callback for onchange event
  * @param {Object} object_this context of onchange function
  * @constructor
  */
-DOMStringCollection = function(string, getter, setter, object_this) {
+DOMStringCollection = function(getter, setter, object_this) {
 	/**
 	 * Event fired when any change apply to the object
 	 */
