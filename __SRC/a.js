@@ -234,11 +234,11 @@ var _browser_msie
 	// ------------------------------ ==================  Utils.Dom  ================== ------------------------------
   , DOMStringCollection
 
-  , DOMStringCollection_checkToken
-
   , DOMStringCollection_init
 
   , DOMStringCollection_init_add
+
+  , DOMStringCollection_getNodeClassName
 
   , DOMStringCollection_setNodeClassName
 
@@ -1650,24 +1650,22 @@ else if(DEBUG && !document.addEventListener) {
  * DOMSettableTokenList like object
  * http://www.w3.org/TR/html5/common-dom-interfaces.html#domsettabletokenlist-0
  * @param {string} string initial string
- * @param {Function} onchange callback for onchange event
- * @param {Object} onchange_this context of onchange function
+ * @param {Function} getter callback for onchange event
+ * @param {Function} setter callback for onchange event
+ * @param {Object} object_this context of onchange function
  * @constructor
  */
-DOMStringCollection = function(string, onchange, onchange_this) {
+DOMStringCollection = function(string, getter, setter, object_this) {
 	/**
 	 * Event fired when any change apply to the object
 	 */
-	this._onchange = onchange;
-	this._onchange_this = onchange_this;
+	this._getter = getter;
+	this._setter = setter;
+	this._object_this = object_this;
 	this.length = 0;
 	this.value = "";
 
-	DOMStringCollection_init(this, string);
-};
-DOMStringCollection_checkToken = function(token) {
-	if(token === "")_throwDOMException("SYNTAX_ERR");
-	if(_String_contains.call(token + "", " "))_throwDOMException("INVALID_CHARACTER_ERR");
+	this.DOMStringCollection_check_currentValue_and_Token("1");//"1" - fakse token, need only thisObj.value check
 };
 /**
  * @param {DOMStringCollection} _DOMStringCollection
@@ -1692,7 +1690,7 @@ DOMStringCollection_init = function(_DOMStringCollection, _string) {
 		thisObj.value = _string;//empty value should stringify to contain the attribute's whitespace
 	}			
 
-	if(isChange && thisObj._onchange)thisObj._onchange.call(thisObj._onchange_this, thisObj.value);
+	if(isChange && thisObj._setter)thisObj._setter.call(thisObj._object_this, thisObj.value);
 };
 /**
  * @param {string} token
@@ -1703,20 +1701,27 @@ DOMStringCollection_init_add = function(token) {
 };
 
 _append(DOMStringCollection.prototype, {
-	add: function(token) {
+	DOMStringCollection_check_currentValue_and_Token : function(token) {
+		var string = this._getter.call(this._object_this);
+		if(string != this.value)DOMStringCollection_init(this, string);
+
+		if(token === "")_throwDOMException("SYNTAX_ERR");
+		if(_String_contains.call(token + "", " "))_throwDOMException("INVALID_CHARACTER_ERR");
+	},
+	"add": function(token) {
 		var thisObj = this, v = thisObj.value;
 
-		if(thisObj.contains(token)//DOMStringCollection_checkToken(token) here
+		if(thisObj.contains(token)//DOMStringCollection_check_currentValue_and_Token(token) here
 			)return;
 
 		thisObj.value += ((v && !v.match(RE_DOMSettableTokenList_lastSpaces) ? " " : "") + token);
 
 		this[this.length++] = token;
 
-		if(thisObj._onchange)thisObj._onchange.call(thisObj._onchange_this, thisObj.value);
+		if(thisObj._setter)thisObj._setter.call(thisObj._object_this, thisObj.value);
 	},
-	remove: function(token) {
-		DOMStringCollection_checkToken(token);
+	"remove": function(token) {
+		this.DOMStringCollection_check_currentValue_and_Token(token);
 
 		var i, itemsArray, thisObj = this;
 
@@ -1733,17 +1738,19 @@ _append(DOMStringCollection.prototype, {
 			}
 		}
 
-		if(thisObj._onchange)thisObj._onchange.call(thisObj._onchange_this, thisObj.value)
+		if(thisObj._setter)thisObj._setter.call(thisObj._object_this, thisObj.value)
 	},
-	contains: function(token) {
-		DOMStringCollection_checkToken(token);
+	"contains": function(token) {
+		this.DOMStringCollection_check_currentValue_and_Token(token);
 
 		return _String_contains.call(" " + this.value + " ", " " + token + " ");
 	},
-	item: function(index) {
+	"item": function(index) {
+		this.DOMStringCollection_check_currentValue_and_Token("1");//"1" - fakse token, need only thisObj.value check
+
 		return this[index] || null;
 	},
-	toggle: function(token) {
+	"toggle": function(token) {
 		var result = thisObj.contains(token); //DOMStringCollection_checkToken(token) here;
 
 		this[result ? 'add' : 'remove'](token);
@@ -1758,6 +1765,9 @@ DOMStringCollection.prototype.toString = function() {//_append function do not o
 
 DOMStringCollection_setNodeClassName = function(newValue) {
 	this.className = newValue;
+};
+DOMStringCollection_getNodeClassName = function(newValue) {
+	return this.className;
 };
 
 if(INCLUDE_EXTRAS) {//Export DOMStringCollection
@@ -1913,7 +1923,7 @@ if(!("classList" in _testElement)) {
 			var thisObj = this,
 				cont = thisObj["_"] || (thisObj["_"] = {});//Положим S_ELEMENT_CACHED_CLASSLIST_NAME в контейнер "_";
 
-			if(!cont[S_ELEMENT_CACHED_CLASSLIST_NAME])cont[S_ELEMENT_CACHED_CLASSLIST_NAME] = new DOMStringCollection(thisObj.className, DOMStringCollection_setNodeClassName, thisObj);
+			if(!cont[S_ELEMENT_CACHED_CLASSLIST_NAME])cont[S_ELEMENT_CACHED_CLASSLIST_NAME] = new DOMStringCollection(thisObj.className, DOMStringCollection_getNodeClassName, DOMStringCollection_setNodeClassName, thisObj);
 
 			return cont[S_ELEMENT_CACHED_CLASSLIST_NAME];
 		}

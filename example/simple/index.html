@@ -85,13 +85,13 @@ test2
 <script>
 
 function main() {
-	window.addEventListener("someEvent", function doSomething(event) {
+	window.addEventListener("someEvent", function doSomething(e) {
 		var i,
-			j = event.target;
+			j = e.target;
 		
-		if(event.detail) {
-			!isNaN(event.detail) && 
-				(i = "color" + event.detail), 
+		if(e.detail) {
+			!isNaN(e.detail) && 
+				(i = "color" + e.detail), 
 					j.attributes[i] &&
 						(j.style.backgroundColor = j.attributes[i].value);
 		}
@@ -103,8 +103,8 @@ function main() {
 	}, false)
 	
 	var dosome1;
-	document.addEventListener("someEvent", dosome1 = function(event) {
-		console.log(1, (this === document ? "document" : "window") + " someEvent " + (event.eventPhase === Event.BUBBLING_PHASE ? "bubble" : event.eventPhase === Event.AT_TARGET ? "target" : "capture") + "" + event.timeStamp)
+	document.addEventListener("someEvent", dosome1 = function(e) {
+		console.log(1, (this === document ? "document" : "window") + " someEvent " + (e.eventPhase === Event.BUBBLING_PHASE ? "bubble" : e.eventPhase === Event.AT_TARGET ? "target" : "capture") + "" + e.timeStamp)
 	}, false);
 	document.addEventListener("someEvent", dosome1, true);
 	window.addEventListener("someEvent", dosome1, false);
@@ -112,7 +112,7 @@ function main() {
 
 	var j = document.getElementsByClassName("test")[0];
 	j.addEventListener("someEvent", function(e) {
-		console.log(2, "j someEvent bubble | ", event.eventPhase == Event.AT_TARGET ? "at target" : "");
+		console.log(2, "j someEvent bubble | ", e.eventPhase == Event.AT_TARGET ? "at target" : "");
 	} , false);
 	
 	j = document.querySelector(".test");
