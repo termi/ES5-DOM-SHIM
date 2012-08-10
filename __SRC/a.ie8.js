@@ -1,4 +1,4 @@
- /** @license MIT License (c) copyright Egor Halimonenko (termi1uc1@gmail.com) */
+ /** @license MIT License (c) copyright Egor Halimonenko (termi1uc1@gmail.com | github.com/termi) */
 
 // ==ClosureCompiler==
 // @compilation_level ADVANCED_OPTIMIZATIONS
@@ -13,22 +13,35 @@
  * TODO::
  * 1. http://www.positioniseverything.net/explorer.html
  */
- 
-//GCC DEFINES START
-/** @define {boolean} */
-var IS_DEBUG = false;
-/** @define {boolean} */
-var JQUERY_COMPATIBLE = false;
-/** @define {boolean} */
-var UNSTABLE_FUNCTIONS = false;
-//GCC DEFINES END
 
+// [[[|||---=== GCC DEFINES START ===---|||]]]
+/** @define {boolean} */
+var __GCC__IS_DEBUG____ = true;
+//IF __GCC____GCC__IS_DEBUG____ == true [
+//0. Some errors in console
+//1. Fix console From https://github.com/theshock/console-cap/blob/master/console.js
+//]
+/** @define {boolean} */
+var __GCC__JQUERY_COMPATIBLE__ = false;
+//IF __GCC__JQUERY_COMPATIBLE__ == true [
+// Remove window.getComputedStyle shim for IE
+//]
+/** @define {boolean} */
+var __GCC__NODE_CONSTRUCTOR_AS_ACTIVX__ = true;
+/** @define {boolean} */
+var __GCC__NODE_CONSTRUCTOR_AS_DOM_ELEMENT__ = false;
+
+/** @define {boolean} */
+var __GCC__UNSTABLE_FUNCTIONS__ = false;
+//IF __GCC____GCC__UNSTABLE_FUNCTIONS____ == true [
+//]
+// [[[|||---=== GCC DEFINES END ===---|||]]]
 
 ;(function(global, _append) {
 
 
 /** @const @type {boolean} */
-var DEBUG = IS_DEBUG;
+var DEBUG = __GCC__IS_DEBUG__;
 
 /** Browser sniffing
  * @type {boolean} */
@@ -42,7 +55,7 @@ _browser_msie = (_browser_msie = /msie (\d+)/i.exec(navigator.userAgent)) && +_b
 
 if(!global["Element"])((global["Element"] =
 //Reprisent ActiveXObject as Node, Element and HTMLElement so `<element> instanceof Node` is working (!!!But no in IE9 with in "compatible mode")
-	ActiveXObject
+	__GCC__NODE_CONSTRUCTOR_AS_ACTIVX__ ? ActiveXObject : __GCC__NODE_CONSTRUCTOR_AS_DOM_ELEMENT__ ? document.createTextNode("") : {}
 ).prototype)["ie"] = true;//fake prototype for IE < 8
 if(!global["HTMLElement"])global["HTMLElement"] = global["Element"];//IE8
 if(!global["Node"])global["Node"] = global["Element"];//IE8
@@ -83,6 +96,11 @@ var _ = global["_"]["ielt9shims"]
 
 	/** @const */
   , _document_documentElement = document.documentElement
+
+	/** @const */
+  , _throw = function(errStr) {
+  		throw errStr instanceof Error ? errStr : new Error(errStr);
+  }
 
 	/** @const */
   , _throwDOMException = function(errStr) {
@@ -129,9 +147,8 @@ var _ = global["_"]["ielt9shims"]
 	 */
   , _String_trim = String.prototype.trim || (String.prototype.trim = function () {//Cache origin trim function
 		var	str = this.replace(/^\s+/, ''),
-			ws = RE_space,
 			i = str.length;
-		while (ws.test(str.charAt(--i))){};
+		while (RE_space.test(str.charAt(--i))){};
 		return str.slice(0, i + 1);
 	})
 	
@@ -220,19 +237,15 @@ var _ = global["_"]["ielt9shims"]
   , nodeList_methods_fromArray = ["every", "filter", "forEach", "indexOf", "join", "lastIndexOf", "map", "reduce", "reduceRight", "reverse", "slice", "some", "toString"]
 
 	// ------------------------------ ==================  Events  ================== ------------------------------
-  , _event_eventHandlersContainer_by_sourceIndex = {}
+  , _fake_Event_constructor
 
-  , _fake_Event_prototype = {
-	  	/** @const @type {function} */
-	  	"preventDefault" : function(){this.returnValue = false; this["defaultPrevented"] = true} ,
-	  	/** @const @type {function} */
-	  	"stopPropagation" : function(){this.cancelBubble = true} ,
-	  	/** @const @type {function} */
-	  	"stopImmediatePropagation" : function() {
-			this["__stopNow"] = true;
-			this.stopPropagation()
-		}
-	}
+  , _initEvent
+
+  , _initUIEvent
+
+  , _initCustomEvent
+
+  , _initMouseEvent
 
   , _Event_prototype
 
@@ -290,6 +303,7 @@ document.compatMode === "CSS1Compat" ?
 	: 
 	((_getScrollX = function(){return document.body.scrollTop}), (_getScrollY = function(){return document.body.scrollLeft}))
 ;
+
 
 /*
 TODO:: http://code.jquery.com/jquery-1.7.2.js:1537
@@ -426,7 +440,6 @@ return support;
 
 
 
-
 //Emulating HEAD for ie < 9
 document.head || (document.head = document.getElementsByTagName('head')[0]);
 
@@ -437,11 +450,6 @@ if(DEBUG) {
 	if(!(_Function_call.call(document_createElement, document, "div") instanceof ActiveXObject))
 		console.error("DOMElement is not an ActiveXObject. Probably you in IE > 8 'compatible mode'. <element> instanceof [Node|Element|HTMLElement] wouldn't work");
 }
-
-
-if(!global["Event"])global["Event"] = {};
-_Event_prototype = global["Event"].prototype || (global["Event"].prototype = {});
-_append(_Event_prototype, _fake_Event_prototype);
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Function.prototype  ==================================  */
 /*  =======================================================================================  */
@@ -466,7 +474,7 @@ if(!tmp) {
 				args.length === void 0 || //Not an iterable object
 			   typeof args === "string"//Avoid using String
 			  )
-				throw e;
+				_throw(e);
 
 			return _Function_apply.call(this, contexts, Array["from"](args));
 		}
@@ -631,6 +639,162 @@ if(!("pageXOffset" in global)) {
 /*  ======================================================================================  */
 /*  ======================================  Events  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
+if(_browser_msie < 9) {
+	/** @constructor */
+	function_tmp = global["Event"] = function(nativeEvent) {
+		//new operator for Event supported in a.js
+		_throw("");
+	};
+
+	/**
+	 * @param {string=} _type
+	 * @param {boolean=} _bubbles
+	 * @param {boolean=} _cancelable
+	 */
+	_initEvent = function(_type, _bubbles, _cancelable) {
+		if(_type == void 0 || _bubbles == void 0 || _cancelable == void 0) {
+			//WRONG_ARGUMENTS_ERR
+			_throw('WRONG_ARGUMENTS_ERR');
+		}
+		var thisObj = this;
+
+		thisObj.type = _type;
+		//this.cancelBubble = //TODO:: <-- testing Глупость ???
+		//	!(this.bubbles = _bubbles);
+		thisObj.bubbles = _bubbles;
+		thisObj.cancelable = _cancelable;//https://developer.mozilla.org/en/DOM/event.cancelable
+
+		thisObj.isTrusted = false;
+		thisObj.target = null;
+
+		if(!thisObj.timeStamp)thisObj.timeStamp = +new _Native_Date();
+	};
+
+	_initCustomEvent = function(_type, _bubbles, _cancelable, _detail) {
+		//https://developer.mozilla.org/en/DOM/CustomEvent
+		_initEvent.call(this, _type, _bubbles, _cancelable);
+
+		this.detail = _detail;
+	};
+
+	_initUIEvent = function(_type, _bubbles, _cancelable, _view, _detail) {
+		//https://developer.mozilla.org/en/DOM/event.initUIEvent
+		_initCustomEvent.call(this, _type, _bubbles, _cancelable, _detail);
+
+		this.view = _view;
+	};
+
+	_initMouseEvent = function(_type, _bubbles, _cancelable, _view,
+                     _detail, _screenX, _screenY, _clientX, _clientY,
+                     _ctrlKey, _altKey, _shiftKey, _metaKey,
+                     _button, _relatedTarget) {
+		var thisObj = this;
+		//https://developer.mozilla.org/en/DOM/event.initMouseEvent
+		_initUIEvent.call(thisObj, _type, _bubbles, _cancelable, _view, _detail);
+
+		thisObj.screenX = _screenX;
+		thisObj.screenY = _screenY;
+		thisObj.clientX = _clientX;
+		thisObj.clientY = _clientY;
+        thisObj.ctrlKey = _ctrlKey;
+		thisObj.altKey = _altKey;
+		thisObj.shiftKey = _shiftKey;
+		thisObj.metaKey = _metaKey;
+		thisObj.button = _button;
+		thisObj.relatedTarget = _relatedTarget;
+	};
+
+	_Event_prototype = function_tmp.prototype = {
+		constructor : function_tmp,
+
+	  	/** @this {_fake_Event_constructor_for_document_createEvent} */
+	  	"preventDefault" : function() {
+	  		_fake_Event_constructor.getNativeEvent.call(this)["returnValue"] = false;
+	  		_fake_Event_constructor.destroyLinkToNativeEvent.call(this);
+	  		this["defaultPrevented"] = true;
+	  	} ,
+
+	  	/** @this {_fake_Event_constructor_for_document_createEvent} */
+	  	"stopPropagation" : function() {
+	  		_fake_Event_constructor.getNativeEvent.call(this)["cancelBubble"] = true;
+	  		_fake_Event_constructor.destroyLinkToNativeEvent.call(this);
+	  	} ,
+
+	  	/** @this {_fake_Event_constructor_for_document_createEvent} */
+	  	"stopImmediatePropagation" : function() {
+			this["__stopNow"] = true;
+			this.stopPropagation();
+		} ,
+
+		/**
+		 * @param {string=} _type
+		 * @param {boolean=} _bubbles
+		 * @param {boolean=} _cancelable
+		 */
+		"initEvent" : function() {
+			_init.apply(this, arguments);
+
+			_safeExtend(nativeEvent, this);
+		},
+
+		"initCustomEvent" : function() {
+			_initCustomEvent.apply(this, arguments);
+
+			_safeExtend(nativeEvent, this);
+		},
+
+		"initUIEvent" : function() {
+			_initUIEvent.apply(this, arguments);
+
+			_safeExtend(nativeEvent, this);
+		},
+
+		"initMouseEvent" : function() {
+			_initMouseEvent.apply(this, arguments);
+
+			_safeExtend(nativeEvent, this);
+		}
+
+	};
+
+	/** @constructor Event constructor for document.createEvent and commonHandle */
+	_fake_Event_constructor = function(nativeEvent) {
+		var _ = this["_"] = {};
+		_[_event_eventsUUID] = nativeEvent;
+
+		nativeEvent.returnValue = true;//default value
+
+		_safeExtend(this, nativeEvent);
+	};
+
+	/** @this {_fake_Event_constructor_for_document_createEvent} */
+	_fake_Event_constructor.getNativeEvent = function() {
+		var nativeEvent = "_" in this && this["_"][_event_eventsUUID];
+  		if(!nativeEvent) {
+  			_throw("WRONG_THIS_ERR")
+  		}
+
+  		return nativeEvent;
+	};
+
+	/** @this {_fake_Event_constructor_for_document_createEvent} */
+	_fake_Event_constructor.destroyLinkToNativeEvent = function() {
+		if("_" in this) {
+			this["_"][_event_eventsUUID] = null;
+			delete this["_"][_event_eventsUUID];
+		}
+	};
+
+	//inherit _fake_Event_constructor from _fake_Event_constructor
+	/** @constructor */
+	function_tmp = function() { };
+	function_tmp.prototype = _Event_prototype;
+	function_tmp = new function_tmp;
+	function_tmp.constructor = _fake_Event_constructor;
+	_fake_Event_constructor.prototype = function_tmp;
+}
+
+
 //fix [add|remove]EventListener & dispatchEvent for IE < 9
 
 // See: https://github.com/arexkun/Vine
@@ -703,7 +867,7 @@ function fixEvent(event) {
 	return event;
 }
 
-if(  UNSTABLE_FUNCTIONS ) {
+if(  __GCC__UNSTABLE_FUNCTIONS__ ) {
 	function windowCaptureHandler(nativeEvent) {
 		var i,
 			l = _event_captureHandlerNodes.length,
@@ -736,7 +900,7 @@ function commonHandle(nativeEvent) {
 		handlersKey;
 
 
-	if(    UNSTABLE_FUNCTIONS    && !_event_globalIsCaptureIndicator && nativeEvent.bubbles !== false && nativeEvent.type in _event_needCapturing && thisObj != global) {
+	if(    __GCC__UNSTABLE_FUNCTIONS__    && !_event_globalIsCaptureIndicator && nativeEvent.bubbles !== false && nativeEvent.type in _event_needCapturing && thisObj != global) {
 		_event_captureHandlerNodes.push(this);
 		_event = nativeEvent;
 	}
@@ -808,12 +972,12 @@ function commonHandle(nativeEvent) {
 			//TODO:: check out that properties need to be returned in native 'event' object or _extend(nativeEvent, event);
 			
 			if(errors.length == 1) {//Если была только одна ошибка - кидаем ее дальше
-				throw errors[0]
+				_throw(errors[0])
 			}
 			else if(errors.length > 1) {//Иначе делаем общий объект Error со списком ошибок в свойстве errors и кидаем его
 				var e = new Error("Multiple errors thrown : " + _event.type + " : " + " : " + errorsMessages.join("|"));
 				e.errors = errors;
-				throw e;
+				_throw(e);
 			}
 		}
 	}
@@ -836,7 +1000,7 @@ if(!document.addEventListener) {
 			return;
 		}
 
-		if(    UNSTABLE_FUNCTIONS     && useCapture) {
+		if(    __GCC__UNSTABLE_FUNCTIONS__     && useCapture) {
 			if(!_event_needCapturing[_type]) {
 				_event_needCapturing[_type] = true;
 				//window.addEventListener(_type, windowCaptureHandler, true);
@@ -853,7 +1017,7 @@ if(!document.addEventListener) {
 			/** @type {boolean} */
 			_useInteractive = false,
 			/** @type {string} */
-			handlersKey = _event_eventsUUID + (    UNSTABLE_FUNCTIONS     && useCapture ? "-" : "");
+			handlersKey = _event_eventsUUID + (    __GCC__UNSTABLE_FUNCTIONS__     && useCapture ? "-" : "");
 
 		if(thisObj == global && (!("_" in document) || !(handlersKey in document["_"]) || !(_type in document["_"][handlersKey]))) {
 			//Emulate bubbling from document to defaultView (window) | 1 from 2
@@ -892,7 +1056,7 @@ if(!document.addEventListener) {
 				function poll() {
 					try { document.documentElement.doScroll('left'); } catch(e) { setTimeout(poll, 50); return; }
 					commonHandle.call(thisObj, {"type" : _type});
-				};
+				}
 
 				if ("createEventObject" in document && "doScroll" in document.documentElement) {
 					try { if(!global.frameElement)poll() } catch(e) { }
@@ -975,7 +1139,7 @@ if(!document.addEventListener) {
 			/** @type {Object} */
 			_ = thisObj["_"],
 			/** @type {string} */
-			handlersKey = _event_eventsUUID + (    UNSTABLE_FUNCTIONS     && useCapture ? "-" : ""),
+			handlersKey = _event_eventsUUID + (    __GCC__UNSTABLE_FUNCTIONS__     && useCapture ? "-" : ""),
 			/** @type {function} */
 			_callback,
 			/** @type {Array} */
@@ -984,7 +1148,7 @@ if(!document.addEventListener) {
 			any;
 		
 		if(typeof _handler != "function" || !_handler[_event_UUID_prop_name] || !_)return;
-		if(    UNSTABLE_FUNCTIONS     && useCapture && !(_type in _event_needCapturing))return;
+		if(    __GCC__UNSTABLE_FUNCTIONS__     && useCapture && !(_type in _event_needCapturing))return;
 		if(!(_callback = _[_event_handleUUID]))return;
 
 		//_ = _[_event_phase] || (_[_event_phase] = {});
@@ -1075,85 +1239,20 @@ if(!document.dispatchEvent) {
 				
 				return result;
 			}
-			else throw e;
+			else _throw(e);
 		}
 	};
 
 	_Node_prototype.dispatchEvent["__shim__"] = true;
-};
+}
 
 if(!document.createEvent) {/*IE < 9 ONLY*/
-	/**
-	 * @param {string=} _type
-	 * @param {boolean=} _bubbles
-	 * @param {boolean=} _cancelable
-	 */
-	function _initEvent(_type, _bubbles, _cancelable) {
-		if(_type == void 0 || _bubbles == void 0 || _cancelable == void 0) {
-			//WRONG_ARGUMENTS_ERR
-			throw new Error('WRONG_ARGUMENTS_ERR');
-		}
-		var thisObj = this;
-	
-		thisObj.type = _type;
-		//this.cancelBubble = //TODO:: <-- testing Глупость ???
-		//	!(this.bubbles = _bubbles);
-		thisObj.bubbles = _bubbles;
-		thisObj.cancelable = _cancelable;//https://developer.mozilla.org/en/DOM/event.cancelable
-		
-		thisObj.isTrusted = false;
-		thisObj.target = null;
-
-		if(!thisObj.timeStamp)thisObj.timeStamp = +new _Native_Date();
-	}
-	function _initCustomEvent(_type, _bubbles, _cancelable, _detail) {
-		//https://developer.mozilla.org/en/DOM/CustomEvent
-		_initEvent.call(this, _type, _bubbles, _cancelable);
-		
-		this.detail = _detail;
-	}
-	function _initUIEvent(_type, _bubbles, _cancelable, _view, _detail) {
-		//https://developer.mozilla.org/en/DOM/event.initUIEvent
-		_initCustomEvent.call(this, _type, _bubbles, _cancelable, _detail);
-		
-		this.view = _view;
-	}
-	function _initMouseEvent(_type, _bubbles, _cancelable, _view, 
-                     _detail, _screenX, _screenY, _clientX, _clientY, 
-                     _ctrlKey, _altKey, _shiftKey, _metaKey, 
-                     _button, _relatedTarget) {
-		var thisObj = this;
-		//https://developer.mozilla.org/en/DOM/event.initMouseEvent
-		_initUIEvent.call(thisObj, _type, _bubbles, _cancelable, _view, _detail);
-		
-		thisObj.screenX = _screenX;
-		thisObj.screenY = _screenY;
-		thisObj.clientX = _clientX;
-		thisObj.clientY = _clientY;
-        thisObj.ctrlKey = _ctrlKey;
-		thisObj.altKey = _altKey;
-		thisObj.shiftKey = _shiftKey;
-		thisObj.metaKey = _metaKey;
-		thisObj.button = _button;
-		thisObj.relatedTarget = _relatedTarget;
-	}
-
 	/**
 	 * https://developer.mozilla.org/en/DOM/document.createEvent
 	 * Not using. param {string} eventType is a string that represents the type of event to be created. Possible event types include "UIEvents", "MouseEvents", "MutationEvents", and "HTMLEvents". See https://developer.mozilla.org/en/DOM/document.createEvent#Notes section for details.
 	 */
 	document.createEvent = function() {
-		var eventObject;
-		
-		eventObject = document.createEventObject();
-		
-		eventObject.returnValue = true;//default value
-		eventObject.initEvent = _initEvent;
-		eventObject.initCustomEvent = _initCustomEvent;
-		eventObject.initUIEvent = _initUIEvent;
-		eventObject.initMouseEvent = _initMouseEvent;
-		
-		return eventObject;
+		return new _fake_Event_constructor_for_document_createEvent(document.createEventObject());
 	}
 }
 
@@ -1191,7 +1290,7 @@ else {//IE8 quirk mode, IE lt 8
 
 _NodeList.prototype["item"] = function(index) {
 	return this[index];
-}
+};
 
 //Inherit NodeList from Array
 function extendNodeListPrototype(nodeListProto) {
@@ -1211,7 +1310,7 @@ if(document.querySelectorAll)extendNodeListPrototype(document.querySelectorAll("
 
 
 // IE - contains fails if argument is textnode
-if(UNSTABLE_FUNCTIONS) {
+if(__GCC__UNSTABLE_FUNCTIONS__) {
 	_txtTextElement = _Function_call.call(document_createTextNode, document, "");
 	_testElement.appendChild(_txtTextElement);
 
@@ -1277,7 +1376,7 @@ if(!("children" in _testElement) || _browser_msie < 9)_.push(function() {
 
 		return arr;
 	}});
-})
+});
 
 //[IE lt 9] Fix "offsetLeft" and "offsetTop" properties in IE < 9
 if(_browser_msie < 9)_.push(function() {
@@ -1395,7 +1494,7 @@ if(_browser_msie < 9)_.push(function() {
 			}
 		}
 	});
-})
+});
 
 //TODO::window.innerWidth & window.innerHeight http://www.javascripter.net/faq/browserw.htm
 //TODO::https://developer.mozilla.org/en/DOM/window.outerHeight
@@ -1500,7 +1599,7 @@ if(__ielt8__element_init__) {//__ielt8__element_init__ in a.ielt8.js
 if(DEBUG && !("textContent" in _testElement)) {
 	if(!('innerText' in this) &&
 	   (!('data' in this) || !this.appendData))
-		throw Error("IE is too old");
+		_throw("IE is too old");
 }
 if(!("textContent" in _testElement))
 	_.push(function() {
@@ -1610,8 +1709,7 @@ if(!document.importNode) {
 		return null;
 	};
 	document.importNode["shim"] = true;
-};
-
+}
 
 tmp = 'compareDocumentPosition';
 if(!(tmp in document)) {
@@ -1642,7 +1740,7 @@ if(!(tmp in document)) {
 	_document_documentElement[__n1 + __name] = document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x10;
 }
 
-if(!global.getComputedStyle && !JQUERY_COMPATIBLE) {//IE < 9
+if(!global.getComputedStyle && !__GCC__JQUERY_COMPATIBLE__) {//IE < 9
 // Problemm with jQuery:: jQuery using <currentStyle>.getPropertyValue and where is no such method in IE<9 and it can't be shimed
 /*
 TODO::
@@ -1674,7 +1772,6 @@ var filter = elem.style['filter'];
 		return element.currentStyle;
 	}
 }
-
 
 //Исправляем для IE<9 создание DocumentFragment, для того, чтобы функция работала с HTML5
 if(_browser_msie < 9) {
@@ -1808,7 +1905,7 @@ if(_Function_call.call(document_createElement, document, "x-x").cloneNode().oute
 		return safeFragment.appendChild(result);
 	};
 
-};
+}
 
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  HTML5 shiv  ======================================  */
@@ -1834,7 +1931,7 @@ if(!_Element_prototype[tmp] && document.querySelectorAll) {
 		if(!names || !(names = _String_trim.call(names)))return new _NodeList;
 		return _call(this.querySelectorAll || document.querySelectorAll, this, names.replace(/\s+(?=\S)|^/g, "."))
 	};
-};
+}
 
 if(!("opacity" in _document_documentElement.style))(function(RE_alpha) {
 	Object.defineProperty(CSSStyleDeclaration.prototype, "opacity", {
@@ -1874,16 +1971,16 @@ if(!("opacity" in _document_documentElement.style))(function(RE_alpha) {
 
 	document.querySelectorAll = function() {
 		return _NodeList_from(_document_querySelectorAll.apply(this, arguments))
-	}
+	};
 	document.querySelector = function() {
 		return _document_querySelector.apply(this, arguments)
-	}
+	};
 	_Element_prototype.querySelectorAll = function() {
 		return _NodeList_from(_Element_prototype_querySelectorAll.apply(this, arguments))
-	}
+	};
 	_Element_prototype.querySelector = function() {
 		return _Element_prototype_querySelector.apply(this, arguments)
-	}
+	};
 })(document.querySelectorAll, document.querySelector, _Element_prototype.querySelectorAll, _Element_prototype.querySelector);
 
 
@@ -1892,7 +1989,7 @@ _testElement = _txtTextElement = tmp = function_tmp = nodeList_methods_fromArray
 
 })(window, /** @const */function(obj, extention) {
 		for(var key in extention)
-			if(Object.prototype.hasOwnProperty(extention, key) && !Object.prototype.hasOwnProperty(obj, key))
+			if(Object.prototype.hasOwnProperty.call(extention, key) && !Object.prototype.hasOwnProperty.call(obj, key))
 				obj[key] = extention[key];
 		
 		return obj;

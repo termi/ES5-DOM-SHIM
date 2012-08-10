@@ -18,9 +18,8 @@
  * 4. MutationObserver http://hacks.mozilla.org/2012/05/dom-mutationobserver-reacting-to-dom-changes-without-killing-browser-performance/
  *                     http://updates.html5rocks.com/2012/02/Detect-DOM-changes-with-Mutation-Observers
  * 5. Web Animation API http://people.mozilla.org/~bbirtles/web-animations/web-animations.html#the-mediaitem-interface
- * 6. XHR Level2:
- *        1. http://stackoverflow.com/questions/1919972/how-do-i-access-xhr-responsebody-for-binary-data-from-javascript-in-ie/4330882#4330882
- * 7. window.innerWidth for IE < 9 https://developer.mozilla.org/en/DOM/window.innerWidth
+ * 6. window.innerWidth for IE < 9 https://developer.mozilla.org/en/DOM/window.innerWidth
+ * 7. http://dev.w3.org/csswg/selectors4/ querySelector[All] shim
  */
 
 
@@ -36,12 +35,6 @@ var __GCC__IS_DEBUG__ = false;
 //IF __GCC__IS_DEBUG__ == true [
 //0. Some errors in console
 //1. Fix console From https://github.com/theshock/console-cap/blob/master/console.js
-//]
-
-/** @define {boolean} */
-var __GCC__JQUERY_COMPATIBLE__ = false;
-//IF __GCC__JQUERY_COMPATIBLE__ == true [
-// Without window.getComputedStyle shim for IE
 //]
 
 /** @define {boolean} */
@@ -308,6 +301,10 @@ var _browser_msie
   , _String_trim_beginRegexp
 
   , _String_trim_endRegexp
+
+  , doesDefinePropertyWork
+
+  , doesGetOwnPropertyDescriptorWork
 
   , definePropertyWorksOnObject
 
@@ -737,7 +734,7 @@ if(__GCC__ECMA_SCRIPT5__) {
 //     http://msdn.microsoft.com/en-us/library/dd229916.aspx
 // WebKit Bugs:
 //     https://bugs.webkit.org/show_bug.cgi?id=36423
-function doesDefinePropertyWork(object) {
+doesDefinePropertyWork = function(object) {
     try {
         Object.defineProperty(object, "sentinel", {});
         return "sentinel" in object;
@@ -882,7 +879,7 @@ if (!Object.defineProperties || definePropertiesFallback) {
 
 // ES5 15.2.3.3
 // http://es5.github.com/#x15.2.3.3
-function doesGetOwnPropertyDescriptorWork(object) {
+doesGetOwnPropertyDescriptorWork = function(object) {
     try {
         object["sentinel2"] = 0;
         return Object.getOwnPropertyDescriptor(
@@ -1903,9 +1900,6 @@ if(!Event["AT_TARGET"]) {
 }
 
 
-if(!__GCC__JQUERY_COMPATIBLE__) {
-	// Problemm with jQuery:: jQuery using <currentStyle>.getPropertyValue and where is no such method in IE<9 and it can't be shimed
-
 	// window.getComputedStyle fix
 	//FF say that pseudoElt param is required
 	try {
@@ -1916,7 +1910,6 @@ if(!__GCC__JQUERY_COMPATIBLE__) {
 			return this.call(global, obj, pseudoElt || null)
 		}, global.getComputedStyle);
 	}
-}
 
 /*  ======================================================================================  */
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  DOM  =======================================  */
@@ -2242,7 +2235,7 @@ if(!("find" in document)) {
 			selector = selector.replace(RE_document_find_scopedreplacer, node.nodeType == 9/*Node.DOCUMENT_NODE*/ ?
 				":root"
 				:
-				document_find_scopedreplacer = function() {
+				function() {
 					return "#" + (node.id || (node.id = "find" + ++UUID));
 				}
 			);
@@ -2275,7 +2268,7 @@ if(!("find" in document)) {
 			selector = selector.replace(RE_document_find_scopedreplacer, node.nodeType == 9/*Node.DOCUMENT_NODE*/ ?
 				":root"
 				:
-				document_find_scopedreplacer = function() {
+				function() {
 					return "#" + (node.id || (node.id = "find" + ++UUID));
 				}
 			);
@@ -2299,6 +2292,7 @@ if(!("find" in document)) {
 }
 if(!("find" in _Element_prototype)) {
 	//TODO:: add ':scope' support
+	// http://lists.w3.org/Archives/Public/public-webapps/2011OctDec/0316.html (Re: QSA, the problem with ":scope", and naming)
 	_Element_prototype["find"] = _Element_prototype.querySelector;
 	_Element_prototype["findAll"] = _Element_prototype.querySelectorAll;
 }
