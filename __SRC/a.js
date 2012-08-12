@@ -1191,7 +1191,8 @@ _append(Array.prototype, {
 		  fromIndex < length && (!(fromIndex in thisArray) || thisArray[fromIndex] !== searchElement) ;
 		  // increment counter
 		  fromIndex++
-		){};
+		){}
+
 		// if counter equals length (not found), return -1, otherwise counter
 		return fromIndex ^ length ? fromIndex : -1;
 	}
@@ -1380,7 +1381,7 @@ if(__GCC__INCLUDE_EXTRAS__ && __GCC__INCLUDE_EXTRAS__STRING_RANDOM__) {
 if(!String["random"])String["random"] = function String_random(length) {
 	if(!length || length < 0)return "";
 	
-	return Array(++length).join(0).replace(/./g,function() {
+	return (new Array(++length)).join(0).replace(/./g,function() {
 		return(0 | Math.random() * 32).toString(32)
 	});
 };
@@ -1435,7 +1436,7 @@ if("0".split(void 0, 0).length) {
 
 _String_contains_ = function(substring, fromIndex) {
 	return !!~this.indexOf(substring, fromIndex);
-}
+};
 
 if (__GCC__ECMA_SCRIPT6__) {
 _append(String.prototype, {
@@ -1659,71 +1660,69 @@ if("addEventListener" in _testElement &&
 			_testElement.click();//testing
 		else
 			_testElement.dispatchEvent(new _Event("click"));
-	} catch (e) {
+	} catch (e) { }
 
-	} finally {
-		if(_tmp_ == 0 || _tmp_ == 2 || implementation_stopImmediatePropagation) {//fixEventListenerAll
-			(function() {//closure
-				var _addEventListener_dublicate_bug = _tmp_ == 2
-				  	/** @const @type {string} */
-				  , _event_eventsUUID = "_e_8vj"
-				;
+	if(_tmp_ == 0 || _tmp_ == 2 || implementation_stopImmediatePropagation) {//fixEventListenerAll
+		(function() {//closure
+			var _addEventListener_dublicate_bug = _tmp_ == 2
+			    /** @const @type {string} */
+			  , _event_eventsUUID = "_e_8vj"
+			;
 
-				_forEach(
-					[global["HTMLDocument"] && global["HTMLDocument"].prototype || global["document"],
-					 global["Window"] && global["Window"].prototype || global,
-					 _Element_prototype],
-					function (elementToFix) {
-						if(elementToFix) {
-							var old_addEventListener = elementToFix.addEventListener,
-								old_removeEventListener = elementToFix.removeEventListener;
+			_forEach(
+				[global["HTMLDocument"] && global["HTMLDocument"].prototype || global["document"],
+				 global["Window"] && global["Window"].prototype || global,
+				 _Element_prototype],
+				function (elementToFix) {
+					if(elementToFix) {
+						var old_addEventListener = elementToFix.addEventListener,
+							old_removeEventListener = elementToFix.removeEventListener;
 
-							if(old_addEventListener) {
-								elementToFix.addEventListener = function(type, listener, useCapture) {
-									var _,
-										_eventsUUID;
+						if(old_addEventListener) {
+							elementToFix.addEventListener = function(type, listener, useCapture) {
+								var _,
+									_eventsUUID;
 
-									useCapture = useCapture || false;
+								useCapture = useCapture || false;
 
-									if(_addEventListener_dublicate_bug || implementation_stopImmediatePropagation) {
-										_eventsUUID = _event_eventsUUID + (useCapture ? "-" : "") + (listener[UUID_PROP_NAME] || (listener[UUID_PROP_NAME] = ++UUID)) + type
-									
-										if(!(_ = this["_"]))_ = this["_"] = {};
-										//If multiple identical EventListeners are registered on the same EventTarget with the same parameters, the duplicate instances are discarded. They do not cause the EventListener to be called twice, and since the duplicates are discarded, they do not need to be removed manually with the removeEventListener method.
-										if(_eventsUUID in _)return;
+								if(_addEventListener_dublicate_bug || implementation_stopImmediatePropagation) {
+									_eventsUUID = _event_eventsUUID + (useCapture ? "-" : "") + (listener[UUID_PROP_NAME] || (listener[UUID_PROP_NAME] = ++UUID)) + type
 
-										listener = implementation_stopImmediatePropagation ? (
-											_[_eventsUUID] = _unsafe_Function_bind_.call(implementation_stopImmediatePropagation, {_listener : listener, _this : this})
-										) : (_[_eventsUUID] = void 0), listener;
+									if(!(_ = this["_"]))_ = this["_"] = {};
+									//If multiple identical EventListeners are registered on the same EventTarget with the same parameters, the duplicate instances are discarded. They do not cause the EventListener to be called twice, and since the duplicates are discarded, they do not need to be removed manually with the removeEventListener method.
+									if(_eventsUUID in _)return;
+
+									listener = implementation_stopImmediatePropagation ? (
+										_[_eventsUUID] = _unsafe_Function_bind_.call(implementation_stopImmediatePropagation, {_listener : listener, _this : this})
+									) : (_[_eventsUUID] = void 0), listener;
+								}
+
+								return old_addEventListener.call(this, type, listener, useCapture);
+							};
+
+							//elementToFix.addEventListener.__shim__ = true;
+							if(old_removeEventListener)elementToFix.removeEventListener = function(type, listener, useCapture) {
+								var _,
+									_eventsUUID;
+
+								useCapture = useCapture || false;
+
+								if(_addEventListener_dublicate_bug || implementation_stopImmediatePropagation) {
+									_ = this["_"];
+									if(_ && _[_eventsUUID = _event_eventsUUID + (useCapture ? "-" : "") + listener[UUID_PROP_NAME] + type]) {
+										listener = _[_eventsUUID];
+										delete _[_eventsUUID];
 									}
+								}
 
-									return old_addEventListener.call(this, type, listener, useCapture);
-								};
-
-								//elementToFix.addEventListener.__shim__ = true;
-								if(old_removeEventListener)elementToFix.removeEventListener = function(type, listener, useCapture) {
-									var _,
-										_eventsUUID;
-
-									useCapture = useCapture || false;
-
-									if(_addEventListener_dublicate_bug || implementation_stopImmediatePropagation) {
-										_ = this["_"];
-										if(_ && _[_eventsUUID = _event_eventsUUID + (useCapture ? "-" : "") + listener[UUID_PROP_NAME] + type]) {
-											listener = _[_eventsUUID];
-											delete _[_eventsUUID];
-										}
-									}
-
-									return old_removeEventListener.call(this, type, listener, useCapture);
-								};
-								//elementToFix.removeEventListener.__shim__ = true;
-							}
+								return old_removeEventListener.call(this, type, listener, useCapture);
+							};
+							//elementToFix.removeEventListener.__shim__ = true;
 						}
 					}
-				);
- 			})();
-		}
+				}
+			);
+        })();
 	}
 }
 else if(DEBUG && !document.addEventListener) {
@@ -1875,7 +1874,8 @@ if(__GCC__INCLUDE_EXTRAS__ && __GCC__INCLUDE_EXTRAS__DOMSTRINGCOLLECTION__) {//E
 if(!_Event_prototype["AT_TARGET"]) {
 	_Event_prototype["AT_TARGET"] = 2;
 	_Event_prototype["BUBBLING_PHASE"] = 3;
-	_Event_prototype["CAPTURING_PHASE"] = 1;/*,
+	_Event_prototype["CAPTURING_PHASE"] = 1;
+	/*,
 		"BLUR": 8192,
 		"CHANGE": 32768,
 		"CLICK": 64,
@@ -1891,7 +1891,8 @@ if(!_Event_prototype["AT_TARGET"]) {
 		"MOUSEOUT": 8,
 		"MOUSEOVER": 4,
 		"MOUSEUP": 2,
-		"SELECT": 16384*/
+		"SELECT": 16384
+	*/
 }
 if(!Event["AT_TARGET"]) {
 	Event["AT_TARGET"] = 2;
@@ -2099,14 +2100,14 @@ if(!_testElement["prepend"]) {
 			resultNode = document.createDocumentFragment();
 
 			//nodes can be a live NodeList so we can't use forEach and need to check nodes.length after each appendChild
-			for(var i = 0, maxLength = nodes.length, curLength ; i < (curLength = nodes.length) ; ++i) {
+			for(i = 0, maxLength = nodes.length, curLength ; i < (curLength = nodes.length) ; ++i) {
 				i -= (maxLength - curLength);
 				resultNode.appendChild(nodes[i]);
 			}			
 		}
 		
 		return resultNode;
-	}
+	};
 	
 	_Element_prototype["after"] = function () {
 		this.parentNode && this.parentNode.insertBefore(dom4_mutationMacro(arguments), this.nextSibling);
@@ -2135,7 +2136,7 @@ if(!_testElement["prepend"]) {
 	if(!("prepend" in document)) {
 		document["prepend"] = function() {
 			_Element_prototype["prepend"].apply(this.documentElement, arguments)
-		}
+		};
 		document["append"] = function() {
 			_Element_prototype["append"].apply(this.documentElement, arguments)
 		}
@@ -2260,7 +2261,7 @@ if(!("find" in document)) {
 		  , n
 		  , uuid
 		  , uniqueMap = {}
-		  , forse
+		  , forsed
 		;
 
 		do {
@@ -2276,9 +2277,13 @@ if(!("find" in document)) {
 			tmpResult = node.querySelectorAll(selector);
 			for(k = 0, n = tmpResult.length ; k < n ; ++k) {
 				node2 = tmpResult[k];
-				uuid = (forse = false, node2[UUID_PROP_NAME]) || (forse = true, (node2[UUID_PROP_NAME] = ++UUID));
+				forsed = false;
+				uuid = node2[UUID_PROP_NAME] || (
+					forsed = true,
+					(node2[UUID_PROP_NAME] = ++UUID)
+				);
 
-				if(forse || !(uuid in uniqueMap)) {
+				if(forsed || !(uuid in uniqueMap)) {
 					uniqueMap[uuid] = void 0;
 
 					result.push(tmpResult[k]);
@@ -2469,7 +2474,7 @@ if(__GCC__INCLUDE_EXTRAS__ && __GCC__INCLUDE_EXTRAS__REVERSE_POLYFILL__ && !('re
 	};
 
 	Object.defineProperty(global["HTMLOListElement"] && global["HTMLOListElement"].prototype || _Element_prototype, "reversed", {
-		get : function () {
+		"get" : function () {
 			var thisObj = this;
 
 			if((thisObj.nodeName || "").toUpperCase() !== "OL")return void 0;
@@ -2477,7 +2482,7 @@ if(__GCC__INCLUDE_EXTRAS__ && __GCC__INCLUDE_EXTRAS__REVERSE_POLYFILL__ && !('re
 			return thisObj.getAttribute('reversed') !== null;
 		},
 		/** @param {boolean} value */
-		set : function (value) {
+		"set" : function (value) {
 			var thisObj = this;
 
 			if((thisObj.nodeName || "").toUpperCase() !== "OL")return void 0;
@@ -2500,7 +2505,7 @@ if(__GCC__INCLUDE_EXTRAS__ && __GCC__INCLUDE_EXTRAS__REVERSE_POLYFILL__ && !('re
 		OL_reversed_autoInitFunction();
 	else 
 		document.addEventListener('DOMContentLoaded', OL_reversed_autoInitFunction, false);
-};//__GCC__INCLUDE_EXTRAS__
+}//__GCC__INCLUDE_EXTRAS__
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  HTMLLabelElement.prototype  ==================================  */
 /*  ======================================================================================  */
 
@@ -2586,11 +2591,11 @@ XHR = global["XHR"] = function(options, callback) {
         if (this.readyState === 4) {
         	callback.call(this, null/*error*/, this.response || this.responseText || this.responseXML);            
         }
-    }
+    };
 
     xhr.onerror = function (evt) {
         callback.call(this, evt)
-    }
+    };
 
     try {
 	    xhr.open(options["method"], url + (isPOST ? "" : (url.indexOf("?") ? "&" : "?" + data)));
@@ -2607,7 +2612,7 @@ XHR = global["XHR"] = function(options, callback) {
 	}
 
     return xhr;
-}
+};
 XHR.defaults = {
 	"headers" : {
 		"X-Requested-With" : "HTTPRequest",
@@ -2674,7 +2679,7 @@ if(!_Native_Date.prototype.toISOString || (_String_contains_.call(new _Native_Da
         // pad milliseconds to have three digits.
         return year + "-" + result.slice(0, 2).join("-") + "T" + result.slice(2).join(":") + "." +
             ("000" + this.getUTCMilliseconds()).slice(-3) + "Z";
-    }
+    };
 
 // ES5 15.9.4.4
 // http://es5.github.com/#x15.9.4.4
@@ -2783,7 +2788,7 @@ if (!_Native_Date.parse/* || "Date.parse is buggy"*/) {
 	// Returns count of leap years before "year" since 0 CE
 	_Shimed_Date_leapYears = function(year) {
 	    return Math.ceil(year / 4) - Math.ceil(year / 100) + Math.ceil(year / 400);
-	}
+	};
 
 	// Copy any custom methods a 3rd party library may have added
 	for (_tmp_ in _Native_Date) {

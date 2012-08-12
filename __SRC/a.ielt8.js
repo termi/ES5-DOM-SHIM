@@ -16,7 +16,7 @@
 
 // [[[|||---=== GCC DEFINES START ===---|||]]]
 /** @define {boolean} */
-var __GCC__IS_DEBUG____ = true;
+var __GCC__IS_DEBUG__ = true;
 //IF __GCC____GCC__IS_DEBUG____ == true [
 //0. Some errors in console
 //1. Fix console From https://github.com/theshock/console-cap/blob/master/console.js
@@ -162,9 +162,6 @@ var _ = global["_"]["ielt9shims"]
   , _Array_slice = Array.prototype.slice
 
 	/** @const */
-  , _Array_splice = Array.prototype.splice
-
-	/** @const */
   , _Function_apply = Function.prototype.apply
 
 	/** @const */
@@ -185,21 +182,6 @@ var _ = global["_"]["ielt9shims"]
 	
 	/** @const */
   , _hasOwnProperty = _unSafeBind.call(Function.prototype.call, Object.prototype.hasOwnProperty)
-  
-	/**
-	 * @const
-	 * Call _function
-	 * @param {Function} _function function to call
-	 * @param {*} context
-	 * @param {...} var_args
-	 * @return {*} mixed
-	 * @version 2
-	 */
-  , _call = function(_function, context, var_args) {
-		// If no callback function or if callback is not a callable function
-		// it will throw TypeError
-       return _Function_apply.call(_function, context, _Array_slice.call(arguments, 2))
-	}
 
   	/** @type {Node} */
   , _testElement = document.createElement('p')
@@ -222,14 +204,11 @@ var _ = global["_"]["ielt9shims"]
 	/** @const @type {RegExp} */
   , RE_space = /\s/
 	
-	/** @const @type {RegExp} */
-  , RE__String_trim_spaces = /^\s\s*/
-	
 	/** @type {boolean} */
   , _String_split_shim_isnonparticipating
 
 	/** @type {*} */
-  , tmp
+  , _tmp_
 
 	/** @type {Function} */
   , function_tmp
@@ -237,15 +216,9 @@ var _ = global["_"]["ielt9shims"]
   , nodeList_methods_fromArray = ["every", "filter", "forEach", "indexOf", "join", "lastIndexOf", "map", "reduce", "reduceRight", "reverse", "slice", "some", "toString"]
 
 	// ------------------------------ ==================  Events  ================== ------------------------------
-  , _fake_Event_constructor
-
-  , _initEvent
-
-  , _initUIEvent
-
-  , _initCustomEvent
-
-  , _initMouseEvent
+  , _ielt9_Event
+	/** @type {Object} */
+  , _EventInitFunctions
 
   , _Event_prototype
 
@@ -260,6 +233,9 @@ var _ = global["_"]["ielt9shims"]
 
 	/** @const @type {string} */
   , _event_eventsUUID = "_e_8vj"
+
+	/** @const @type {string} */
+  , _event_nativeEventPropName = "ietl9_event"
 
 	/** @const @type {Function */
   , _event_emptyFunction = function(){}
@@ -457,12 +433,12 @@ if(DEBUG) {
 
 //Fix Function.prototype.apply to work with generic array-like object instead of an array
 // test: (function(a,b){console.log(a,b)}).apply(null, {0:1,1:2,length:2})
-tmp = false;
+_tmp_ = false;
 try {
-	tmp = isNaN.apply(null, {})
+	_tmp_ = isNaN.apply(null, {})
 }
 catch(e) { }
-if(!tmp) {
+if(!_tmp_) {
 	Function.prototype.apply = function(contexts, args) {
 		try {
 			return args != void 0 ?
@@ -641,135 +617,115 @@ if(!("pageXOffset" in global)) {
 
 if(_browser_msie < 9) {
 	/** @constructor */
-	function_tmp = global["Event"] = function(nativeEvent) {
+	function_tmp = global["Event"] = function() {
 		//new operator for Event supported in a.js
 		_throw("");
 	};
 
-	/**
-	 * @param {string=} _type
-	 * @param {boolean=} _bubbles
-	 * @param {boolean=} _cancelable
-	 */
-	_initEvent = function(_type, _bubbles, _cancelable) {
-		if(_type == void 0 || _bubbles == void 0 || _cancelable == void 0) {
-			//WRONG_ARGUMENTS_ERR
-			_throw('WRONG_ARGUMENTS_ERR');
-		}
-		var thisObj = this;
-
-		thisObj.type = _type;
-		//this.cancelBubble = //TODO:: <-- testing Глупость ???
-		//	!(this.bubbles = _bubbles);
-		thisObj.bubbles = _bubbles;
-		thisObj.cancelable = _cancelable;//https://developer.mozilla.org/en/DOM/event.cancelable
-
-		thisObj.isTrusted = false;
-		thisObj.target = null;
-
-		if(!thisObj.timeStamp)thisObj.timeStamp = +new _Native_Date();
-	};
-
-	_initCustomEvent = function(_type, _bubbles, _cancelable, _detail) {
-		//https://developer.mozilla.org/en/DOM/CustomEvent
-		_initEvent.call(this, _type, _bubbles, _cancelable);
-
-		this.detail = _detail;
-	};
-
-	_initUIEvent = function(_type, _bubbles, _cancelable, _view, _detail) {
-		//https://developer.mozilla.org/en/DOM/event.initUIEvent
-		_initCustomEvent.call(this, _type, _bubbles, _cancelable, _detail);
-
-		this.view = _view;
-	};
-
-	_initMouseEvent = function(_type, _bubbles, _cancelable, _view,
-                     _detail, _screenX, _screenY, _clientX, _clientY,
-                     _ctrlKey, _altKey, _shiftKey, _metaKey,
-                     _button, _relatedTarget) {
-		var thisObj = this;
-		//https://developer.mozilla.org/en/DOM/event.initMouseEvent
-		_initUIEvent.call(thisObj, _type, _bubbles, _cancelable, _view, _detail);
-
-		thisObj.screenX = _screenX;
-		thisObj.screenY = _screenY;
-		thisObj.clientX = _clientX;
-		thisObj.clientY = _clientY;
-        thisObj.ctrlKey = _ctrlKey;
-		thisObj.altKey = _altKey;
-		thisObj.shiftKey = _shiftKey;
-		thisObj.metaKey = _metaKey;
-		thisObj.button = _button;
-		thisObj.relatedTarget = _relatedTarget;
-	};
-
-	_Event_prototype = function_tmp.prototype = {
-		constructor : function_tmp,
-
-	  	/** @this {_fake_Event_constructor_for_document_createEvent} */
-	  	"preventDefault" : function() {
-	  		_fake_Event_constructor.getNativeEvent.call(this)["returnValue"] = false;
-	  		_fake_Event_constructor.destroyLinkToNativeEvent.call(this);
-	  		this["defaultPrevented"] = true;
-	  	} ,
-
-	  	/** @this {_fake_Event_constructor_for_document_createEvent} */
-	  	"stopPropagation" : function() {
-	  		_fake_Event_constructor.getNativeEvent.call(this)["cancelBubble"] = true;
-	  		_fake_Event_constructor.destroyLinkToNativeEvent.call(this);
-	  	} ,
-
-	  	/** @this {_fake_Event_constructor_for_document_createEvent} */
-	  	"stopImmediatePropagation" : function() {
-			this["__stopNow"] = true;
-			this.stopPropagation();
-		} ,
-
+	_EventInitFunctions = {
 		/**
 		 * @param {string=} _type
 		 * @param {boolean=} _bubbles
 		 * @param {boolean=} _cancelable
 		 */
-		"initEvent" : function() {
-			_init.apply(this, arguments);
+		"initEvent" : function(_type, _bubbles, _cancelable) {
+			if(_type == void 0 || _bubbles == void 0 || _cancelable == void 0) {
+				//WRONG_ARGUMENTS_ERR
+				_throw('WRONG_ARGUMENTS_ERR');
+			}
+			var thisObj = this;
 
-			_safeExtend(nativeEvent, this);
-		},
+			thisObj.type = _type;
+			//this.cancelBubble = //TODO:: <-- testing | Need this ???
+			//	!(this.bubbles = _bubbles);
+			thisObj.bubbles = _bubbles;
+			thisObj.cancelable = _cancelable;//https://developer.mozilla.org/en/DOM/event.cancelable
 
-		"initCustomEvent" : function() {
-			_initCustomEvent.apply(this, arguments);
+			thisObj.isTrusted = false;
+			thisObj.target = null;
 
-			_safeExtend(nativeEvent, this);
-		},
+			if(!thisObj.timeStamp)thisObj.timeStamp = +new _Native_Date();
+		}
+		,
+		"initCustomEvent" : function(_type, _bubbles, _cancelable, _detail) {
+			//https://developer.mozilla.org/en/DOM/CustomEvent
+			_EventInitFunctions["initEvent"].call(this, _type, _bubbles, _cancelable);
 
-		"initUIEvent" : function() {
-			_initUIEvent.apply(this, arguments);
+			this.detail = _detail;
+		}
+		,
+		"initUIEvent" : function(_type, _bubbles, _cancelable, _view, _detail) {
+			//https://developer.mozilla.org/en/DOM/event.initUIEvent
+			_EventInitFunctions["initCustomEvent"].call(this, _type, _bubbles, _cancelable, _detail);
 
-			_safeExtend(nativeEvent, this);
-		},
+			this.view = _view;
+		}
+		,
+		"initMouseEvent" : function(_type, _bubbles, _cancelable, _view,
+		                                            _detail, _screenX, _screenY, _clientX, _clientY,
+		                                            _ctrlKey, _altKey, _shiftKey, _metaKey,
+		                                            _button, _relatedTarget) {
+			var thisObj = this;
+			//https://developer.mozilla.org/en/DOM/event.initMouseEvent
+			_EventInitFunctions["initUIEvent"].call(thisObj, _type, _bubbles, _cancelable, _view, _detail);
 
-		"initMouseEvent" : function() {
-			_initMouseEvent.apply(this, arguments);
+			thisObj.screenX = _screenX;
+			thisObj.screenY = _screenY;
+			thisObj.clientX = _clientX;
+			thisObj.clientY = _clientY;
+			thisObj.ctrlKey = _ctrlKey;
+			thisObj.altKey = _altKey;
+			thisObj.shiftKey = _shiftKey;
+			thisObj.metaKey = _metaKey;
+			thisObj.button = _button;
+			thisObj.relatedTarget = _relatedTarget;
+		}
+	};
 
-			_safeExtend(nativeEvent, this);
+	_Event_prototype = function_tmp.prototype = {
+		constructor : function_tmp,
+
+	  	/** @this {_ielt9_Event} */
+	  	"preventDefault" : function() {
+	  		_ielt9_Event.getNativeEvent.call(this)["returnValue"] = false;
+	  		_ielt9_Event.destroyLinkToNativeEvent.call(this);
+	  		this["defaultPrevented"] = true;
+	  	} ,
+
+	  	/** @this {_ielt9_Event} */
+	  	"stopPropagation" : function() {
+	  		_ielt9_Event.getNativeEvent.call(this)["cancelBubble"] = true;
+	  		_ielt9_Event.destroyLinkToNativeEvent.call(this);
+	  	} ,
+
+	  	/** @this {_ielt9_Event} */
+	  	"stopImmediatePropagation" : function() {
+			this["__stopNow"] = true;
+			this.stopPropagation();
 		}
 
 	};
 
+	for(_tmp_ in _EventInitFunctions)if(_hasOwnProperty(_EventInitFunctions, _tmp_)) {
+		_Event_prototype[_tmp_] = function() {
+			_EventInitFunctions[arguments.callee["name"]].apply(this, arguments);
+			_safeExtend(this[_event_nativeEventPropName], this);
+		};
+		_Event_prototype[_tmp_]["name"] = _tmp_;
+	}
+
 	/** @constructor Event constructor for document.createEvent and commonHandle */
-	_fake_Event_constructor = function(nativeEvent) {
-		var _ = this["_"] = {};
-		_[_event_eventsUUID] = nativeEvent;
+	_ielt9_Event = function(nativeEvent) {
+		this[_event_nativeEventPropName] = nativeEvent;
 
 		nativeEvent.returnValue = true;//default value
 
 		_safeExtend(this, nativeEvent);
 	};
 
-	/** @this {_fake_Event_constructor_for_document_createEvent} */
-	_fake_Event_constructor.getNativeEvent = function() {
-		var nativeEvent = "_" in this && this["_"][_event_eventsUUID];
+	/** @this {_ielt9_Event} */
+	_ielt9_Event.getNativeEvent = function() {
+		var nativeEvent = this[_event_nativeEventPropName];
   		if(!nativeEvent) {
   			_throw("WRONG_THIS_ERR")
   		}
@@ -777,21 +733,21 @@ if(_browser_msie < 9) {
   		return nativeEvent;
 	};
 
-	/** @this {_fake_Event_constructor_for_document_createEvent} */
-	_fake_Event_constructor.destroyLinkToNativeEvent = function() {
-		if("_" in this) {
-			this["_"][_event_eventsUUID] = null;
-			delete this["_"][_event_eventsUUID];
+	/** @this {_ielt9_Event} */
+	_ielt9_Event.destroyLinkToNativeEvent = function() {
+		if(this[_event_nativeEventPropName]) {
+			this[_event_nativeEventPropName] = void 0;
+			delete this[_event_nativeEventPropName];
 		}
 	};
 
-	//inherit _fake_Event_constructor from _fake_Event_constructor
+	//inherit _ielt9_Event from Event
 	/** @constructor */
 	function_tmp = function() { };
 	function_tmp.prototype = _Event_prototype;
 	function_tmp = new function_tmp;
-	function_tmp.constructor = _fake_Event_constructor;
-	_fake_Event_constructor.prototype = function_tmp;
+	function_tmp.constructor = _ielt9_Event;
+	_ielt9_Event.prototype = function_tmp;
 }
 
 
@@ -920,15 +876,33 @@ function commonHandle(nativeEvent) {
 		
 		// получить объект события и проверить, подготавливали мы его для IE или нет
 		nativeEvent || (nativeEvent = window.event);
-		if(!("__isFixed" in nativeEvent))nativeEvent = fixEvent.call(thisObj, nativeEvent);
-		else {
-			nativeEvent.currentTarget = thisObj;
+
+		if("__custom_event" in nativeEvent) {
+			_event = nativeEvent;
+		}
+		else if(!(_event = nativeEvent["__customEvent__"])) {
+			if(nativeEvent.bubbles == void 0) {
+				nativeEvent.bubbles = true;
+				//TODO::
+				//nativeEvent.bubbles = bubbleEventMap[nativeEvent.type]
+			}
+			if(nativeEvent.cancelable == void 0) {
+				nativeEvent.cancelable = true;
+				//TODO::
+				//nativeEvent.bubbles = cancelableEventMap[nativeEvent.type]
+			}
+
+			// save event properties in fake 'event' object to allow store 'event' and use it in future
+			_event = nativeEvent["__customEvent__"] = new _ielt9_Event(nativeEvent);
+			_event.initEvent(nativeEvent.type, nativeEvent.bubbles, nativeEvent.cancelable);
+			_event.isTrusted = true;
+			_event["__custom_event"] = void 0;
 		}
 
-		// save event properties in fake 'event' object to allow store 'event' and use it in future
-		if(!("__custom_event" in nativeEvent))(_event = _safeExtend(new Event(nativeEvent.type), nativeEvent))["__custom_event"] = true;
-		else _event = nativeEvent;
+		_event[_event_nativeEventPropName] = nativeEvent;
+		nativeEvent.currentTarget = thisObj;//TODO:: check it
 
+		if(!("__isFixed" in nativeEvent))nativeEvent = fixEvent.call(thisObj, nativeEvent);
 
 		var handlers = _[handlersKey][_event.type];
 		if("__dom0__" in nativeEvent) {
@@ -965,6 +939,8 @@ function commonHandle(nativeEvent) {
 
 				if(_event["__stopNow"])break;//Мгновенная остановка обработки событий
 			}
+			handlers[0] = void 0;//cleanup
+			delete handlers[0];
 
 			//return changed properties in native 'event' object
 			nativeEvent.returnValue = _event.returnValue;
@@ -1055,7 +1031,7 @@ if(!document.addEventListener) {
 
 				function poll() {
 					try { document.documentElement.doScroll('left'); } catch(e) { setTimeout(poll, 50); return; }
-					commonHandle.call(thisObj, {"type" : _type});
+					commonHandle.call(thisObj, {"type" : _type, "isTrusted" : true, "__custom_event" : void 0});
 				}
 
 				if ("createEventObject" in document && "doScroll" in document.documentElement) {
@@ -1252,7 +1228,7 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 	 * Not using. param {string} eventType is a string that represents the type of event to be created. Possible event types include "UIEvents", "MouseEvents", "MutationEvents", and "HTMLEvents". See https://developer.mozilla.org/en/DOM/document.createEvent#Notes section for details.
 	 */
 	document.createEvent = function() {
-		return new _fake_Event_constructor_for_document_createEvent(document.createEventObject());
+		return new _ielt9_Event(document.createEventObject());
 	}
 }
 
@@ -1269,20 +1245,20 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 function _NodeList() {}
 _NodeList.prototype = new Array;
 
-tmp = new _NodeList;
-tmp.push(1);
-if(tmp.length) {//IE8 standart mode
+_tmp_ = new _NodeList;
+_tmp_.push(1);
+if(_tmp_.length) {//IE8 standart mode
 	global["NodeList"] = _NodeList;//"NodeList" in global | Rewrite broken NodeList implimentation
 }
 else {//IE8 quirk mode, IE lt 8
 	//Internet Explorer refuses to maintain the length property of a subclass created like this | http://dean.edwards.name/weblog/2006/11/hooray/
 	// create an <iframe>
-	tmp = document.createElement("iframe");
-	tmp.style.display = "none";
-	document.body.appendChild(tmp);
+	_tmp_ = document.createElement("iframe");
+	_tmp_.style.display = "none";
+	document.body.appendChild(_tmp_);
 
 	// write a script into the <iframe> and steal its Array object
-	tmp.contentWindow.document.write(
+	_tmp_.contentWindow.document.write(
 	"<script>parent.NodeList=Array;<\/script>"
 	);
 	_NodeList = global["NodeList"];
@@ -1316,9 +1292,9 @@ if(__GCC__UNSTABLE_FUNCTIONS__) {
 
 	try {
 	    _testElement.contains(_txtTextElement);
-	    tmp = false;
+	    _tmp_ = false;
 	} catch (e) {
-		tmp = true;
+		_tmp_ = true;
 		_Node_prototype.contains = function contains(other) {
 	    	if(other.nodeType === 3) {
 			    return _recursivelyWalk(this.childNodes, function (node) {
@@ -1570,7 +1546,7 @@ try {
 
 /* is this stuff defined? */
 if(!document.ELEMENT_NODE) {
-	tmp = {
+	_tmp_ = {
 		ELEMENT_NODE : 1,
 		//ATTRIBUTE_NODE : 2,// historical
 		TEXT_NODE : 3,
@@ -1584,9 +1560,9 @@ if(!document.ELEMENT_NODE) {
 		DOCUMENT_FRAGMENT_NODE : 11
 		//NOTATION_NODE : 12// historical
 	};
-	_append(document, tmp);
-	_append(_Node_prototype, tmp);
-	_append(global["Node"], tmp);
+	_append(document, _tmp_);
+	_append(_Node_prototype, _tmp_);
+	_append(global["Node"], _tmp_);
 }
 /*var __ielt8__element_init__ = _Node_prototype["__ielt8__element_init__"];
 if(__ielt8__element_init__) {//__ielt8__element_init__ in a.ielt8.js
@@ -1597,8 +1573,8 @@ if(__ielt8__element_init__) {//__ielt8__element_init__ in a.ielt8.js
 
 //https://developer.mozilla.org/En/DOM/Node.textContent
 if(DEBUG && !("textContent" in _testElement)) {
-	if(!('innerText' in this) &&
-	   (!('data' in this) || !this.appendData))
+	if(!('innerText' in _testElement) &&
+	   (!('data' in _testElement) || !_testElement.appendData))
 		_throw("IE is too old");
 }
 if(!("textContent" in _testElement))
@@ -1711,11 +1687,11 @@ if(!document.importNode) {
 	document.importNode["shim"] = true;
 }
 
-tmp = 'compareDocumentPosition';
-if(!(tmp in document)) {
+_tmp_ = 'compareDocumentPosition';
+if(!(_tmp_ in document)) {
 	var __name,
 		__n1 = __name || 'DOCUMENT_POSITION_';//Use '__name || ' only for GCC not to inline __n1 param. In this case __name MUST be undefined
-	_document_documentElement[tmp] = document[tmp] = _Node_prototype[tmp] = function(b) {
+	_document_documentElement[_tmp_] = document[_tmp_] = _Node_prototype[_tmp_] = function(b) {
 		var a = this;
 		
 		//compareDocumentPosition from http://ejohn.org/blog/comparing-document-position/
@@ -1917,7 +1893,7 @@ if(_Function_call.call(document_createElement, document, "x-x").cloneNode().oute
 
 
 
-_testElement = _txtTextElement = tmp = function_tmp = nodeList_methods_fromArray = supportsUnknownElements = void 0;
+_testElement = _txtTextElement = _tmp_ = function_tmp = nodeList_methods_fromArray = supportsUnknownElements = void 0;
 
 
 
@@ -1994,9 +1970,9 @@ var /** @type {boolean} */
 ;
 
 
-tmp = ieltbehaviorRules.length;
-while(--tmp >= 0)
-	ielt9BehaviorRule += (" url(\"" + ieltbehaviorRules[tmp] + "\")");
+_tmp_ = ieltbehaviorRules.length;
+while(--_tmp_ >= 0)
+	ielt9BehaviorRule += (" url(\"" + ieltbehaviorRules[_tmp_] + "\")");
 ielt9BehaviorRule += "}";
 
 function createBehaviorStyle(styleId, tags, behaviorRule) {
@@ -2701,46 +2677,46 @@ function _matchesSelector(selector) {
 }
 
 //SHIM export
-tmp = "matchesSelector";
-if(!_document_documentElement[tmp]) {
-	_Element_prototype[tmp] = _document_documentElement[tmp] = _matchesSelector;
+_tmp_ = "matchesSelector";
+if(!_document_documentElement[_tmp_]) {
+	_Element_prototype[_tmp_] = _document_documentElement[_tmp_] = _matchesSelector;
 }
-tmp = "matches";
-if(!_document_documentElement[tmp]) {
-	_Element_prototype[tmp] = _document_documentElement[tmp] = _matchesSelector;
+_tmp_ = "matches";
+if(!_document_documentElement[_tmp_]) {
+	_Element_prototype[_tmp_] = _document_documentElement[_tmp_] = _matchesSelector;
 }
 
-tmp = "querySelectorAll";
-if(!document[tmp]) {
+_tmp_ = "querySelectorAll";
+if(!document[_tmp_]) {
 	/**
 	* @param {!string} selector
 	* @param {(Node|Array.<Node>)=} nodesRef
 	* @this {Document|Node}
 	* @return {Array.<Node>}
 	*/
-	_Element_prototype[tmp] = _document_documentElement[tmp] = document[tmp] = function(selector, nodesRef) {
+	_Element_prototype[_tmp_] = _document_documentElement[_tmp_] = document[_tmp_] = function(selector, nodesRef) {
 		return queryManySelector.call(this, selector, false, nodesRef);
 	}
 }
 
-tmp = "querySelector";
-if(!document[tmp]) {
+_tmp_ = "querySelector";
+if(!document[_tmp_]) {
 	/**
 	* @param {!string} selector
 	* @param {(Node|Array.<Node>)=} nodesRef
 	* @this {Document|Node}
 	* @return {Node}
 	*/
-	_Element_prototype[tmp] = _document_documentElement[tmp] = document[tmp] = function(selector, nodesRef) {
+	_Element_prototype[_tmp_] = _document_documentElement[_tmp_] = document[_tmp_] = function(selector, nodesRef) {
 		return queryManySelector.call(this, selector, true, nodesRef)[0] || null;
 	}
 }
 
-tmp = "getElementsByClassName";
-if(!document[tmp]) {
+_tmp_ = "getElementsByClassName";
+if(!document[_tmp_]) {
 	//getElementsByClassName shim
 	//based on https://gist.github.com/1383091
-	_Element_prototype[tmp] = _document_documentElement[tmp] = document[tmp] = function(klas) {
+	_Element_prototype[_tmp_] = _document_documentElement[_tmp_] = document[_tmp_] = function(klas) {
 		klas = new RegExp(klas.replace(RE__getElementsByClassName, STRING_FOR_RE__getElementsByClassName));
 
 		var nodes = this.all,
@@ -2830,10 +2806,10 @@ _Node_prototype["__ielt8__element_init__"] = function __ielt8__element_init__() 
 
 
 __ielt8_Node_behavior_apply = _Node_prototype["__ielt8_Node_behavior_apply"] = function (el) {
-	tmp = ieltbehaviorRules.length;
+	_tmp_ = ieltbehaviorRules.length;
 
-	while(--tmp >= 0) try {
-		el.addBehavior(ieltbehaviorRules[tmp]);
+	while(--_tmp_ >= 0) try {
+		el.addBehavior(ieltbehaviorRules[_tmp_]);
 	}
 	catch(e) {}
 };
@@ -2856,9 +2832,9 @@ document.createElement = function(tagName) {
 
 	var el = _Function_call.call(prevCreateElement, document, tagName);
 	
-	tmp = ieltbehaviorRules.length;
-	while(--tmp >= 0) try {
-		el.addBehavior(ieltbehaviorRules[tmp])
+	_tmp_ = ieltbehaviorRules.length;
+	while(--_tmp_ >= 0) try {
+		el.addBehavior(ieltbehaviorRules[_tmp_])
 	}
 	catch(e) {}
 	
@@ -2932,8 +2908,11 @@ function _DOMContentLoaded() {
 	
 	if(_emulate_scrollX_scrollY)_emulate_scrollX_scrollY();
 
-	if("classList" in document.body.firstChild) {
-		//TODO:: no htc available do for(var node in document.all) __ielt8__element_init__(node)
+	if(!("classList" in document.body.firstChild)) {
+		if(DEBUG && console) {
+			console.error("Cannot handle htc behavior. Maybe *.htc file not allowed or not exists");
+		}
+		//TODO:: no htc available, do for(var node in document.all) __ielt8__element_init__(node)
 	}
 }
 function _onload() {
@@ -2954,7 +2933,7 @@ global.attachEvent('onload', _onload);//Native method
 createBehaviorStyle(__STYLE_ID, __SUPPORTED__TAG_NAMES__, ielt9BehaviorRule);
 
 
-noDocumentReadyState = ielt9BehaviorRule = tmp = void 0;
+noDocumentReadyState = ielt9BehaviorRule = _tmp_ = void 0;
 
 
 })(window, /** @const */function(obj, extention) {
