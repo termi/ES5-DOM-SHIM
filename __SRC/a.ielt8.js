@@ -9,7 +9,7 @@
 // ==/ClosureCompiler==
 /**
  * ES5 and DOM shim for IE < 8
- * @version 5
+ * @version 0.7
  * TODO::
  * 1. http://www.positioniseverything.net/explorer.html
  */
@@ -140,17 +140,19 @@ var _ = global["_"]["ielt9shims"]
 	}
 
   	/**
-  	 *  @const
+  	 * @const
      * Use native and probably broken function or Quick, but non-full-standart
 	 * For system use only
 	 * More standart solution in a.js
 	 */
-  , _String_trim = String.prototype.trim || (String.prototype.trim = function () {//Cache origin trim function
-		var	str = this.replace(/^\s+/, ''),
+  , _String_trim = String.prototype.trim || function () {//Cache origin trim function
+		var	str = this.replace(RE_left_spaces, ''),
 			i = str.length;
-		while (RE_space.test(str.charAt(--i))){};
+
+		while (RE_space.test(str.charAt(--i))){}
+
 		return str.slice(0, i + 1);
-	})
+	}
 	
 	/** @const */
   , _String_split = String.prototype.split
@@ -200,6 +202,9 @@ var _ = global["_"]["ielt9shims"]
 
 	/** @const @type {RegExp} */
   , RE_cloneElement_tagMatcher = /^\<([\w\:\-]*)[\>\ ]/i
+
+	/** @const @type {RegExp} */
+  , RE_left_spaces = /^\s+/
 	
 	/** @const @type {RegExp} */
   , RE_space = /\s/
