@@ -16,6 +16,7 @@ __Status__: Stable Beta
  - IE6+ support
  - Include all we need from ES5, ES6 and DOM shim in one file
  - some extra stuff (if you don't need it, use `a.noextras.js` instead of `a.js`)
+ -
 
 ## Caution !!!
 
@@ -64,21 +65,14 @@ INCLUDE_EXTRAS:
 
  - Exporting these objects to global (window)
 	1. browser
-	2. Utils.Dom.DOMStringCollection
+	2. DOMStringCollection
 	3. XHR from https://github.com/Raynos/xhr with customisations
-	4. (If where is no any other) $(selector, root) alias for root.querySelector(selector) (with ">[any selector]" support)
-	5. $$(selector, root) alias for root.querySelectorAll(selector) (with ">[any selector]" support)
-	6. $$0 alias for $
  - Extending objects
 	1. Object.append(object, donor, [donor2, ...])
 	2. Object.extend(object, donor, [donor2, ...]) (Object.append with overwrite exists properties)
 	3. Object.inherit(Child, Parent)
 	4. Array.prototype.unique()
 	5. String.random(length)
- - Extra polyfills
-	1. 'reversed' for <ol> with DOM API
-	2. HTML*Element.labels
-	3. HTMLLabelElement.control
 
 ## DEBUG
 
@@ -108,4 +102,3 @@ http://jsperf.com/es5-dom-shim-test
 ## License
 
     MIT
-	
