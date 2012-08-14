@@ -1,4 +1,4 @@
- /** @license MIT License (c) copyright Egor Halimonenko (termi1uc1@gmail.com | github.com/termi) */
+/** @license MIT License (c) copyright Egor Halimonenko (termi1uc1@gmail.com | github.com/termi) */
 
 // ==ClosureCompiler==
 // @compilation_level ADVANCED_OPTIMIZATIONS
@@ -146,7 +146,7 @@ var _ = global["_"]["ielt9shims"]
 	 * More standart solution in a.js
 	 */
   , _String_trim = String.prototype.trim || function () {//Cache origin trim function
-		var	str = this.replace(/^\s+/, ''),
+		var	str = this.replace(RE_left_spaces, ''),
 			i = str.length;
 
 		while (RE_space.test(str.charAt(--i))){}
@@ -203,6 +203,9 @@ var _ = global["_"]["ielt9shims"]
 	/** @const @type {RegExp} */
   , RE_cloneElement_tagMatcher = /^\<([\w\:\-]*)[\>\ ]/i
 	
+	/** @const @type {RegExp} */
+  , RE_left_spaces = /^\s+/
+
 	/** @const @type {RegExp} */
   , RE_space = /\s/
 	
@@ -1118,7 +1121,7 @@ if(!document.addEventListener) {
 			_ = thisObj["_"],
 			/** @type {string} */
 			handlersKey = _event_eventsUUID + (    __GCC__UNSTABLE_FUNCTIONS__     && useCapture ? "-" : ""),
-			/** @type {function} */
+			/** @type {Function} */
 			_callback,
 			/** @type {Array} */
 			handlers,
@@ -1244,6 +1247,7 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 /*  =======================================================================================  */
 /*  ================================  NodeList.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
+/** @constructor */
 function _NodeList() {}
 _NodeList.prototype = new Array;
 

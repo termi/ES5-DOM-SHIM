@@ -1,4 +1,4 @@
- /** @license MIT License (c) copyright Egor Halimonenko (termi1uc1@gmail.com | github.com/termi) */
+/** @license MIT License (c) copyright Egor Halimonenko (termi1uc1@gmail.com | github.com/termi) */
 
 // ==ClosureCompiler==
 // @compilation_level ADVANCED_OPTIMIZATIONS
@@ -1121,7 +1121,7 @@ if(!document.addEventListener) {
 			_ = thisObj["_"],
 			/** @type {string} */
 			handlersKey = _event_eventsUUID + (    __GCC__UNSTABLE_FUNCTIONS__     && useCapture ? "-" : ""),
-			/** @type {function} */
+			/** @type {Function} */
 			_callback,
 			/** @type {Array} */
 			handlers,
@@ -1247,6 +1247,7 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 /*  =======================================================================================  */
 /*  ================================  NodeList.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
+/** @constructor */
 function _NodeList() {}
 _NodeList.prototype = new Array;
 

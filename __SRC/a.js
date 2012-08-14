@@ -263,9 +263,9 @@ var /** @type {boolean} */
   , dom4_mutationMacro
 
 	/** @type {RegExp} @const */
-  , RE_DOMSettableTokenList_lastSpaces = /\\s+$/g
+  , RE_DOMSettableTokenList_lastSpaces = /\s+$/g
 	/** @type {RegExp} @const */
-  , RE_DOMSettableTokenList_spaces = /\\s+/g
+  , RE_DOMSettableTokenList_spaces = /\s+/g
 
     /** @type {number} some unique identifire. must inc after use */
   , UUID = 1
@@ -1772,7 +1772,7 @@ if(DEBUG && !document.addEventListener) {
 if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL_CLASSLIST__) {
 /**
  * __Non-standart__
- * Utils.Dom.DOMStringCollection
+ * DOMStringCollection
  * DOMSettableTokenList like object
  * http://www.w3.org/TR/html5/common-dom-interfaces.html#domsettabletokenlist-0
  * @param {Function} getter callback for onchange event
