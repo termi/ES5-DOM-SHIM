@@ -1,4 +1,4 @@
-﻿ /** @license MIT License (c) copyright Egor Halimonenko (termi1uc1@gmail.com | github.com/termi) */
+﻿/** @license MIT License (c) copyright Egor Halimonenko (termi1uc1@gmail.com | github.com/termi) */
 
 // ==ClosureCompiler==
 // @compilation_level ADVANCED_OPTIMIZATIONS
@@ -17,7 +17,7 @@
  * 3. offset[Top/Left/Width/Height] for IE from https://raw.github.com/yui/yui3/master/src/dom/js/dom-style-ie.js
  * 4. MutationObserver http://hacks.mozilla.org/2012/05/dom-mutationobserver-reacting-to-dom-changes-without-killing-browser-performance/
  *                     http://updates.html5rocks.com/2012/02/Detect-DOM-changes-with-Mutation-Observers
- * 5. Web Animation API http://people.mozilla.org/~bbirtles/web-animations/web-animations.html#the-mediaitem-interface
+ * 5. Web Animation API https://dvcs.w3.org/hg/FXTF/raw-file/tip/web-anim/index.html
  * 6. window.innerWidth for IE < 9 https://developer.mozilla.org/en/DOM/window.innerWidth
  * 7. http://dev.w3.org/csswg/selectors4/ querySelector[All] shim
  */
@@ -186,7 +186,7 @@ var /** @type {boolean} */
         return _Function_apply_.call(_function, context, _Array_slice_.call(arguments, 2))
 	}
 
-	/** @type{(Function|undefined)} */
+	/** @type {(Function|undefined))} */
   , _append = function(obj, ravArgs) {
 		for(var i = 1; i < arguments.length; i++) {
 			var extension = arguments[i];
@@ -508,6 +508,8 @@ Object["inherit"] = function(Child, Parent) {
 if(__GCC__ECMA_SCRIPT5__) {
 /**
  * Wraps the function in another, locking its execution scope to an object specified by thisObj.
+ * http://es5.github.com/#x15.3.4.5
+ * http://code.google.com/p/js-examples/source/browse/trunk/bind_emulation.js
  * @param {Object} object
  * @param {...} var_args
  * @return {Function}
@@ -532,6 +534,7 @@ if(!Function.prototype.bind)Function.prototype.bind = function (object, var_args
 		};
 	if(__method.prototype) {
 		_result.prototype = Object.create(__method.prototype);
+		//TODO:: Function objects created using Function.prototype.bind do not have a prototype property or the [[Code]], [[FormalParameters]], and [[Scope]] internal properties.
 		//_result.constructor = __method;
 	}
 	return _result;
@@ -756,6 +759,10 @@ if(__GCC__ECMA_SCRIPT5__) {
 //     http://msdn.microsoft.com/en-us/library/dd229916.aspx
 // WebKit Bugs:
 //     https://bugs.webkit.org/show_bug.cgi?id=36423
+
+// check whether defineProperty works if it's given. Otherwise,
+// shim partially.
+if (Object.defineProperty) {
 doesDefinePropertyWork = function(object) {
     try {
         Object.defineProperty(object, "sentinel", {});
@@ -765,9 +772,6 @@ doesDefinePropertyWork = function(object) {
     }
 };
 
-// check whether defineProperty works if it's given. Otherwise,
-// shim partially.
-if (Object.defineProperty) {
     definePropertyWorksOnObject = doesDefinePropertyWork({});
 	definePropertyWorksOnDom = doesDefinePropertyWork(_testElement);
 
@@ -905,6 +909,12 @@ if (!Object.defineProperties || definePropertiesFallback) {
 
 // ES5 15.2.3.3
 // http://es5.github.com/#x15.2.3.3
+// FF bug:
+//  https://bugzilla.mozilla.org/show_bug.cgi?id=520882
+
+// check whether getOwnPropertyDescriptor works if it's given. Otherwise,
+// shim partially.
+if (Object.getOwnPropertyDescriptor) {
 doesGetOwnPropertyDescriptorWork = function(object) {
     try {
         object["sentinel2"] = 0;
@@ -913,15 +923,24 @@ doesGetOwnPropertyDescriptorWork = function(object) {
             "sentinel2"
         ).value === 0;
     } catch (exception) {
-        return void 0;
+			return false;
     }
 };
 
-// check whether getOwnPropertyDescriptor works if it's given. Otherwise,
-// shim partially.
-if (Object.getOwnPropertyDescriptor) {
     getOwnPropertyDescriptorWorksOnObject = doesGetOwnPropertyDescriptorWork({});
     getOwnPropertyDescriptorWorksOnDom = doesGetOwnPropertyDescriptorWork(_testElement);
+	if(getOwnPropertyDescriptorWorksOnDom && document.__proto__) {
+		//FireFox failed this test
+		try {
+			getOwnPropertyDescriptorWorksOnDom = !!Object.getOwnPropertyDescriptor(
+				document.__proto__,
+				"firstChild"
+			);
+		} catch (exception) {
+			getOwnPropertyDescriptorWorksOnDom = false;
+		}
+	}
+
     if (!getOwnPropertyDescriptorWorksOnDom ||
         !getOwnPropertyDescriptorWorksOnObject
     ) {
@@ -936,7 +955,7 @@ if (!Object.getOwnPropertyDescriptor || getOwnPropertyDescriptorFallback) {
 	 * Returns a property descriptor for an own property (that is, one directly present on an object, not present by dint of being along an object's prototype chain) of a given object.
 	 * @param {!Object} object The object in which to look for the property.
 	 * @param {!string} property The name of the property whose description is to be retrieved
-	 * @return {Object.<(ObjectPropertyDescriptor|null)>|undefined}
+	 * @return {(Object.<(ObjectPropertyDescriptor|null)>|undefined)}
 	 */
     Object.getOwnPropertyDescriptor = function _getOwnPropertyDescriptor(object, property) {
         if ((typeof object != "object" && typeof object != "function") || object === null) {
@@ -944,7 +963,10 @@ if (!Object.getOwnPropertyDescriptor || getOwnPropertyDescriptorFallback) {
         }
 
         // make a valiant attempt to use the real _getOwnPropertyDescriptor
-        // for I8's DOM elements.
+        // for:
+        //  I8's DOM elements.
+	    //  Safari lt 6
+	    //  FireFox
         if (getOwnPropertyDescriptorFallback) {
             try {
                 return getOwnPropertyDescriptorFallback.call(Object, object, property);
