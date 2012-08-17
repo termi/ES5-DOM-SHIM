@@ -238,7 +238,7 @@ var /** @type {boolean} */
 		throw ex;
 	}
 
-	/** @type{(Function|undefined)} */
+	/** @type {(Function|undefined)} */
   , functionReturnFalse = function() { return false }
 
   , functionReturnFirstParam = function(param) { return param }
@@ -763,14 +763,14 @@ if(__GCC__ECMA_SCRIPT5__) {
 // check whether defineProperty works if it's given. Otherwise,
 // shim partially.
 if (Object.defineProperty) {
-doesDefinePropertyWork = function(object) {
-    try {
-        Object.defineProperty(object, "sentinel", {});
-        return "sentinel" in object;
-    } catch (exception) {
-		return false;
-    }
-};
+	doesDefinePropertyWork = function(object) {
+	    try {
+	        Object.defineProperty(object, "sentinel", {});
+	        return "sentinel" in object;
+	    } catch (exception) {
+			return false;
+	    }
+	};
 
     definePropertyWorksOnObject = doesDefinePropertyWork({});
 	definePropertyWorksOnDom = doesDefinePropertyWork(_testElement);
@@ -915,17 +915,17 @@ if (!Object.defineProperties || definePropertiesFallback) {
 // check whether getOwnPropertyDescriptor works if it's given. Otherwise,
 // shim partially.
 if (Object.getOwnPropertyDescriptor) {
-doesGetOwnPropertyDescriptorWork = function(object) {
-    try {
-        object["sentinel2"] = 0;
-        return Object.getOwnPropertyDescriptor(
-            object,
-            "sentinel2"
-        ).value === 0;
-    } catch (exception) {
-			return false;
-    }
-};
+	doesGetOwnPropertyDescriptorWork = function(object) {
+	    try {
+	        object["sentinel2"] = 0;
+	        return Object.getOwnPropertyDescriptor(
+	            object,
+	            "sentinel2"
+	        ).value === 0;
+	    } catch (exception) {
+				return false;
+	    }
+	};
 
     getOwnPropertyDescriptorWorksOnObject = doesGetOwnPropertyDescriptorWork({});
     getOwnPropertyDescriptorWorksOnDom = doesGetOwnPropertyDescriptorWork(_testElement);
