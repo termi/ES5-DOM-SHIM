@@ -16,7 +16,7 @@
 
 // [[[|||---=== GCC DEFINES START ===---|||]]]
 /** @define {boolean} */
-var __GCC__IS_DEBUG__ = true;
+var __GCC__IS_DEBUG__ = false;
 //IF __GCC____GCC__IS_DEBUG____ == true [
 //0. Some errors in console
 //1. Fix console From https://github.com/theshock/console-cap/blob/master/console.js
@@ -731,9 +731,12 @@ if(_browser_msie < 9) {
 	/** @this {_ielt9_Event} */
 	_ielt9_Event.getNativeEvent = function() {
 		var nativeEvent = this[_event_nativeEventPropName];
-  		if(!nativeEvent) {
+  		if(nativeEvent === void 0) {
   			_throw("WRONG_THIS_ERR")
   		}
+		/*else if(nativeEvent === null) {
+			//_ielt9_Event.destroyLinkToNativeEvent was fired
+		}*/
 
   		return nativeEvent;
 	};
@@ -741,8 +744,7 @@ if(_browser_msie < 9) {
 	/** @this {_ielt9_Event} */
 	_ielt9_Event.destroyLinkToNativeEvent = function() {
 		if(this[_event_nativeEventPropName]) {
-			this[_event_nativeEventPropName] = void 0;
-			delete this[_event_nativeEventPropName];
+			this[_event_nativeEventPropName] = null;
 		}
 	};
 
@@ -764,6 +766,8 @@ if(_browser_msie < 9) {
 
 
 function fixEvent(event) {
+	if("__isFixed" in event)return;
+
 	var thisObj = this,
 		_button = ("button" in event) && event.button;
 	
@@ -784,7 +788,7 @@ function fixEvent(event) {
 
 	if(!event["defaultPrevented"])event["defaultPrevented"] = false;
 
-	"target" in event || (event.target = event.srcElement || document);// добавить target для IE
+	if(!event.target)event.target = event.srcElement || document;// добавить target для IE
 	/*
 	if ( event.target && event.target.nodeType in {3 : void 0, 4 : void 0} ) {
 		event.target = event.target.parentNode;
@@ -900,6 +904,7 @@ function commonHandle(nativeEvent) {
 			// save event properties in fake 'event' object to allow store 'event' and use it in future
 			_event = nativeEvent["__customEvent__"] = new _ielt9_Event(nativeEvent);
 			_event.initEvent(nativeEvent.type, nativeEvent.bubbles, nativeEvent.cancelable);
+			fixEvent(_event);
 			_event.isTrusted = true;
 			_event["__custom_event"] = void 0;
 		}
@@ -907,7 +912,7 @@ function commonHandle(nativeEvent) {
 		_event[_event_nativeEventPropName] = nativeEvent;
 		nativeEvent.currentTarget = thisObj;//TODO:: check it
 
-		if(!("__isFixed" in nativeEvent))nativeEvent = fixEvent.call(thisObj, nativeEvent);
+		//if(!("__isFixed" in nativeEvent))nativeEvent = fixEvent.call(thisObj, nativeEvent);
 
 		var handlers = _[handlersKey][_event.type];
 		if("__dom0__" in nativeEvent) {
@@ -1369,6 +1374,10 @@ if(_browser_msie < 9)_.push(function() {
 	 * @return {number}
 	 */
 	function unsafeGetOffsetRect(elem, X_else_Y) {
+		if("element" in elem && "defaults" in elem && "document" in elem) {//IE < 8 with htc -> this instanceof DispHTCDefaultDispatch
+			elem = elem["element"];
+		}
+
 		var box = elem.getBoundingClientRect(),//It might be an error here
 			body = document.body;
 	 

@@ -259,7 +259,7 @@ var /** @type {boolean} */
 	)
 
   , _testElement = _document_createElement('p')
-  
+
   , dom4_mutationMacro
 
 	/** @type {RegExp} @const */
@@ -274,6 +274,8 @@ var /** @type {boolean} */
   , UUID_PROP_NAME = "__UUID__"
 
   , _tmp_
+
+  , _tmp_function
 
   // ------------------------------ ==================  querySelector[All], match, find[All]  ================== ------------------------------
 	/** @type {RegExp} @const */
@@ -1620,7 +1622,13 @@ if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL_DOM_EVENTS_LVL3__) {
 	} catch (e) {
 		global["Event"] = _Event;
 	
-		if(_Event_prototype)_Event.prototype = _Event_prototype;//В IE < 8 не удастся получить Event.prototype
+		if(_Event_prototype) {
+			_Event.prototype = _Event_prototype;
+		}
+		else if(__GCC__LEGACY_BROWSERS_SUPPORT__ && __GCC__LEGACY_BROWSERS_SUPPORT__IELT9__) {
+			//IE < 8 has no Event.prototype
+			_Event_prototype = _Event.prototype;
+		}
 	}
 	
 	// Chrome calling .initEvent on a CustomEvent object is a no-no
@@ -1703,12 +1711,11 @@ if(__GCC__LEGACY_BROWSERS_SUPPORT__ && __GCC__LEGACY_BROWSERS_SUPPORT__OPERA_LT_
 	_tmp_ = 0;
 
 	try {
-		//we can use "dom4_mutationMacro" var here :]
-		dom4_mutationMacro = function () {
+		_tmp_function = function () {
 			_tmp_++
 		};
-		_testElement.addEventListener("click", dom4_mutationMacro);
-		_testElement.addEventListener("click", dom4_mutationMacro);
+		_testElement.addEventListener("click", _tmp_function);
+		_testElement.addEventListener("click", _tmp_function);
 		if(_testElement.click)// NO: Opera 10.10
 			_testElement.click();//testing
 		else
@@ -3009,7 +3016,7 @@ if(!__GCC__INCLUDE_EXTRAS__) {
 
 // no need any more
 _append = _tmp_ = _testElement = nodeList_methods_fromArray = _document_createElement = _Event =
-	_CustomEvent = _Event_prototype = _Custom_Event_prototype = 
+	_CustomEvent = _Event_prototype = _Custom_Event_prototype = _tmp_function =
 	_Element_prototype = _Shimed_Date = functionReturnFalse = definePropertyWorksOnObject = definePropertyWorksOnDom = void 0;
 
 
