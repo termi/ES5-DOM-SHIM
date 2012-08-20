@@ -734,12 +734,14 @@ if(_browser_msie < 9) {
   		if(nativeEvent === void 0) {
   			_throw("WRONG_THIS_ERR")
   		}
-		/*else if(nativeEvent === null) {
+		else if(nativeEvent === null) {
 			//_ielt9_Event.destroyLinkToNativeEvent was fired
-		}*/
+			nativeEvent = _ielt9_Event.getNativeEvent.fakeObject;
+		}
 
   		return nativeEvent;
 	};
+	_ielt9_Event.getNativeEvent.fakeObject = {};
 
 	/** @this {_ielt9_Event} */
 	_ielt9_Event.destroyLinkToNativeEvent = function() {
@@ -1266,7 +1268,8 @@ else {//IE8 quirk mode, IE lt 8
 	// create an <iframe>
 	_tmp_ = document.createElement("iframe");
 	_tmp_.style.display = "none";
-	document.body.appendChild(_tmp_);
+
+	(document.body || _document_documentElement).appendChild(_tmp_);
 
 	// write a script into the <iframe> and steal its Array object
 	_tmp_.contentWindow.document.write(
@@ -2778,7 +2781,7 @@ _Node_prototype.g16 = _returnFirstParam(16);
 _Node_prototype["__ielt8__element_init__"] = function __ielt8__element_init__() {
 	var thisObj = this;
 	if(thisObj["element"])thisObj = thisObj["element"];//¬_¬ only if the save `this` to local variable
-	
+
 	if(!("prepend" in thisObj)) {//DOM4 API
 		thisObj["after"] = _Element_prototype["after"];
 		thisObj["before"] = _Element_prototype["before"];
