@@ -1914,12 +1914,11 @@ if(_Function_call.call(document_createElement, document, "x-x").cloneNode().oute
 
 //separate properties and attributes
 _Element_prototype.setAttribute = function(name, value) {
-	name = name.toUpperCase();
-	this[name] = value + "";
+	this[name.toUpperCase()] = value + "";
 };
 _Element_prototype.getAttribute = function(name) {
-	name = name.toUpperCase();
-	return this[name] + "";
+	var result = this[name.toUpperCase()];
+	return result ? result + "" : null;
 };
 _Element_prototype.removeAttribute = function(name) {
 	name = name.toUpperCase();
