@@ -1912,6 +1912,27 @@ if(_Function_call.call(document_createElement, document, "x-x").cloneNode().oute
 /*  ======================================================================================  */
 /*  ================================= Only for IE8 =======================================  */
 
+//separate properties and attributes
+_Element_prototype.setAttribute = function(name, value) {
+	name = name.toUpperCase();
+	this[name] = value + "";
+};
+_Element_prototype.getAttribute = function(name) {
+	name = name.toUpperCase();
+	return this[name] + "";
+};
+_Element_prototype.removeAttribute = function(name) {
+	name = name.toUpperCase();
+
+	var result = name in this;
+
+	if(result) {
+		delete this[name];
+	}
+
+	return result;
+};
+
 //getElementsByClassName shim
 _tmp_ = "getElementsByClassName";
 if(!_Element_prototype[_tmp_] && document.querySelectorAll) {

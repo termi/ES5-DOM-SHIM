@@ -2753,7 +2753,36 @@ if(!document[_tmp_]) {
 }
 //SHIM export
 
+_Element_prototype.setAttribute = function(name, val, flag) {
+	if(flag == void 0) {
+		name = name.toUpperCase();
+		val = val + "";
+		flag = 1;
+	}
+	return Function.prototype.call.call(this["_"]["__setAttribute__"], this, name, val, flag);
+};
+_Element_prototype.getAttribute = function(name, flag) {
+	var needAttributeShim
+		, val
+	;
 
+	if(needAttributeShim = (flag == void 0)) {
+		name = name.toUpperCase();
+		flag = 1;
+	}
+
+	val = Function.prototype.call.call(this["_"]["__getAttribute__"], this, name, flag);
+	if(val && needAttributeShim)val += "";
+
+	return val;
+};
+_Element_prototype.removeAttribute = function(name, flag) {
+	if(flag == void 0) {
+		name = name.toUpperCase();
+		flag = 1;
+	}
+	return Function.prototype.call.call(this["_"]["__removeAttribute__"], this, name, flag);
+};
 
 if(!_Node_prototype.hasAttribute)_Node_prototype.hasAttribute = function(name) {
 	return this.getAttribute(name) !== null;
@@ -2779,8 +2808,12 @@ _Node_prototype.g11 = _returnFirstParam(11);
 _Node_prototype.g16 = _returnFirstParam(16);
 
 _Node_prototype["__ielt8__element_init__"] = function __ielt8__element_init__() {
-	var thisObj = this;
+	var thisObj = this
+	  , _
+	;
 	if(thisObj["element"])thisObj = thisObj["element"];//¬_¬ only if the save `this` to local variable
+
+	if(!(_ = thisObj["_"]))_ = thisObj["_"] = {};//container
 
 	if(!("prepend" in thisObj)) {//DOM4 API
 		thisObj["after"] = _Element_prototype["after"];
@@ -2807,6 +2840,15 @@ _Node_prototype["__ielt8__element_init__"] = function __ielt8__element_init__() 
 								     (thisObj["matches"] = _matchesSelector));
 	
 	"hasAttribute" in thisObj || (thisObj.hasAttribute = _Element_prototype.hasAttribute);
+
+	if(this.setAttribute != _Element_prototype.setAttribute) {
+		_["__setAttribute__"] = this.setAttribute;
+		_["__getAttribute__"] = this.getAttribute;
+		_["__removeAttribute__"] = this.removeAttribute;
+		this.setAttribute = _Element_prototype.setAttribute;
+		this.getAttribute = _Element_prototype.getAttribute;
+		this.removeAttribute = _Element_prototype.removeAttribute;
+	}
 
 	//Unsafe (with "OBJECT" tag, for example) set's
 	try {
