@@ -68,7 +68,7 @@ if(!global["DocumentFragment"]) {
 
 	global["DocumentFragment"] = 
 		global["Document"] || global["HTMLDocument"] ||//For IE8
-		(_temoObj = {}, _temoObj.prototype = {}, _temoObj);//For IE < 8
+		(_temoObj = function(){}, _temoObj.prototype = {}, _temoObj);//For IE < 8
 
 }
 if(!global["Document"])global["Document"] = global["DocumentFragment"];
@@ -980,7 +980,7 @@ function commonHandle(nativeEvent) {
 
 
 if(!document.addEventListener) {
-	_Node_prototype.addEventListener = global.addEventListener = document.addEventListener = function(_type, _handler, useCapture) {
+	_Node_prototype.addEventListener = _document_documentElement.addEventListener = global.addEventListener = document.addEventListener = function(_type, _handler, useCapture) {
 		//TODO:: useCapture == true
 		if(typeof _handler != "function" &&
 		   !(typeof _handler === "object" && _handler.handleEvent)//Registering an EventListener with a function object that also has a handleEvent property -> Call EventListener as a function
@@ -1121,7 +1121,7 @@ if(!document.addEventListener) {
 
 	_Node_prototype.addEventListener["__shim__"] = true;
 
-	_Node_prototype.removeEventListener = global.removeEventListener = document.removeEventListener = function(_type, _handler, useCapture) {
+	_Node_prototype.removeEventListener = _document_documentElement.removeEventListener = global.removeEventListener = document.removeEventListener = function(_type, _handler, useCapture) {
 		var /** @type {Node} */
 			thisObj = this,
 			/** @type {Object} */
@@ -1187,7 +1187,7 @@ UNSPECIFIED_EVENT_TYPE_ERR: Raised if the Event's type was not specified by init
  * @return {boolean} The return value is false if at least one of the event handlers which handled this event called preventDefault. Otherwise it returns true.
  */
 if(!document.dispatchEvent) {
-	_Node_prototype.dispatchEvent = global.dispatchEvent = document.dispatchEvent = function(_event) {
+	_Node_prototype.dispatchEvent = _document_documentElement.dispatchEvent = global.dispatchEvent = document.dispatchEvent = function(_event) {
 		if(!_event.type)return true;
 
 		//reinit event

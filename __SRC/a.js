@@ -20,6 +20,10 @@
  * 5. Web Animation API https://dvcs.w3.org/hg/FXTF/raw-file/tip/web-anim/index.html
  * 6. window.innerWidth for IE < 9 https://developer.mozilla.org/en/DOM/window.innerWidth
  * 7. http://dev.w3.org/csswg/selectors4/ querySelector[All] shim
+ * 8. http://www.w3.org/TR/DOM-Level-3-Events/#event-type-mouseenter and http://www.w3.org/TR/DOM-Level-3-Events/#event-type-mouseleave for standards-compliant browsers:
+ *   i) https://gist.github.com/3153964
+ *   ii) http://blog.stchur.com/2007/03/15/mouseenter-and-mouseleave-events-for-firefox-and-other-non-ie-browsers/
+ *   iii) https://developer.mozilla.org/en-US/docs/DOM/DOM_event_reference/mouseleave | https://developer.mozilla.org/en-US/docs/DOM/DOM_event_reference/mouseenter
  */
 
 
@@ -2226,6 +2230,9 @@ if(!document.documentElement.matchesSelector)document.documentElement.matchesSel
 
 //New DOM4 API
 if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL_DOM4_API__) {
+
+if(!("matches" in _Element_prototype))_Element_prototype["matches"] = document.documentElement["matches"] = _Element_prototype.matchesSelector;
+
 if(!_testElement["prepend"]) {
 	dom4_mutationMacro = function(nodes) {
 		var resultNode = null
@@ -2288,8 +2295,6 @@ if(!_testElement["prepend"]) {
 		}
 	}
 }
-
-if(!("matches" in _Element_prototype))_Element_prototype["matches"] = document.documentElement["matches"] = _Element_prototype.matchesSelector;
 
 if(!("find" in document)) {
 	RE_document_find_scopedreplacer = /(\:scope)(?=[ >~+])/;
