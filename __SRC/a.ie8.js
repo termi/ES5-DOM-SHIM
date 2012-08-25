@@ -1917,7 +1917,18 @@ _Element_prototype.setAttribute = function(name, value) {
 	this[name.toUpperCase()] = value + "";
 };
 _Element_prototype.getAttribute = function(name) {
-	var result = this[name.toUpperCase()];
+	var upperName = name.toUpperCase()
+	  , result = this[upperName]
+	;
+
+	if(!result) {
+		if(!(upperName in this) && (typeof (result = this[name]) === "string")) {
+			result = this[upperName] = this[name];
+			delete this[name];
+		}
+		else result = void 0;
+	}
+
 	return result ? result + "" : null;
 };
 _Element_prototype.removeAttribute = function(name) {
