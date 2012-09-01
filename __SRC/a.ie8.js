@@ -2178,9 +2178,11 @@ if(_tmp_ = CSSStyleDeclaration) {
 	}
 
 	if(!("getPropertyValue" in _tmp_)) {
-		Object.keys(_CSSStyleDeclaration_prototype_methods).forEach(function(name) {
-			_tmp_[name] = this[name];
-		}, _CSSStyleDeclaration_prototype_methods)
+		(function(methos) {
+			for(var i in methos) if(_hasOwnProperty.call(methos, i)) {
+				this[i] = methos[i];
+			}
+		}).call(_tmp_, _CSSStyleDeclaration_prototype_methods);
 	}
 }
 
