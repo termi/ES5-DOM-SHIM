@@ -1,4 +1,4 @@
-﻿/** @license MIT License (c) copyright Egor Halimonenko (termi1uc1@gmail.com | github.com/termi) */
+﻿/** @license ES6/DOM4 polyfill | @version 0.7 alpha-1 | MIT License | github.com/termi */
 
 // ==ClosureCompiler==
 // @compilation_level ADVANCED_OPTIMIZATIONS
@@ -9,7 +9,7 @@
 // ==/ClosureCompiler==
 
 /**
- * @version 0.7 pre-alpha
+ * @version 0.7 alpha-2
  * TODO::
  * 0. eng comments
  * 1. HTMLCanvasElement.toBlob (https://developer.mozilla.org/en/DOM/HTMLCanvasElement | http://stackoverflow.com/questions/4998908/convert-data-uri-to-file-then-append-to-formdata#answer-5100158)
@@ -402,7 +402,7 @@ if(__GCC__INCLUDE_EXTRAS__ && __GCC__INCLUDE_EXTRAS__BROWSER__) {
 	global["browser"] = browser;//Export
 }//if(__GCC__INCLUDE_EXTRAS__)
 else if(__GCC__LEGACY_BROWSERS_SUPPORT__ && __GCC__LEGACY_BROWSERS_SUPPORT__IELT9__) {
-	_browser_msie = (_browser_msie = /msie (\d+)/i.exec(navigator.userAgent)) && +_browser_msie[1] || void 0;
+	_browser_msie = (_browser_msie = /msie (\d+)/i.exec(navigator.userAgent) || []) && +_browser_msie[1] || void 0;
 }
 //Browser sniffing :) END
 
@@ -2130,21 +2130,23 @@ try {
 } catch (e) {
 	[
 		Node.prototype,
-		//Comment.prototype,
+		Comment && Comment.prototype,
 		_Element_prototype,
-		//ProcessingInstruction.prototype,
+		ProcessingInstruction && ProcessingInstruction.prototype,
 		Document.prototype,
-		//DocumentType.prototype,
+		DocumentType && DocumentType.prototype,
 		DocumentFragment.prototype
 	].forEach(function(proto) {
-			var cloneNode = proto.cloneNode;
-			delete proto.cloneNode;
-			proto.cloneNode = function _cloneNode(bool) {
-				if (bool === void 0) {
-					bool = true;
-				}
-				return cloneNode.call(this, bool);
-			};
+			if(proto) {
+				var cloneNode = proto.cloneNode;
+				delete proto.cloneNode;
+				proto.cloneNode = function _cloneNode(bool) {
+					if (bool === void 0) {
+						bool = true;
+					}
+					return cloneNode.call(this, bool);
+				};
+			}
 		});
 }
 

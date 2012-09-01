@@ -1,4 +1,4 @@
-/** @license MIT License (c) copyright Egor Halimonenko (termi1uc1@gmail.com | github.com/termi) */
+/** @license ES6/DOM4 polyfill for IE < 8 | @version 0.7 alpha-1 | MIT License | github.com/termi */
 
 // ==ClosureCompiler==
 // @compilation_level ADVANCED_OPTIMIZATIONS
@@ -9,7 +9,7 @@
 // ==/ClosureCompiler==
 /**
  * ES5 and DOM shim for IE < 8
- * @version 0.7
+ * @version 0.7 alpha-2
  * TODO::
  * 1. http://www.positioniseverything.net/explorer.html
  */
@@ -22,17 +22,16 @@ var __GCC__IS_DEBUG__ = false;
 //1. Fix console From https://github.com/theshock/console-cap/blob/master/console.js
 //]
 /** @define {boolean} */
-var __GCC__JQUERY_COMPATIBLE__ = false;
-//IF __GCC__JQUERY_COMPATIBLE__ == true [
-// Remove window.getComputedStyle shim for IE
-//]
-/** @define {boolean} */
 var __GCC__NODE_CONSTRUCTOR_AS_ACTIVX__ = true;
 /** @define {boolean} */
 var __GCC__NODE_CONSTRUCTOR_AS_DOM_ELEMENT__ = false;
+/** @define {boolean} */
+var __GCC__INCLUDE_DOMPARSER_SHIM__ = false;
 
 /** @define {boolean} */
 var __GCC__UNSTABLE_FUNCTIONS__ = false;
+/** @define {boolean} */
+var __GCC__FIX_OBJECT_DEFINE_PROPERTY_SET_VALUE_NOT_IGNORING_SETTER__ = true;
 //IF __GCC____GCC__UNSTABLE_FUNCTIONS____ == true [
 //]
 // [[[|||---=== GCC DEFINES END ===---|||]]]
@@ -47,7 +46,7 @@ var DEBUG = __GCC__IS_DEBUG__;
  * @type {boolean} */
 //isMSIE = eval("false;/*@cc_on@if(@\x5fwin32)isMSIE=true@end@*/");
 var _browser_msie;
-_browser_msie = (_browser_msie = /msie (\d+)/i.exec(navigator.userAgent)) && +_browser_msie[1] || void 0;
+_browser_msie = (_browser_msie = /msie (\d+)/i.exec(navigator.userAgent) || []) && +_browser_msie[1] || void 0;
 
 
 
@@ -219,6 +218,72 @@ var _ = global["_"]["ielt9shims"]
   , function_tmp
 
   , nodeList_methods_fromArray = ["every", "filter", "forEach", "indexOf", "join", "lastIndexOf", "map", "reduce", "reduceRight", "reverse", "slice", "some", "toString"]
+
+	/** @const */
+  , RE_style_alpha_filter = /alpha\(opacity=([^\)]+)\)/
+
+	/** @const */
+  , STRING_FOR_RE_style_important = "\\s*:\\s*(\\S+)\\s*(?:[$;]|(?:(!important)\\s*[$;]))"
+
+	/** @type {Function}
+	 * @this {Node} */
+  , style_getOpacityFromMSFilter = function() {
+		var val = (this.filter || "").match(RE_style_alpha_filter);
+
+		return val ? (parseInt(val[1]) / 100) + "" : "";//can't replace parseInt to '+(val[1])'
+	}
+
+  , _CSSStyleDeclaration_prototype_methods = {
+		/**
+		 * @param {String} propertyName
+		 * @return String
+		 */
+		"getPropertyValue" : function(propertyName) {
+			return this.getAttribute(propertyName);
+		}
+		/**
+		 * @param {String} propertyName
+		 * @return String
+		 */
+		, "removeProperty" : function(propertyName) {
+			this.removeAttribute(propertyName);
+		}
+		/**
+		 * @param {String} propertyName
+		 * @param {String} value
+		 * @param {String} priority
+		 * @return void
+		 */
+		, "setProperty" : function(propertyName, value, priority) {
+			if(priority != "important") {
+				this.setAttribute(propertyName, value);
+			}
+			else {
+				var reg = new RegExp(propertyName + STRING_FOR_RE_style_important, "i")
+					, val = ";" + propertyName + ":" + value + " !important;"
+				;
+				if(reg.test(this.cssText)) {
+					this.cssText = this.cssText.replace(reg, val)
+				}
+				else this.cssText = this.cssText + val;
+			}
+		}
+		/**
+		@param {String} propertyName
+		@return String
+		*/
+		, "getPropertyPriority" : function(propertyName) {
+			var reg = new RegExp(propertyName + STRING_FOR_RE_style_important, "i");
+			return ((this.cssText || "").match(reg) || [])[2] || "";
+		}
+		/**
+		@param {Number} index
+		@return String
+		*/
+		, "item" : function(index) {
+			//TODO::
+		}
+	}
 
 	// ------------------------------ ==================  Events  ================== ------------------------------
   , _ielt9_Event
@@ -580,24 +645,24 @@ if('te'.split(/(s)*/)[1] != void 0 ||
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Exception  ==================================  */
 /*  =======================================================================================  */
 if(!global["DOMException"]) {
-	var p = (global["DOMException"] = function() { }).prototype = new Error;
-	p.INDEX_SIZE_ERR = 1;
+	_tmp_ = (global["DOMException"] = function() { }).prototype = new Error;
+	_tmp_.INDEX_SIZE_ERR = 1;
 	//p.DOMSTRING_SIZE_ERR = 2; // historical
-	p.HIERARCHY_REQUEST_ERR = 3;
-	p.WRONG_DOCUMENT_ERR = 4;
-	p.INVALID_CHARACTER_ERR = 5;
+	_tmp_.HIERARCHY_REQUEST_ERR = 3;
+	_tmp_.WRONG_DOCUMENT_ERR = 4;
+	_tmp_.INVALID_CHARACTER_ERR = 5;
 	//p.NO_DATA_ALLOWED_ERR = 6; // historical
-	p.NO_MODIFICATION_ALLOWED_ERR = 7;
-	p.NOT_FOUND_ERR = 8;
-	p.NOT_SUPPORTED_ERR = 9;
+	_tmp_.NO_MODIFICATION_ALLOWED_ERR = 7;
+	_tmp_.NOT_FOUND_ERR = 8;
+	_tmp_.NOT_SUPPORTED_ERR = 9;
 	//p.INUSE_ATTRIBUTE_ERR = 10; // historical
-	p.INVALID_STATE_ERR = 11;
-	p.SYNTAX_ERR = 12;
-	p.INVALID_MODIFICATION_ERR = 13;
-	p.NAMESPACE_ERR = 14;
-	p.INVALID_ACCESS_ERR = 15;
+	_tmp_.INVALID_STATE_ERR = 11;
+	_tmp_.SYNTAX_ERR = 12;
+	_tmp_.INVALID_MODIFICATION_ERR = 13;
+	_tmp_.NAMESPACE_ERR = 14;
+	_tmp_.INVALID_ACCESS_ERR = 15;
 	//p.VALIDATION_ERR = 16; // historical
-	p.TYPE_MISMATCH_ERR = 17;
+	_tmp_.TYPE_MISMATCH_ERR = 17;
 }
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Exception  ==================================  */
@@ -1268,7 +1333,6 @@ else {//IE8 quirk mode, IE lt 8
 	// create an <iframe>
 	_tmp_ = document.createElement("iframe");
 	_tmp_.style.display = "none";
-
 	(document.body || _document_documentElement).appendChild(_tmp_);
 
 	// write a script into the <iframe> and steal its Array object
@@ -1734,14 +1798,7 @@ if(!(_tmp_ in document)) {
 	_document_documentElement[__n1 + __name] = document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x10;
 }
 
-if(!global.getComputedStyle && !__GCC__JQUERY_COMPATIBLE__) {//IE < 9
-// Problemm with jQuery:: jQuery using <currentStyle>.getPropertyValue and where is no such method in IE<9 and it can't be shimed
-/*
-TODO::
-var filter = elem.style['filter'];
-    return filter ? (filter.indexOf('opacity=') >= 0 ?
-      (parseFloat(filter.match(/opacity=([^)]*)/)[1] ) / 100) + '' : '1') : '';
-*/
+if(!global.getComputedStyle) {//IE < 9
 	/**
 	 * @link https://developer.mozilla.org/en/DOM/window.getComputedStyle
 	 * getCurrentStyle - функция возвращяет текущий стиль элемента
@@ -1751,18 +1808,77 @@ var filter = elem.style['filter'];
 	 * @return {CSSStyleDeclaration} Стиль элемента
 	 */
 	global.getComputedStyle = function(element, pseudoElt) {
-		//TODO:: obj.currentStyle.getPropertyValue = function(propName) {obj.currentStyle[propName]}
-		//http://snipplr.com/view/13523/
-		/*if(!("getPropertyValue" in element.currentStyle))element.currentStyle.getPropertyValue = function(prop) {
- 			var re = /(\-([a-z]){1})/g;
-            if (prop == 'float') prop = 'styleFloat';
-            if (re.test(prop)) {
-                prop = prop.replace(re, function () {
-                    return arguments[2].toUpperCase();
-                });
-            }
-            return element.currentStyle[prop] ? element.currentStyle[prop] : null;
-		}*/
+		if(!("getPropertyValue" in element.currentStyle)) {
+			element.runtimeStyle.getPropertyValue = function(propertyName) {
+				return element.currentStyle.getAttribute(propertyName);
+			};
+
+			element.runtimeStyle.setProperty = element.runtimeStyle.removeProperty = function() {
+				_throwDOMException("NO_MODIFICATION_ALLOWED_ERR");
+			};
+
+			element.runtimeStyle.getPropertyPriority = function(propertyName) {
+				//TODO: tests
+				return "";
+			};
+			element.runtimeStyle.item = _CSSStyleDeclaration_prototype_methods["item"];
+		}
+
+		var propDescription
+			, _CSSStyleDeclProt
+			;
+		if((_CSSStyleDeclProt = global.CSSStyleDeclaration) && (_CSSStyleDeclProt = _CSSStyleDeclProt.prototype) && !("float" in element.currentStyle) || !("opacity" in element.currentStyle)) {
+			if(!("float" in element.currentStyle)) {//TODO:: testing
+				propDescription = Object.getOwnPropertyDescriptor(_CSSStyleDeclProt, "float");
+				if(propDescription) {
+					delete _CSSStyleDeclProt["float"];
+				}
+				Object.defineProperty(element.runtimeStyle, "float", {
+					value : {
+						valueOf : _unSafeBind.call(function(){
+							return this.runtimeStyle.styleFloat || this.style.styleFloat
+						}, element)
+					}
+				});
+				if(propDescription) {
+					Object.defineProperty(_CSSStyleDeclProt, "float", propDescription);
+				}
+			}
+
+			if(!("opacity" in element.currentStyle)) {//TODO:: testing
+				propDescription = Object.getOwnPropertyDescriptor(_CSSStyleDeclProt, "opacity");
+				if(propDescription) {
+					delete _CSSStyleDeclProt["opacity"];
+				}
+				Object.defineProperty(element.runtimeStyle, "opacity", {
+					value : {
+						valueOf : _unSafeBind.call(function(){
+							return this.runtimeStyle["msOpacity"] || this.style["msOpacity"] || style_getOpacityFromMSFilter.call(this.style) || style_getOpacityFromMSFilter.call(this.runtimeStyle);
+						}, element)
+					}
+				});
+				if(propDescription) {
+					Object.defineProperty(_CSSStyleDeclProt, "opacity", propDescription);
+				}
+			}
+		}
+		else {
+			if(!("float" in element.currentStyle)) {
+				element.runtimeStyle["float"] = {
+					valueOf : _unSafeBind.call(function(){
+						return this.runtimeStyle.styleFloat || this.style.styleFloat
+					}, element)
+				}
+			}
+			if(!("opacity" in element.currentStyle)) {
+				element.runtimeStyle["opacity"] = {
+					valueOf : _unSafeBind.call(function(){
+						return this.runtimeStyle["msOpacity"] || this.style["msOpacity"] || style_getOpacityFromMSFilter.call(this.style) || style_getOpacityFromMSFilter.call(this.runtimeStyle);
+					}, element)
+				}
+			}
+		}
+
 		return element.currentStyle;
 	}
 }
@@ -1782,6 +1898,62 @@ if(_browser_msie < 9) {
 	};
 }
 
+if(__GCC__INCLUDE_DOMPARSER_SHIM__) {
+	if(!("DOMParser" in global)) {
+		(function(global){
+			var _DOMParser = global["DOMParser"] = function(){};
+
+			function prepareTextForIFrame(text) {
+				return text
+					.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')//remove script tags from HTML text
+					//TODO:: not remove all <script (.*?)>, just <script>, <script type="text/javascript">, <script type="">, <script type="text/vbscript">. Due <script> can contains a template
+					.replace(/"/g, '\\"')
+					;
+			}
+
+			//http://stackoverflow.com/questions/4935664/how-to-create-a-new-htmldocument-in-ie
+			_DOMParser.prototype["parseFromString"] = function(markup, type) {
+				if(!type || type == "text/html" || /xml$/.test(type)) {
+					markup = prepareTextForIFrame(markup);
+
+					var iframe = document.createElement('iframe');
+					iframe.style.display = 'none';
+					iframe.src = 'javascript:document.write("' + markup + '")';
+					document.body.appendChild(iframe);
+					newHTMLDocument = iframe.contentDocument || iframe.contentWindow.document;
+
+					newHTMLDocument["__destroy__"] = function() {
+						var _doc = this.contentWindow.document;
+						_doc.documentElement.innerHTML = "";
+						_doc["_"] = _doc.documentElement["_"] = void 0;
+						/*TODO:: filter build-in properties suche as "URL", "location", etc
+						 Object.keys(_doc).forEach(function(key){
+						 try{
+						 _doc[key] = void 0;
+						 }
+						 catch(e){}
+						 })
+						 */
+						document.body.removeChild(this);
+					}.bind(iframe);
+
+					markup = iframe = void 0;
+
+					//TODO::
+					//shimDocument(newHTMLDocument);
+					newHTMLDocument.querySelector = document.querySelector;
+					newHTMLDocument.querySelectorAll = document.querySelectorAll;
+
+					return newHTMLDocument;
+				}
+				else {
+					//Not supported
+					return null;
+				}
+			}
+		})(global);
+	}
+}
 
 
 
@@ -1956,7 +2128,6 @@ var /** @const*/
   , __STYLE_ID                      = "ielt8_style_prev_for_behaviour"
 	/** @const List of supporting tag names */
   , __SUPPORTED__TAG_NAMES__ = "*"
-
 ;
 //CONFIG END
 
@@ -2849,6 +3020,14 @@ _Node_prototype["__ielt8__element_init__"] = function __ielt8__element_init__() 
 		this.getAttribute = _Element_prototype.getAttribute;
 		this.removeAttribute = _Element_prototype.removeAttribute;
 	}
+
+	/*TODO::
+	if(!("getPropertyValue" in this.style)) {
+		Object.keys(_CSSStyleDeclaration_prototype_methods).forEach(function(name) {
+			this[name] = _CSSStyleDeclaration_prototype_methods[name];
+		}, this.styl);
+	}
+	*/
 
 	//Unsafe (with "OBJECT" tag, for example) set's
 	try {
