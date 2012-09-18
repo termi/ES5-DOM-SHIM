@@ -1,4 +1,4 @@
-/** @license ES6/DOM4 polyfill for IE < 8 | @version 0.7 alpha-1 | MIT License | github.com/termi */
+/** @license ES6/DOM4 polyfill for IE < 8 | @version 0.7 alpha-3 | MIT License | github.com/termi */
 
 // ==ClosureCompiler==
 // @compilation_level ADVANCED_OPTIMIZATIONS
@@ -38,18 +38,14 @@ var __GCC__FIX_OBJECT_DEFINE_PROPERTY_SET_VALUE_NOT_IGNORING_SETTER__ = true;
 
 ;(function(global, _append) {
 
+/** Browser sniffing
+ * GCC W U NO SUPPORT @cc ?
+ * @type {boolean} */
+var _browser_msie = window.eval && eval("/*@cc_on 1;@*/") && +((/msie (\d+)/i.exec(navigator.userAgent) || [])[1] || 0) || void 0;
+if(!(_browser_msie < 9))return;
 
 /** @const @type {boolean} */
 var DEBUG = __GCC__IS_DEBUG__;
-
-/** Browser sniffing
- * @type {boolean} */
-//isMSIE = eval("false;/*@cc_on@if(@\x5fwin32)isMSIE=true@end@*/");
-var _browser_msie;
-_browser_msie = (_browser_msie = /msie (\d+)/i.exec(navigator.userAgent) || []) && +_browser_msie[1] || void 0;
-
-
-
 
 
 if(!global["Element"])((global["Element"] =
@@ -65,7 +61,7 @@ var _temoObj;
 //Not sure if it wrong. TODO:: tests for this
 if(!global["DocumentFragment"]) {
 
-	global["DocumentFragment"] = 
+	global["DocumentFragment"] =
 		global["Document"] || global["HTMLDocument"] ||//For IE8
 		(_temoObj = function(){}, _temoObj.prototype = {}, _temoObj);//For IE < 8
 
@@ -79,9 +75,8 @@ global["_"] = {
 	"orig_" : global["_"]//Save original "_" - we will restore it in a.js
 };
 
-//"_" - container for shims what should be use in a.js
-var _ = global["_"]["ielt9shims"]
-	
+var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use in a.js
+
   , __temporary__DOMContentLoaded_container = {}
 
 	/** @const */
@@ -134,7 +129,7 @@ var _ = global["_"]["ielt9shims"]
 					obj[key] = extention[key];
 				}
 				catch(e) { }
-		
+
 		return obj;
 	}
 
@@ -152,7 +147,7 @@ var _ = global["_"]["ielt9shims"]
 
 		return str.slice(0, i + 1);
 	}
-	
+
 	/** @const */
   , _String_split = String.prototype.split
 
@@ -167,7 +162,7 @@ var _ = global["_"]["ielt9shims"]
 
 	/** @const */
   , _Function_call = Function.prototype.call
-	
+
 	/** Use native "bind" or unsafe bind for service and performance needs
 	 * @const
 	 * @param {Object} object
@@ -179,8 +174,8 @@ var _ = global["_"]["ielt9shims"]
 		return function () {
 			return _Function_apply.call(__method, object, args.concat(_Array_slice.call(arguments)));
 		}
-	} 
-	
+	}
+
 	/** @const */
   , _hasOwnProperty = _unSafeBind.call(Function.prototype.call, Object.prototype.hasOwnProperty)
 
@@ -188,9 +183,9 @@ var _ = global["_"]["ielt9shims"]
   , _testElement = document.createElement('p')
 
   , _txtTextElement
-	
+
   , _Node_prototype = global["Node"].prototype
-	
+
   , _Element_prototype = global["Element"].prototype
 
 	/** @const */
@@ -204,10 +199,10 @@ var _ = global["_"]["ielt9shims"]
 
 	/** @const @type {RegExp} */
   , RE_left_spaces = /^\s+/
-	
+
 	/** @const @type {RegExp} */
   , RE_space = /\s/
-	
+
 	/** @type {boolean} */
   , _String_split_shim_isnonparticipating
 
@@ -324,14 +319,14 @@ var _ = global["_"]["ielt9shims"]
   , html5_elements = 'abbr|article|aside|audio|canvas|command|datalist|details|figure|figcaption|footer|header|hgroup|keygen|mark|meter|nav|output|progress|section|source|summary|time|video'
 
   , html5_elements_array = html5_elements.split('|')
-	
+
 	/* Not all elements can be cloned in IE (this list can be shortend) **/
   , ielt9_elements = /^<|^(?:a|b|button|code|div|fieldset|form|map|h1|h2|h3|h4|h5|h6|i|object|iframe|img|input|label|li|link|ol|option|p|param|q|script|select|span|strong|style|table|tbody|td|textarea|tfoot|th|thead|tr|ul|optgroup)$/i
 
 	// feature detection: whether the browser supports unknown elements
 	/** @type {boolean}*/
   , supportsUnknownElements
-	
+
   , safeFragment
 
 	/** @type {Node} */
@@ -346,7 +341,7 @@ var _ = global["_"]["ielt9shims"]
 
 document.compatMode === "CSS1Compat" ?
 	((_getScrollX = function(){return _document_documentElement.scrollLeft}), (_getScrollY = function(){return _document_documentElement.scrollTop}))
-	: 
+	:
 	((_getScrollX = function(){return document.body.scrollTop}), (_getScrollY = function(){return document.body.scrollLeft}))
 ;
 
@@ -549,7 +544,7 @@ More better solution:: http://xregexp.com/
 if('te'.split(/(s)*/)[1] != void 0 ||
    '1_1'.split(/(_)/).length != 3) {
    _String_split_shim_isnonparticipating = /()??/.exec("")[1] === void 0; // NPCG: nonparticipating capturing group
-   
+
 	String.prototype.split = function (separator, limit) {
 		var str = this;
 		// if `separator` is not a regex, use the native `split`
@@ -557,7 +552,7 @@ if('te'.split(/(s)*/)[1] != void 0 ||
 			//http://es5.github.com/#x15.5.4.14
 			//If separator is undefined, then the result array contains just one String, which is the this value (converted to a String). If limit is not undefined, then the output array is truncated so that it contains no more than limit elements.
 			if(separator === void 0 && limit === 0)return [];
-			
+
 			return _String_split.call(str, separator, limit);
 		}
 
@@ -587,8 +582,8 @@ if('te'.split(/(s)*/)[1] != void 0 ||
 			if (!limit) {
 				return [];
 			}
-		}		
-		
+		}
+
 		while (match = separator1.exec(str)) {
 			lastIndex = match.index + match[0].length; // `separator1.lastIndex` is not reliable cross-browser
 
@@ -685,7 +680,6 @@ if(!("pageXOffset" in global)) {
 /*  ======================================================================================  */
 /*  ======================================  Events  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-if(_browser_msie < 9) {
 	/** @constructor */
 	function_tmp = global["Event"] = function() {
 		//new operator for Event supported in a.js
@@ -822,7 +816,6 @@ if(_browser_msie < 9) {
 	function_tmp = new function_tmp;
 	function_tmp.constructor = _ielt9_Event;
 	_ielt9_Event.prototype = function_tmp;
-}
 
 
 //fix [add|remove]EventListener & dispatchEvent for IE < 9
@@ -837,7 +830,7 @@ function fixEvent(event) {
 
 	var thisObj = this,
 		_button = ("button" in event) && event.button;
-	
+
 	// один объект события может передаваться по цепочке разным обработчикам
 	// при этом кроссбраузерная обработка будет вызвана только 1 раз
 	// Снизу, в функции commonHandle,, мы должны проверять на !event["__isFixed"]
@@ -885,12 +878,12 @@ function fixEvent(event) {
 	if(!event.which && _button)event.which = _button & 1 ? 1 : _button & 2 ? 3 : _button & 4 ? 2 : 0;
 
 	"timeStamp" in event || (event.timeStamp = +new _Native_Date());
-	
+
 	"eventPhase" in event || (event.eventPhase = (event.target == thisObj) ? 2 : 3); // "AT_TARGET" = 2, "BUBBLING_PHASE" = 3
-	
+
 	"currentTarget" in event || (event.currentTarget = thisObj);
-		
-		
+
+
 	// событие DOMAttrModified
 	//  TODO:: недоделано
 	// TODO:: Привести event во всех случаях (для всех браузеров) в одинаковый вид с newValue, prevValue, propName и т.д.
@@ -920,28 +913,28 @@ if(  __GCC__UNSTABLE_FUNCTIONS__ ) {
 
 // вспомогательный универсальный обработчик. Вызывается в контексте элемента всегда this = element
 function commonHandle(nativeEvent) {
-	if(fixEvent === void 0) {//фильтруем редко возникающую ошибку, когда событие отрабатывает после unload'а страницы. 
+	if(fixEvent === void 0) {//фильтруем редко возникающую ошибку, когда событие отрабатывает после unload'а страницы.
 		return;
 	}
 
 	var thisObj = this,
-		_,
+		_ = thisObj["_"],
 		errors,
 		errorsMessages,
 		_event,
 		handlersKey;
 
+	if(_["__stop_events__"])return;
 
 	if(    __GCC__UNSTABLE_FUNCTIONS__    && !_event_globalIsCaptureIndicator && nativeEvent.bubbles !== false && nativeEvent.type in _event_needCapturing && thisObj != global) {
 		_event_captureHandlerNodes.push(this);
 		_event = nativeEvent;
 	}
 	else {
-		_ = thisObj["_"];
 		errors = [];
 		errorsMessages = [];
 		handlersKey = _event_eventsUUID + (_event_globalIsCaptureIndicator ? "-" : "");
-		
+
 		if((!_ || !_[handlersKey])) {
 			if(!("__dom0__" in nativeEvent))return;
 			else {
@@ -949,7 +942,7 @@ function commonHandle(nativeEvent) {
 				_[handlersKey] || (_[handlersKey] = {});
 			}
 		}
-		
+
 		// получить объект события и проверить, подготавливали мы его для IE или нет
 		nativeEvent || (nativeEvent = window.event);
 
@@ -1023,7 +1016,7 @@ function commonHandle(nativeEvent) {
 			nativeEvent.returnValue = _event.returnValue;
 			nativeEvent.cancelBubble = _event.cancelBubble;
 			//TODO:: check out that properties need to be returned in native 'event' object or _extend(nativeEvent, event);
-			
+
 			if(errors.length == 1) {//Если была только одна ошибка - кидаем ее дальше
 				_throw(errors[0])
 			}
@@ -1060,7 +1053,7 @@ if(!document.addEventListener) {
 				window.addEventListener(_type, windowCaptureHandler);
 			}
 		}
-		
+
 		var /** @type {Node} */
 			thisObj = this,
 			/** @type {Object} */
@@ -1076,17 +1069,17 @@ if(!document.addEventListener) {
 			//Emulate bubbling from document to defaultView (window) | 1 from 2
 			document.addEventListener(_type, _event_emptyFunction, useCapture);
 		}
-			
+
 		if(!_)_ = thisObj["_"] = {};
 		//_ = _[_event_phase] || (_[_event_phase] = {});
-		
+
 		if(_type === "DOMContentLoaded") {//IE
 			if (document.readyState == 'complete')return;
 
 			if(thisObj === global)thisObj = document;
 
 			_useInteractive = true;
-			
+
 			if(!__temporary__DOMContentLoaded_container[_type]) {
 				__temporary__DOMContentLoaded_container[_type] = true;
 				/*var a = document.getElementById("__ie_onload");
@@ -1118,7 +1111,7 @@ if(!document.addEventListener) {
 		}
 		/* TODO:: DOMAttrModified
 		else if(_type == "DOMAttrModified") {
-		
+
 		}
 		*/
 		else if(_type === "load" && "tagName" in thisObj && thisObj.tagName.toUpperCase() === "SCRIPT") {//[script:onload]
@@ -1129,7 +1122,7 @@ if(!document.addEventListener) {
 			//However, IE reports the script as being in "interactive"
 			//readyState at the time of the define call.
 			_useInteractive = true;
-			
+
 			//Need to use old school onreadystate here since
 			//when the event fires and the node is not attached
 			//to the DOM, the evt.srcElement is null, so use
@@ -1147,22 +1140,22 @@ if(!document.addEventListener) {
 			_type = "readystatechange";
 		}
 		else if(_type === "DOMMouseScroll")_type = "mousewheel";//TODO:: Test it
-		
+
 		/*
 		TODO::
 		Reference: http://www.w3.org/TR/DOM-Level-2-Events/events.html#Events-EventTarget
 		If multiple identical EventListeners are registered on the same EventTarget with the same parameters the duplicate instances are discarded. They do not cause the EventListener to be called twice and since they are discarded they do not need to be removed with the removeEventListener method.
 		*/
-		
-		
+
+
 		// исправляем небольшой глюк IE с передачей объекта window
 		if(thisObj.setInterval && (thisObj != global && !thisObj["frameElement"]))thisObj = global;
-		
+
 		//Назначить функции-обработчику уникальный номер. По нему обработчик можно будет легко найти в списке events[type].
 		if(!_handler[_event_UUID_prop_name])_handler[_event_UUID_prop_name] = ++_event_UUID;
-		
-		//Инициализовать служебную структуру events и обработчик _[handleUUID]. 
-		//Основная его задача - передать вызов универсальному обработчику commonHandle с правильным указанием текущего элемента this. 
+
+		//Инициализовать служебную структуру events и обработчик _[handleUUID].
+		//Основная его задача - передать вызов универсальному обработчику commonHandle с правильным указанием текущего элемента this.
 		//Как и events, _[handleUUID] достаточно инициализовать один раз для любых событий.
 		if(!(_callback = _[_event_handleUUID])) {
 			_callback = _[_event_handleUUID] = _unSafeBind.call(commonHandle, thisObj);
@@ -1173,12 +1166,12 @@ if(!document.addEventListener) {
 		if(!_[handlersKey])_[handlersKey] = {};
 		if(!_[handlersKey][_type]) {
 			_[handlersKey][_type] = {};
-			
+
 			if(!_useInteractive)//[script:onload]
 				thisObj.attachEvent('on' + _type, _callback);
 		}
-		
-		//Добавляем пользовательский обработчик в список elem[handlersKey][type] под заданным номером. 
+
+		//Добавляем пользовательский обработчик в список elem[handlersKey][type] под заданным номером.
 		//Так как номер устанавливается один раз, и далее не меняется - это приводит к ряду интересных фич.
 		// Например, запуск add с одинаковыми аргументами добавит событие только один раз.
 		_[handlersKey][_type][_handler[_event_UUID_prop_name]] = _handler;
@@ -1199,28 +1192,28 @@ if(!document.addEventListener) {
 			handlers,
 			/** @type {String} */
 			any;
-		
+
 		if(typeof _handler != "function" || !_handler[_event_UUID_prop_name] || !_)return;
 		if(    __GCC__UNSTABLE_FUNCTIONS__     && useCapture && !(_type in _event_needCapturing))return;
 		if(!(_callback = _[_event_handleUUID]))return;
 
 		//_ = _[_event_phase] || (_[_event_phase] = {});
 		//if(!_)return;
+		//Get handlers list
+		handlers = _[handlersKey] && _[handlersKey][_type];
+		//Delete handler by ID
+		delete handlers[_handler[_event_UUID_prop_name]];
+		//Check handlers list for emptiness
+		for(any in handlers)if(_hasOwnProperty(handlers, any))return;
 
-		handlers = _[handlersKey] && _[handlersKey][_type];//Получить список обработчиков
-		
-		delete handlers[_handler[_event_UUID_prop_name]];//Удалить обработчик по его номеру
-
-		for(any in handlers)if(_hasOwnProperty(handlers, any))return;//Проверить, не пуст ли список обработчиков
-
-		//Если пуст, то удалить служебный обработчик и очистить служебную структуру events[type]
+		//If handlers list is empty - detach native event handler
 		thisObj.detachEvent("on" + _type, _callback);
-
+		//  and delete handlers container
 		delete _[handlersKey][_type];
 
-		//Если событий вообще не осталось - удалить events за ненадобностью.
+		//If no any handlers on that element
 		for(any in _[handlersKey])if(_hasOwnProperty(_[handlersKey], any))return;
-		
+		// delete container of handlers containers
 		delete _[handlersKey];
 	};
 
@@ -1236,16 +1229,16 @@ if(!document.addEventListener) {
 
 /**
 dispatchEvent
-This method allows the dispatch of events into the implementations event model. Events dispatched in this manner will have the same capturing and bubbling behavior as events dispatched directly by the implementation. The target of the event is the EventTarget on which dispatchEvent is called. 
-Parameters 
+This method allows the dispatch of events into the implementations event model. Events dispatched in this manner will have the same capturing and bubbling behavior as events dispatched directly by the implementation. The target of the event is the EventTarget on which dispatchEvent is called.
+Parameters
 evt of type Event
 Specifies the event type, behavior, and contextual information to be used in processing the event.
-Return Value 
-boolean	
+Return Value
+boolean
 The return value of dispatchEvent indicates whether any of the listeners which handled the event called preventDefault. If preventDefault was called the value is false, else the value is true.
 
-Exceptions 
-EventException	
+Exceptions
+EventException
 UNSPECIFIED_EVENT_TYPE_ERR: Raised if the Event's type was not specified by initializing the event before dispatchEvent was called. Specification of the Event's type as null or an empty string will also trigger this exception
  * @param {(Event|CustomEvent)} _event is an event object to be dispatched.
  * @this {Element} is the target of the event.
@@ -1258,12 +1251,13 @@ if(!document.dispatchEvent) {
 		//reinit event
 		if(!_event.returnValue)_event.returnValue = true;
 	  	if(_event.cancelBubble)_event.cancelBubble = false;
+        delete _event["__stopNow"];
 
 		/**
 		 * @type {Node}
 		 */
 		var thisObj = this;
-		
+
 		try {
 			return thisObj.fireEvent("on" + _event.type, _event);
 		}
@@ -1289,7 +1283,7 @@ if(!document.dispatchEvent) {
 
 				result = !_event.cancelBubble;
 				_event = null;
-				
+
 				return result;
 			}
 			else _throw(e);
@@ -1315,6 +1309,130 @@ if(!document.createEvent) {/*IE < 9 ONLY*/
 
 /*  ======================================================================================  */
 /*  ========================================  DOM  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+_.push(function() {
+	var _InputElement_prototype = global["HTMLInputElement"] && global["HTMLInputElement"].prototype || _Element_prototype
+		, _TextAreaElement_prototype = global["HTMLTextAreaElement"] && global["HTMLTextAreaElement"].prototype
+		, _setSelectionRange = function (start, end/*, selectionDirection*/) {
+			if(start == void 0)return;
+			if(end == void 0)end = start;
+
+			var thisObj = this
+				, nodeName = thisObj.nodeName.toUpperCase()
+				, selRange
+			;
+
+			if(nodeName != "INPUT" && nodeName != "TEXTAREA")return;
+
+			selRange = thisObj.createTextRange();
+			selRange.collapse(true);
+			selRange.moveStart('character', start);
+			selRange.moveEnd('character', end - start);
+			selRange.select();
+		}
+		/**
+		 * @param {boolean=} needStart true - return start point, otherwise endPoint
+		 */
+		, _getSelectionStart_or_End = function(needStart) {
+			var thisObj = this
+				, selection
+				, nodeName = thisObj.nodeName.toUpperCase()
+				, range
+				, stored_range
+				, str
+				, start
+				, result
+				, curElement
+				, current__stop_events__1
+				, current__stop_events__2
+			;
+
+			if(nodeName != "INPUT" && nodeName != "TEXTAREA")return;
+
+			curElement = document.activeElement;
+			selection = document["selection"];
+			range = selection["createRange"]();
+			stored_range = range["duplicate"]();
+
+			if(thisObj["_"]) {
+				current__stop_events__1 = thisObj["_"]["__stop_events__"];
+				thisObj["_"]["__stop_events__"] = true;
+			}
+			if(curElement["_"]) {
+				current__stop_events__2 = curElement["_"]["__stop_events__"];
+				curElement["_"]["__stop_events__"] = true;
+			}
+
+			try {
+				thisObj.focus();
+
+				if(nodeName == "TEXTAREA") {
+					str = thisObj.value;
+					range = stored_range;
+
+					if(needStart) {
+						range.moveEnd("character", str.length);
+						result = range.text == "" ? str.length : str.lastIndexOf(range.text);
+					}
+					else {
+						range.moveStart("character", -str.length);
+						result = range.text.length;
+					}
+				}
+				else {
+					stored_range.moveToElementText(this);
+					stored_range.setEndPoint('EndToEnd', range);
+					start = stored_range.text.length - range.text.length;
+					if(needStart) {
+						result = start;
+					}
+					else {
+						result = start + range.text.length;
+					}
+				}
+
+				if(curElement && curElement.focus)curElement.focus();
+			}
+			catch(__e__) {
+				result = void 0;
+			}
+
+			if(thisObj["_"] && !current__stop_events__1) {
+				delete thisObj["_"]["__stop_events__"];
+			}
+			if(curElement["_"] && !current__stop_events__2) {
+				delete curElement["_"]["__stop_events__"];
+			}
+
+			return result;
+		}
+		, properties = {
+			"setSelectionRange" : {
+				"value" : _setSelectionRange
+			}
+			, "selectionStart" : {
+				"get" : function() {
+					return _getSelectionStart_or_End.call(this, true);
+				}
+				, "set" : function(val) {
+					_setSelectionRange.call(this, val, _getSelectionStart_or_End.call(this));
+					return val;
+				}
+			}
+			, "selectionEnd" : {
+				"get" : function() {
+					return _getSelectionStart_or_End.call(this);
+				}
+				, "set" : function(val) {
+					_setSelectionRange.call(this, _getSelectionStart_or_End.call(this, true), val);
+					return val;
+				}
+			}
+		}
+	;
+	Object.defineProperties(_InputElement_prototype, properties);
+	if(_TextAreaElement_prototype)Object.defineProperties(_TextAreaElement_prototype, properties);
+});
 
 /*  =======================================================================================  */
 /*  ================================  NodeList.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
@@ -1389,7 +1507,7 @@ if (document.doctype === null && _browser_msie > 7)//TODO:: this fix for IE < 8
 	_.push(function() {
 		var documentShim_doctype = document.childNodes[0];
 		Object.defineProperty(documentShim_doctype, "nodeType", {
-			get: function () { return 10 } 
+			get: function () { return 10 }
 		});
 	    Object.defineProperty(document, "doctype", {configurable : true, enumerable : false, get : function () { return documentShim_doctype } });
 	});
@@ -1418,7 +1536,7 @@ if (!_Function_call.call(document_createDocumentFragment, document).contains && 
 
 //https://developer.mozilla.org/en/DOM/Element.children
 //[IE lt 9] Fix "children" property in IE < 9
-if(!("children" in _testElement) || _browser_msie < 9)_.push(function() {
+if(!("children" in _testElement))_.push(function() {
 	Object.defineProperty(_Element_prototype, "children", {"get" : function() {
 		var arr = [],
 			child = this.firstChild;
@@ -1433,7 +1551,7 @@ if(!("children" in _testElement) || _browser_msie < 9)_.push(function() {
 });
 
 //[IE lt 9] Fix "offsetLeft" and "offsetTop" properties in IE < 9
-if(_browser_msie < 9)_.push(function() {
+_.push(function() {
 	/**
 	 * http://javascript.ru/ui/offset#popytka-2:-getboundingclientrect
 	 * @param {Node} elem
@@ -1447,7 +1565,7 @@ if(_browser_msie < 9)_.push(function() {
 
 		var box = elem.getBoundingClientRect(),//It might be an error here
 			body = document.body;
-	 
+
 		if(!_document_documentElement.contains(elem))
 			return X_else_Y ? box.left : box.top;
 
@@ -1470,7 +1588,7 @@ if(_browser_msie < 9)_.push(function() {
 			result = result + parseInt(elem[prop], 10);
 			elem = elem.offsetParent;
 		}
-	 
+
 		return result;
 	}
 
@@ -1556,7 +1674,7 @@ if(_browser_msie < 9)_.push(function() {
 
 //TODO::window.innerWidth & window.innerHeight http://www.javascripter.net/faq/browserw.htm
 //TODO::https://developer.mozilla.org/en/DOM/window.outerHeight
-	
+
 
 //[IE lt 9, old browsers] Traversal for IE < 9 and other
 if(_testElement.childElementCount == void 0)_.push(function() {
@@ -1669,7 +1787,7 @@ if(!("textContent" in _testElement))
 			"set" : function(val) {
 				if('innerText' in this)this.innerText = val;
 				else if('data' in this && this.replaceData)this.replaceData(0, this.length, val);
-				
+
 				return val;
 			}
 		});
@@ -1687,7 +1805,7 @@ if(!("isEqualNode" in _testElement)) {
 	    if (node.nodeType === 10/*Node.DOCUMENT_TYPE_NODE*/) {
 	        if (this.name !== node.name ||
 	            this.publicId !== node.publicId ||
-	            this.systemId !== node.systemId 
+	            this.systemId !== node.systemId
 	        )return false;
 	    }
 
@@ -1741,7 +1859,7 @@ if(!document.importNode) {
 					_childNodes,
 					i,
 					il;
-					
+
 				/* does the node have any attributes to add? */
 				if (attrs && attrs.length > 0)
 					/* add all of the attributes */
@@ -1756,7 +1874,7 @@ if(!document.importNode) {
 						newNode.appendChild(document.importNode(_childNodes[i++], allChildren));
 				return newNode;
 			break;
-			
+
 			case 3://document.TEXT_NODE:
 			case 4://document.CDATA_SECTION_NODE:
 			case 8://document.COMMENT_NODE:
@@ -1775,7 +1893,7 @@ if(!(_tmp_ in document)) {
 		__n1 = __name || 'DOCUMENT_POSITION_';//Use '__name || ' only for GCC not to inline __n1 param. In this case __name MUST be undefined
 	_document_documentElement[_tmp_] = document[_tmp_] = _Node_prototype[_tmp_] = function(b) {
 		var a = this;
-		
+
 		//compareDocumentPosition from http://ejohn.org/blog/comparing-document-position/
 		return a.contains ?
 				(a != b && a.contains(b) && 16) +
@@ -1883,20 +2001,18 @@ if(!global.getComputedStyle) {//IE < 9
 	}
 }
 
-//Исправляем для IE<9 создание DocumentFragment, для того, чтобы функция работала с HTML5
-if(_browser_msie < 9) {
+//HTML5 shiv for IE < 9
 	document.createDocumentFragment = function() {
-		var df = 
+		var df =
 				_Function_call.call(document_createDocumentFragment, this);
-		
+
 		if(global["DocumentFragment"] === global["Document"]) {
 			//TODO:: if DocumentFragment is a fake DocumentFragment -> append each instance with Document methods
 			_append(df, global["DocumentFragment"].prototype);//TODO: tests
 		}
-		
+
 		return html5_document(df);
 	};
-}
 
 if(__GCC__INCLUDE_DOMPARSER_SHIM__) {
 	if(!("DOMParser" in global)) {
@@ -1961,7 +2077,7 @@ if(__GCC__INCLUDE_DOMPARSER_SHIM__) {
 /*  =======================================================================================  */
 
 supportsUnknownElements = ((_testElement.innerHTML = '<x-x></x-x>'), _testElement.childNodes.length === 1 && _testElement.childNodes[0].nodeType === 1);
-	
+
 html5_elements = "|" + html5_elements + "|";
 
 function shivedCreateElement(nodeName) {
@@ -1975,7 +2091,7 @@ function shivedCreateElement(nodeName) {
 		(safeFragment["__orig__createElement__"] || safeFragment.createElement/* || function(){}*/)(nodeName);
 		//node.document.createElement(nodeName);
 	}
-	
+
 	return safeFragment.appendChild(node);
 }
 shivedCreateElement["ielt9"] = true;
@@ -1992,7 +2108,7 @@ function html5_document(doc) { // pass in a document as an argument
 		while (++a < html5_elements_array.length) { // loop through array
 			doc.createElement(html5_elements_array[a]); // pass html5 element into createElement method on document
 		}
-		
+
 		if(doc.createElement !== shivedCreateElement && !("ielt9" in doc.createElement)) {
 			doc["__orig__createElement__"] = doc.createElement;
 			doc.createElement = shivedCreateElement;
@@ -2018,12 +2134,12 @@ if(!supportsUnknownElements) {
 //Test for broken 'cloneNode'
 if(_Function_call.call(document_createElement, document, "x-x").cloneNode().outerHTML.indexOf("<:x-x>") === 0) {
 	safeElement = safeFragment.appendChild("createElement" in safeFragment && safeFragment.createElement("div") || safeFragment.ownerDocument.createElement("div"));
-	_nativeCloneNode = 
+	_nativeCloneNode =
 		_browser_msie === 8 ?
 			_testElement["cloneNode"] :
 			_browser_msie < 8 ?
 				_Node_prototype["cloneNode"] : void 0;
-	
+
 	/**
 	 * Issue: <HTML5_elements> become <:HTML5_elements> when element is cloneNode'd
 	 * Solution: use an alternate cloneNode function, the default is broken and should not be used in IE anyway (for example: it should not clone events)
@@ -2037,11 +2153,11 @@ if(_Function_call.call(document_createElement, document, "x-x").cloneNode().oute
 	 * @this {Node} element Элемент для клонирования
 	 * @version 4
 	 */
-	_Node_prototype["cloneNode"] = function(include_all) {//Экспортируем cloneElement для совместимости и для вызова напрямую	
+	_Node_prototype["cloneNode"] = function(include_all) {//Экспортируем cloneElement для совместимости и для вызова напрямую
 		var element = this,
 			result,
 			nodeBody;
-		
+
 		if(ielt9_elements.test(element.nodeName)) {//HTML4 element?
 			result = _Function_call.call(element["__nativeCloneNode__"] || _nativeCloneNode, element, include_all);
 		}
@@ -2051,7 +2167,7 @@ if(_Function_call.call(document_createElement, document, "x-x").cloneNode().oute
 			// set HTML5-safe element's innerHTML as input element's outerHTML
 			if(include_all)nodeBody = element.outerHTML;
 			else nodeBody = element.outerHTML.replace(element.innerHTML, "");
-		
+
 			safeElement.innerHTML = nodeBody.replace(/^\<\:/, "<").replace(/\<\/\:([\w\-]*\>)$/, "<$1");
 
 			result = safeElement.firstChild; // return HTML5-safe element's first child, which is an outerHTML clone of the input element
@@ -2067,7 +2183,7 @@ if(_Function_call.call(document_createElement, document, "x-x").cloneNode().oute
 				}
 			}
 		}
-			
+
 		return safeFragment.appendChild(result);
 	};
 
@@ -2136,7 +2252,7 @@ var /** @type {boolean} */
 
 	/** @const */
   , ieltbehaviorRules = [__URL_TO_ELEMENT_BEHAVIOR__]
-	
+
   , ielt9BehaviorRule = "{behavior:"
 
   , __ielt8__wontfix = []
@@ -2149,7 +2265,7 @@ var /** @type {boolean} */
 
 	// ------------------------------ ==================  Window  ================== ------------------------------
   , _emulate_scrollX_scrollY
-  
+
 	/** @const */
   , originalScrollTo = global.scrollTo
 
@@ -2195,11 +2311,11 @@ global["__ielt8__wontfix"] = __ielt8__wontfix;
 	// ------------------------------ ==================  querySelector  ================== ------------------------------
 var
   /** @type {RegExp} @const */
-	RE__getElementsByClassName = /\s*(\S+)\s*/g
+  RE__getElementsByClassName = /\s*(\S+)\s*/g
   /** @type {string} @const */
   , STRING_FOR_RE__getElementsByClassName = '(?=(^|.*\\s)$1(\\s|$))'
   /** @type {RegExp} @const */
-  , RE__selector__easySelector = /^([\|\w-]+)?((?:\.(?:[\w-]+))+)?$|^#([\w-]+$)/
+  , RE__selector__easySelector = /^([\w\-\|]+)?((?:\.(?:[\w-]+))+)?$|^#([\w-]+$)/
   /** @type {RegExp} @const */
   , RE__queryManySelector__doubleSpaces = /\s*([,>+~ ])\s*/g//Note: Use with "$1"
   /** @type {RegExp} @const */
@@ -2213,9 +2329,9 @@ var
   /** @type {RegExp} @const */
   , RE__queryOneSelector__selectorMatch = /^([,>+~ ])?([\|\*\w-]*)\#?([\w-]*)((?:\.?[\w-])*)(\[.+\])?(?:\:(.+))?$/
   /** @type {RegExp} @const */
-  , RE__queryOneSelector__attrMatcher = /^\[?(.*?)(?:([\*~&\^\$\@!]?=)(.*?))?\]?$/
+  , RE__queryOneSelector__attrMatcher = /^\[?['"]?(.*?)['"]?(?:([\*~&\^\$\@!]?=)['"]?(.*?)['"]?)?\]?$/
   /** @type {RegExp} @const */
-  , RE__queryOneSelector__pseudoMatcher = /^([^(]+)(?:\(([^)]+)\))?$//* regexpt from jass 0.3.9 (http://yass.webo.in/) rev. 371 line 166 from right */
+  , RE__queryOneSelector__pseudoMatcher = /^([^(]+)(?:\((.+)\))?$/ // regexpt /^([^(]+)(?:\(([^)]+)\))?$/ from jass 0.3.9 (http://yass.webo.in/) rev. 371 line 166 from right
   /** @type {RegExp} @const */
   , RE__queryOneSelector__pseudoNthChildPlus = /\-child\((\dn)\+(\d)\)/g//Note: Use with "-child\($1%$2\)"
   /** @type {RegExp} @const */
@@ -2286,10 +2402,10 @@ var
   }
   /** @type {Object} @const */
   , attributeSpecialCase = {
-    "href" : function(node) {
-      return node.getAttribute("href", 2);
-    }
-  }
+        "href" : function(node) {
+          return _Function_call.call(node, node["__getAttribute__"] || node.getAttribute, "href", 2);
+        }
+      }
   /** @type {Object} @const */
   , attributeSpecialSpecified = {"coords" : 1, "id" : 1, "name" : 1}
 
@@ -2327,7 +2443,7 @@ finally {
  * @param {!string} selector CSS3-selector
  * @param {Node|Array.<Node>|Object} roots
  * @param {Array.<Node>} globalResult
- * @param {boolean} globalResultAsSparseArray 
+ * @param {boolean} globalResultAsSparseArray
  * @param {Node|Array.<HTMLElement>=} preResult
  * @param {boolean=} onlyOne only one need
  * {(Object|boolean)=} resultKeys
@@ -2340,7 +2456,7 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
   var result = globalResult || [];
 
   var /** @type {boolean} */isMatchesSelector = !!preResult
-    , /** @type {Node} */root = isMatchesSelector && (roots = {}) || (!roots ? document : 
+    , /** @type {Node} */root = isMatchesSelector && (roots = {}) || (!roots ? document :
                                 "length" in roots ? //fast and unsafe isArray
                                   roots[0] :
                                   roots)
@@ -2379,13 +2495,11 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
   if(needCheck_tag) {
     tag = (needCheck_nodeType ? void 0 : tag.replace("|", ":").toUpperCase());
   }
-  
+
   if(needCheck_classes) {
     classes = classes.replace(RE__querySelector__dottes, " ");
     klas = new RegExp(classes.replace(RE__getElementsByClassName, STRING_FOR_RE__getElementsByClassName));
   }
-
-  if(isMatchesSelector)combinatorType = 0;
 
   if(css3Attr = selectorArr[5]) {
     css3Attr = _String_split.call(css3Attr, "][");
@@ -2393,10 +2507,7 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
     while(css3Attr_add = css3Attr[++kr]) {
       css3Attr_add = css3Attr[kr] = css3Attr_add.match(RE__queryOneSelector__attrMatcher);
 
-      b = css3Attr_add[1];
-      if((a = b.charAt(0)) === "\'" || a === "\""  && b.substr(-1) === a) {//Note: original IE substr not allowed negative value as first param
-        b = css3Attr_add[1] = _String_substr.call(b, 1, b.length - 2);
-      }
+      //selectorAttrOperatorsMap
 
       css3Attr_add[2] = selectorAttrOperatorsMap[css3Attr_add[2]];
 
@@ -2407,13 +2518,9 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
 	        b = b.substr(0, b.length - 2);
 	        css3Attr_add[4] = true;
 	      }
-
-	      if((a = b.charAt(0)) === "\'" || a === "\""  && b.substr(-1) === a) {
-	        css3Attr_add[3] = _String_substr.call(b, 1, b.length - 2);
 	      }
 	  }
-    }
-    b = a = void 0;
+    b = void 0;
   }
 
   if(css3Pseudo = selectorArr[6]) {
@@ -2429,8 +2536,10 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
       C = css3PseudoOperatorType ? "previousSibling" : "nextSibling";
     }
   }
-  
-  selectorArr = selector = void 0; 
+
+
+  if(isMatchesSelector)combinatorType = 0;
+  selectorArr = selector = void 0;
 
   //prepear
   if(combinatorType == 1) {
@@ -2454,8 +2563,10 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
   canWeReturnUnsafeArray = (!("length" in roots) || roots.length === 1) && !globalResultAsSparseArray && !css3Attr && !css3Pseudo && !needCheck_tag && !needCheck_classes && !needCheck_id;
 
   do {
-    child = void 0;
     switch(combinatorType) {
+      case 0://matchesSelector
+        child = preResult[0];
+      break;
       case 1://" " or ""
         //if("all" in root && !root.all.length)continue;
         if(!id) {//tagName or/and class
@@ -2491,7 +2602,6 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
         nextRoot = roots[rootIndex + 1];
       case 4://"+"
         if(!(child = getNextElement(root)))continue;
-      default:
     }
 
     if(canWeReturnUnsafeArray)return preResult;
@@ -2511,7 +2621,7 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
                   nodeAttrCurrent_value = u[c];
                   nodeAttrCurrent_value = (nodeAttrCurrent_value && (nodeAttrCurrent_value.specified || c in attributeSpecialSpecified) && nodeAttrCurrent_value.nodeValue !== "") ? nodeAttrCurrent_value.nodeValue : null;
                 }
-                
+
                 a = css3Attr_add[2];
 
                 if(nodeAttrCurrent_value === null) {
@@ -2525,9 +2635,7 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
 				}
 
                 nodeAttrExpected_value = css3Attr_add[3];
-				
-				/* from yass 0.3.9 http://yass.webo.in/
-                 and edited by me :) */
+
                 /* function calls for CSS2/3 attributes selectors */
                 switch(a) {
                   /* W3C "an E element with a "nodeAttrCurrent_value" attribute" */
@@ -2589,7 +2697,7 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
                 }
               }
             }
-        
+
             if(match && css3Pseudo) {
               /*
               function calls for CSS2/3 modificatos. Specification taken from
@@ -2645,7 +2753,7 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
                 /* W3C: "an E element, root of the document" */
                 case 5://'root':
                   match = (child_nodeName || child.nodeName.toUpperCase()) == "HTML";
-                break;             
+                break;
                 /*
                 Rrom w3.org: "an E element that has no rsren (including text nodes)".
                 Thx to John, from Sizzle, 2008-12-05, line 416
@@ -2700,7 +2808,7 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
                 case 15://'read-only':
                 case 16://'read-write':
                   child_nodeName || (child_nodeName = child.nodeName.toUpperCase());
-                  match = (child_nodeName == "INPUT" || child_nodeName == "TEXTAREA" || child.getAttribute("contenteditable") !== null) && !child.readonly;
+                  match = (child_nodeName == "INPUT" || child_nodeName == "TEXTAREA" || _Function_call.call(child, child["__getAttribute__"] || child.getAttribute, "contenteditable") !== null) && !child.readonly;
                   if(css3PseudoOperatorType == 16)match = !match;
                 break;
                 /*TODO::
@@ -2727,8 +2835,8 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
     }
   }
     while( child = combinatorTypeMoreThen_2 ? (combinatorType === 4 ? void 0 : child === nextRoot ? void 0 : getNextElement(child) ) : preResult[ ++childrenIndex ] );
-    
 
+    child = void 0;
   }
   while(root = roots[++rootIndex]);
 
@@ -2737,43 +2845,41 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
 
 
 /**
- * @param {!string} selector Строка с CSS3-selector
+ * @param {!string} selector CSS3-selector
  * @param {boolean=} onlyOne only one need
  * @param {(Node|Array.<Node>)=} root
  * @this {Document|HTMLElement|Node} root
  * @return {Array.<HTMLElement>}
  * @version 4.0
  */
-var queryManySelector = function queryManySelector(selector, onlyOne, root) {
+function queryManySelector(selector, onlyOne, root) {
   root || (root = this);
-
-  var rt,
-    rules,
-    timeStamp;
 
   selector = _String_trim.call(selector.replace(RE__queryManySelector__doubleSpaces, "$1"));
 
-  var result = new _NodeList,
-    rule,
-    i = -1,
-    selElements = root,
-    nextRule,
-    lastRule,
-    firstRule = true,
-    fail = false,
-    need_SparseArray,
-    result_isSparseArray
+  var result = []
+      , rule
+      , i = -1
+      , selElements
+      , nextRule
+      , lastRule
+      , firstRule = true
+      , fail = false
+      , need_SparseArray
+      , nodeSortingNeeds
+      , forseNo_need_SparseArray = !!document.querySelector["__noorder__"] || !!document.querySelectorAll["__noorder__"]
+      , rules = selector
+          .replace(RE__querySelector__arrtSpaceSeparated_toSafe, "@=")
+          .replace(RE__queryOneSelector__pseudoNthChildPlus, "-child\\($1%$2\\)")
+          .match(RE__queryManySelector__selectorsMatcher)
+      , parsedRule
   ;
 
-      
-  rules = selector
-    .replace(RE__querySelector__arrtSpaceSeparated_toSafe, "@=")
-    .replace(RE__queryOneSelector__pseudoNthChildPlus, "-child\($1%$2\)")
-    .match(RE__queryManySelector__selectorsMatcher);
+  selElements = root;
 
-  while((rule = rules[++i])) {
-    
-    nextRule = rules[i + 1];
+  while(rule = rules.shift()) {
+
+    nextRule = rules[1];
     lastRule = !nextRule || nextRule.charAt(0) === ',';
 
     //if(nextRule && nextRule.length > 1 && !resultKeys)resultKeys = {};
@@ -2792,8 +2898,8 @@ var queryManySelector = function queryManySelector(selector, onlyOne, root) {
         selElements = null;
         fail = true;
       }
-      else if(!fail) {//CSS3 selector
-        if(need_SparseArray = !!(lastRule && (result_isSparseArray || nextRule || root.length > 1)))result_isSparseArray = true;
+      else {//CSS3 selector
+        if(need_SparseArray = !!(lastRule && (nodeSortingNeeds || nextRule || root.length > 1)))nodeSortingNeeds = true;
         selElements = queryOneSelector(rule, root, lastRule ? result : [], need_SparseArray, null, onlyOne && lastRule/*, lastRule && resultKeys || !firstRule && root.length > 1 && {}*/);
       }
     }
@@ -2801,18 +2907,18 @@ var queryManySelector = function queryManySelector(selector, onlyOne, root) {
     //If last rule in this selector
     if(firstRule = lastRule) {
       if(!result.length && selElements) {
-        result_isSparseArray = false;
+        nodeSortingNeeds = false;
         result = _NodeList_from(selElements);
       }
       selElements = null;
       root = this;
       fail = false;
     }
-    
+
     if(!nextRule || nextRule === ",")break;
   }
-   
-  return result_isSparseArray ?
+
+  return nodeSortingNeeds ?
     _NodeList_from(result) :
     result;
 };
@@ -2825,8 +2931,8 @@ var queryManySelector = function queryManySelector(selector, onlyOne, root) {
 function _matchesSelector(selector) {
   if(!selector)return false;
   if(selector === "*")return true;
-  if(selector === ":root" && this === _document_documentElement)return true;
-  if(selector === "body" && this === document.body)return true;
+  if(this === _document_documentElement && selector === ":root")return true;
+  if(this === document.body && selector.toUpperCase() === "BODY")return true;
 
   //selector = _String_trim.call(selector.replace(RE__queryManySelector__doubleSpaces, "$1"));
 
@@ -2851,7 +2957,7 @@ function _matchesSelector(selector) {
   }
   else if(!RE_matchSelector__isSimpleSelector.test(selector)) {//easy selector
     tmp = queryOneSelector(selector, null, false, null, thisObj, true);
-    
+
     return tmp[0] === thisObj;
   }
   else {
@@ -2930,29 +3036,50 @@ _Element_prototype.setAttribute = function(name, val, flag) {
 		val = val + "";
 		flag = 1;
 	}
-	return Function.prototype.call.call(this["_"]["__setAttribute__"], this, name, val, flag);
+	return Function.prototype.call.call(this["__setAttribute__"], this, name, val, flag);
 };
 _Element_prototype.getAttribute = function(name, flag) {
-	var needAttributeShim
-		, val
+	var upperName = name.toUpperCase()
+        , result
+        , needAttributeShim
 	;
 
 	if(needAttributeShim = (flag == void 0)) {
-		name = name.toUpperCase();
+        upperName = name.toUpperCase();
 		flag = 1;
 	}
 
-	val = Function.prototype.call.call(this["_"]["__getAttribute__"], this, name, flag);
-	if(val && needAttributeShim)val += "";
+    result = _Function_call.call(this["__getAttribute__"], this, upperName, flag);
+	if(result !== null) {
+        if(needAttributeShim)result += "";
+    }
+    else {
+        if(!(upperName in this) && (typeof (result = this[name]) === "string")) {
+            result = this[upperName] = this[name];
+            delete this[name];
+            result += "";
+        }
+        else result = null;
+    }
 
-	return val;
+	return result;
 };
 _Element_prototype.removeAttribute = function(name, flag) {
+    var upperName
+        , result
+    ;
+
 	if(flag == void 0) {
-		name = name.toUpperCase();
 		flag = 1;
+        upperName = name.toUpperCase();
+        result = upperName in this;
+
+        if(!result && this.getAttribute(name) !== null) {
+            delete this[upperName];
+            return true;
+        }
 	}
-	return Function.prototype.call.call(this["_"]["__removeAttribute__"], this, name, flag);
+	return _Function_call.call(this["__removeAttribute__"], this, upperName || name, flag);
 };
 
 if(!_Node_prototype.hasAttribute)_Node_prototype.hasAttribute = function(name) {
@@ -2984,8 +3111,6 @@ _Node_prototype["__ielt8__element_init__"] = function __ielt8__element_init__() 
 	;
 	if(thisObj["element"])thisObj = thisObj["element"];//¬_¬ only if the save `this` to local variable
 
-	if(!(_ = thisObj["_"]))_ = thisObj["_"] = {};//container
-
 	if(!("prepend" in thisObj)) {//DOM4 API
 		thisObj["after"] = _Element_prototype["after"];
 		thisObj["before"] = _Element_prototype["before"];
@@ -2999,7 +3124,7 @@ _Node_prototype["__ielt8__element_init__"] = function __ielt8__element_init__() 
 	"compareDocumentPosition" in thisObj || (thisObj.compareDocumentPosition = _Node_prototype.compareDocumentPosition);
 	"getElementsByClassName" in thisObj || (thisObj.getElementsByClassName = _Element_prototype.getElementsByClassName);
 
-	"addEventListener" in thisObj || ((thisObj.addEventListener = global.addEventListener), 
+	"addEventListener" in thisObj || ((thisObj.addEventListener = global.addEventListener),
 									  (thisObj.removeEventListener = global.removeEventListener),
 									  (thisObj.dispatchEvent = global.dispatchEvent));
 
@@ -3007,15 +3132,17 @@ _Node_prototype["__ielt8__element_init__"] = function __ielt8__element_init__() 
 	"querySelector" in thisObj || ((thisObj.querySelectorAll = _Element_prototype.querySelectorAll),
 								   (thisObj.querySelector = _Element_prototype.querySelector));
 
-	"matchesSelector" in thisObj || ((thisObj.matchesSelector = _matchesSelector), 
+	"matchesSelector" in thisObj || ((thisObj.matchesSelector = _matchesSelector),
 								     (thisObj["matches"] = _matchesSelector));
-	
+
 	"hasAttribute" in thisObj || (thisObj.hasAttribute = _Element_prototype.hasAttribute);
 
+	"setSelectionRange" in thisObj || (thisObj.setSelectionRange = _Element_prototype.setSelectionRange);
+
 	if(this.setAttribute != _Element_prototype.setAttribute) {
-		_["__setAttribute__"] = this.setAttribute;
-		_["__getAttribute__"] = this.getAttribute;
-		_["__removeAttribute__"] = this.removeAttribute;
+        this["__setAttribute__"] = this.setAttribute;
+        this["__getAttribute__"] = this.getAttribute;
+        this["__removeAttribute__"] = this.removeAttribute;
 		this.setAttribute = _Element_prototype.setAttribute;
 		this.getAttribute = _Element_prototype.getAttribute;
 		this.removeAttribute = _Element_prototype.removeAttribute;
@@ -3057,9 +3184,9 @@ __ielt8_Node_behavior_apply = _Node_prototype["__ielt8_Node_behavior_apply"] = f
 origCloneNode = _Node_prototype["cloneNode"];
 _Node_prototype["cloneNode"] = function(deep) {
 	var el = _Function_call.call(origCloneNode || this["__nativeCloneNode__"], this, deep);
-	
+
 	__ielt8_Node_behavior_apply(el);
-	
+
 	return el;
 };
 
@@ -3070,13 +3197,13 @@ prevCreateElement = document.createElement;
 document.createElement = function(tagName) {
 
 	var el = _Function_call.call(prevCreateElement, document, tagName);
-	
+
 	_tmp_ = ieltbehaviorRules.length;
 	while(--_tmp_ >= 0) try {
 		el.addBehavior(ieltbehaviorRules[_tmp_])
 	}
 	catch(e) {}
-	
+
 	return el;
 };
 
@@ -3099,7 +3226,7 @@ if(!global.XMLHttpRequest)global.XMLHttpRequest = function() {
 		xhr = new ActiveXObject("Microsoft.XMLHTTP");
 	}
 	var _xhr_send = xhr.send;
-	
+
 	xhr.send = function() {
 		//Fixes IE Caching problem
         this.setRequestHeader("If-Modified-Since", "Sat, 1 Jan 2000 00:00:00 GMT");//TODO:: tests
@@ -3123,7 +3250,7 @@ if(!("pageXOffset" in global) && global.attachEvent) {
 			function() { global.scrollX = global.pageXOffset = document.body.scrollLeft; global.scrollY = global.pageYOffset = document.body.scrollTop };
 
 	global.attachEvent("onscroll", _emulate_scrollX_scrollY);
-	
+
 	global.scroll = global.scrollTo = function(x, y) {
 		originalScrollTo(x, y);
 		_emulate_scrollX_scrollY();
@@ -3144,7 +3271,7 @@ function _DOMContentLoaded() {
 	document.removeEventListener('DOMContentLoaded', _DOMContentLoaded);
 
 	if(noDocumentReadyState)document.readyState = "interactive";
-	
+
 	if(_emulate_scrollX_scrollY)_emulate_scrollX_scrollY();
 
 	if(!("classList" in document.body.firstChild)) {
@@ -3179,6 +3306,6 @@ noDocumentReadyState = ielt9BehaviorRule = _tmp_ = void 0;
 		for(var key in extention)
 			if(Object.prototype.hasOwnProperty.call(extention, key) && !Object.prototype.hasOwnProperty.call(obj, key))
 				obj[key] = extention[key];
-		
+
 		return obj;
 	});

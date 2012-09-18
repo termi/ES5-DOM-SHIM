@@ -15,8 +15,22 @@ __Status__: Stable Beta
  - Less code (eg less closures, reusable functions) & file size
  - IE6+ support
  - Include all we need from ES5, ES6 and DOM shim in one file
- - some extra stuff (if you don't need it, use `a.noextras.js` instead of `a.js`)
- -
+ - Powerful customisation
+
+## Brief
+
+ - Add methods such [add/remove]EventListener, querySelector[All], setSelectionRange, etc in IE6+
+ - Add Element/Node properties such classList, children, [first/last]ElementChild, reversed, control, labels, etc in IE6+
+ - Add methods such insertAdjacentHTML (old FF), stopImmediatePropagation  (Opera < 12) and properties reversed, control, labels, etc in W3C browsers
+ - Add ES5/6 methods in all browsers
+ - Add DOM4 methods append, prepend, after, before, replace, remove, match in all browsers
+ - Provide bugs fixing for DOM and ES in IE, Opera, Chrome, FF
+ - and more
+
+## Cost
+ - For W3C browsers: ~8KiB
+ - For IE8: ~16KiB
+ - For IE6/7: ~18KiB
 
 ## Caution !!!
 

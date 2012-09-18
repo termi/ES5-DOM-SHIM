@@ -11,6 +11,9 @@
 <PUBLIC:PROPERTY NAME="control" GET="getControl" />
 <PUBLIC:PROPERTY NAME="labels" GET="getLabels" />
 
+<PUBLIC:PROPERTY NAME="selectionStart" GET="getSelectionStart" PUT="setSelectionStart" />
+<PUBLIC:PROPERTY NAME="selectionEnd" GET="getSelectionEnd" PUT="setSelectionEnd" />
+
 <PUBLIC:PROPERTY NAME="textContent" GET="getTextContent" PUT="setTextContent" />
 
 <PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_DISCONNECTED" GET="_g1" />
@@ -43,6 +46,10 @@ var
 	getChildElementCount=Element_proto.getchildElementCount,
 	getControl=Element_proto.getcontrol,
 	getLabels=Element_proto.getlabels,
+	getSelectionStart=Element_proto.getselectionStart,
+	setSelectionStart=Element_proto.setselectionStart,
+	getSelectionEnd=Element_proto.getselectionEnd,
+	setSelectionEnd=Element_proto.setselectionEnd,
 	getReversed=Element_proto.getreversed,
 	getTextContent=Node_proto.gettextContent,
 	setTextContent=Node_proto.settextContent,

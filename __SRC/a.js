@@ -1,4 +1,4 @@
-﻿/** @license ES6/DOM4 polyfill | @version 0.7 alpha-1 | MIT License | github.com/termi */
+﻿/** @license ES6/DOM4 polyfill | @version 0.7 alpha-3 | MIT License | github.com/termi */
 
 // ==ClosureCompiler==
 // @compilation_level ADVANCED_OPTIMIZATIONS
@@ -9,7 +9,7 @@
 // ==/ClosureCompiler==
 
 /**
- * @version 0.7 alpha-2
+ * @version 0.7 alpha-3
  * TODO::
  * 0. eng comments
  * 1. HTMLCanvasElement.toBlob (https://developer.mozilla.org/en/DOM/HTMLCanvasElement | http://stackoverflow.com/questions/4998908/convert-data-uri-to-file-then-append-to-formdata#answer-5100158)
@@ -51,22 +51,22 @@ var __GCC__INCLUDE_EXTRAS__ = true;
 //IF __GCC__INCLUDE_EXTRAS__ == true [
 //Exporting these objects to global (window)
 	/** 1. browser @define {boolean} */
-	var __GCC__INCLUDE_EXTRAS__BROWSER__ = true;
+	var __GCC__INCLUDE_EXTRAS__BROWSER__ = false;
 	/** 2. Utils.Dom.DOMStringCollection @define {boolean} */
 	var __GCC__INCLUDE_EXTRAS__DOMSTRINGCOLLECTION__ = true;
 	/** 3. XHR from https://github.com/Raynos/xhr with customisations @define {boolean} */
- 	var __GCC__INCLUDE_EXTRAS__XHR__ = true;
+ 	var __GCC__INCLUDE_EXTRAS__XHR__ = false;
 //Extending objects
 	/** 1. Object.append(object, donor, [donor2, ...]) @define {boolean} */
 	var __GCC__INCLUDE_EXTRAS__OBJECT_APPEND__ = true;
 	/** 2. Object.extend(object, donor, [donor2, ...]) (Object.append with overwrite exists properties) @define {boolean} */
  	var __GCC__INCLUDE_EXTRAS__OBJECT_EXTEND__ = true;
 	/** 3. Object.inherit(Child, Parent) @define {boolean} */
- 	var __GCC__INCLUDE_EXTRAS__OBJECT_INHERIT__ = true;
+ 	var __GCC__INCLUDE_EXTRAS__OBJECT_INHERITS__ = true;
 	/** 4. Array.prototype.unique() @define {boolean} */
- 	var __GCC__INCLUDE_EXTRAS__ARRAY_PROTOTYPE_UNIQUE__ = true;
+ 	var __GCC__INCLUDE_EXTRAS__ARRAY_PROTOTYPE_UNIQUE__ = false;
 	/** 5. String.random(length) @define {boolean} */
- 	var __GCC__INCLUDE_EXTRAS__STRING_RANDOM__ = true;
+ 	var __GCC__INCLUDE_EXTRAS__STRING_RANDOM__ = false;
 //]
 
 /** @define {boolean} */
@@ -112,7 +112,7 @@ var __GCC__LEGACY_BROWSERS_SUPPORT__ = true;
 	/** @define {boolean} */
 	var __GCC__LEGACY_BROWSERS_SUPPORT__IELT9__ = true;
 	/** @define {boolean} */
-	var __GCC__LEGACY_BROWSERS_SUPPORT__OPERA_LT_12_50__ = true;
+	var __GCC__LEGACY_BROWSERS_SUPPORT__OPERA_LT_12_10__ = true;
 //]
 // [[[|||---=== GCC DEFINES END ===---|||]]]
 
@@ -460,21 +460,24 @@ if(!Object["extend"])Object["extend"] = function(obj, ravArgs) {
 };
 }
 	
-if(__GCC__INCLUDE_EXTRAS__OBJECT_INHERIT__) {
+if(__GCC__INCLUDE_EXTRAS__OBJECT_INHERITS__) {
 /**
- * Inherit one Child 'class' (function) from Parent 'class' (function). Note: you need to apply Parent constructor in Child constructor manualy (<class>.superclass.constructor.apply(this, <arguments>))
+ * Inherits one Child 'class' (function) from Parent 'class' (function). Note: you need to apply Parent constructor in Child constructor manualy (<class>.superclass.constructor.apply(this, <arguments>))
  * @param {Function} Child
  * @param {Function} Parent
  *
  * Example:
  *  function A() { this.message = "World!"; this.subject = "Hello" };A.prototype.say = function() { alert(this.subject + " " + this.message) }
- *  function B() { B.superclass.constructor.call(this); this.message = "Classical inheritance!" }
- *  Object["inherit"](B, A);
+ *  function B() { B.superclass.call(this); this.message = "Classical inheritance!" }
+ *  Object["inherits"](B, A);
  *  test = new B;
  *  test.say();
  */
-Object["inherit"] = function(Child, Parent) {
-	(Child.prototype = Object.create(Child["superclass"] = Parent.prototype)).constructor = Child;
+Object["inherits"] = function(Child, Parent) {
+	Child.prototype = Object.create((Child["superclass"] = Parent).prototype, (Child.prototype && Object.getOwnPropertyNames(Child.prototype) || []).reduce(function(obj, propName){
+		obj[propName] = Object.getOwnPropertyDescriptor(this, propName);
+		return obj;
+	}.bind(Child.prototype), {"constructor" : { "value" : Child, "enumerable" : false }}));
 };
 }
 
@@ -528,8 +531,9 @@ if(!Function.prototype.bind)Function.prototype.bind = function (object, var_args
 			throw new TypeError("Function.prototype.bind called on incompatible " + this);
 		}
 	}
-	var __method = this, args = _Array_slice_.call(arguments, 1),
-		_result = function () {
+	var __method = this
+		, args = _Array_slice_.call(arguments, 1)
+		, _result = function () {
 			return _Function_apply_.call(
 				__method,
 				this instanceof _result ?
@@ -537,7 +541,8 @@ if(!Function.prototype.bind)Function.prototype.bind = function (object, var_args
 					object,
 				args.concat(_Array_slice_.call(arguments))
 			);
-		};
+		}
+	;
 	if(__method.prototype) {
 		_result.prototype = Object.create(__method.prototype);
 		//TODO:: Function objects created using Function.prototype.bind do not have a prototype property or the [[Code]], [[FormalParameters]], and [[Scope]] internal properties.
@@ -955,8 +960,6 @@ if (Object.getOwnPropertyDescriptor) {
 }
 
 if (!Object.getOwnPropertyDescriptor || getOwnPropertyDescriptorFallback) {
-    var ERR_NON_OBJECT = "Object.getOwnPropertyDescriptor called on a non-object: ";
-
 	/**
 	 * Returns a property descriptor for an own property (that is, one directly present on an object, not present by dint of being along an object's prototype chain) of a given object.
 	 * @param {!Object} object The object in which to look for the property.
@@ -965,7 +968,7 @@ if (!Object.getOwnPropertyDescriptor || getOwnPropertyDescriptorFallback) {
 	 */
     Object.getOwnPropertyDescriptor = function _getOwnPropertyDescriptor(object, property) {
         if ((typeof object != "object" && typeof object != "function") || object === null) {
-            throw new TypeError(ERR_NON_OBJECT + object);
+            throw new TypeError("Object.getOwnPropertyDescriptor called on a non-object: " + object);
         }
 
         // make a valiant attempt to use the real _getOwnPropertyDescriptor
@@ -1033,12 +1036,49 @@ if (!Object.getOwnPropertyDescriptor || getOwnPropertyDescriptorFallback) {
     };
 }
 
+if (!Object.getPropertyDescriptor || getOwnPropertyDescriptorFallback) {
+    /**
+     * Returns a property descriptor for an own property (that is, one directly present on an object, not present by dint of being along an object's prototype chain) of a given object.
+     * @param {!Object} object The object in which to look for the property.
+     * @param {!string} property The name of the property whose description is to be retrieved
+     * @return {(Object.<(ObjectPropertyDescriptor|null)>|undefined)}
+     */
+    Object.getPropertyDescriptor = (function(getPropertyDescriptorFallback) {
+        function _getPropertyDescriptor(object, property) {
+            // make a valiant attempt to use the real _getOwnPropertyDescriptor
+            // for:
+            //  I8's DOM elements.
+            //  Safari lt 6
+            //  FireFox
+            if (getPropertyDescriptorFallback) {
+                try {
+                    return getPropertyDescriptorFallback.call(Object, object, property);
+                } catch (exception) {
+                    // try the shim if the real one doesn't work
+                }
+            }
+
+            var descriptor = Object.getOwnPropertyDescriptor(object, property)
+                , __proto = object
+            ;
+
+            while(!descriptor && (__proto = Object.getPrototypeOf(__proto))) {
+                descriptor = Object.getOwnPropertyDescriptor(__proto, property);
+            }
+
+            return descriptor;
+        }
+
+        return _getPropertyDescriptor;
+    })(Object.getPropertyDescriptor);
+
+}
+
 }//if __GCC__ECMA_SCRIPT5__
 
 //TODO::
 // 1. getOwnPropertyDescriptors
-// 2. getPropertyDescriptor
-// 3. getPropertyNames
+// 2. getPropertyNames
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Object prototype  ==================================  */
 /*  =======================================================================================  */
@@ -1489,19 +1529,34 @@ if("0".split(void 0, 0).length) {
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  bug fixing  ==================================  */
 
 _String_contains_ = function(substring, fromIndex) {
-	return !!~this.indexOf(substring, fromIndex);
+	return !!~this.indexOf(substring, fromIndex | 0);
 };
 
 if (__GCC__ECMA_SCRIPT6__) {
 _append(String.prototype, {
-	//from https://github.com/paulmillr/es6-shim/blob/master/es6-shim.js
+	//Some from https://github.com/paulmillr/es6-shim/blob/master/es6-shim.js
 	/**
+	 * Implementation from https://raw.github.com/monolithed/ECMAScript-6/master/ES6.js
 	 * String repeat
 	 * @param {!number} count repeat times
 	 * @return {string} result
 	 */
 	"repeat" : function(count) {
-		return new Array(++count).join(this + "");
+		if (count < 0)return "";
+
+		var result = ''
+			, self = this
+		;
+
+		while (count) {
+			if (count & 1)
+				result += self;
+
+			if (count >>= 1)
+				self += self;
+		}
+
+		return result;
 	}
 
 	/**
@@ -1509,9 +1564,14 @@ _append(String.prototype, {
 	 * @param {string} substring substring to locate in the current string.
 	 * @param {number=} fromIndex start the startsWith check at that position
 	 * @return {boolean}
+	 * @edition ECMA-262 6th Edition, 15.5.4.22
+	 *
+	 * @example:
+	 *
+	 * 'Hello'.startsWith('He') // true
 	 */
   , "startsWith" : function(substring, fromIndex) {
-  		return this.lastIndexOf(substring, fromIndex) === (fromIndex || 0);
+  		return this.lastIndexOf(substring, fromIndex) === (fromIndex | 0);
   		//return this.indexOf(value) == ((position -= position % 1) || 0);
 	}
 
@@ -1522,8 +1582,8 @@ _append(String.prototype, {
 	 * @return {boolean}
 	 */
   , "endsWith" : function(substring, fromIndex) {
-		substring = substring + "";
-		return this.substr(-substring.length - (fromIndex || 0), fromIndex) == substring;
+		substring += "";
+		return this.substr(-substring.length - (fromIndex | 0), fromIndex) == substring;
 		//var length = this.length - value.length;
   		//position = typeof position == "undefined" ? length : ((position -= position % 1) || 0);
   		//return length > -1 && this.indexOf(value, position) == position;
@@ -1680,7 +1740,7 @@ else {
 }
 
 //Browser not implement Event.prototype.stopImmediatePropagation
-if(__GCC__LEGACY_BROWSERS_SUPPORT__ && __GCC__LEGACY_BROWSERS_SUPPORT__OPERA_LT_12_50__ && !_Event_prototype["stopImmediatePropagation"]) {
+if(__GCC__LEGACY_BROWSERS_SUPPORT__ && __GCC__LEGACY_BROWSERS_SUPPORT__OPERA_LT_12_10__ && !_Event_prototype["stopImmediatePropagation"]) {
 	implementation_stopImmediatePropagation = function(e) {
 		var listener = this._listener,
 			thisObj = this._this;
@@ -1693,19 +1753,19 @@ if(__GCC__LEGACY_BROWSERS_SUPPORT__ && __GCC__LEGACY_BROWSERS_SUPPORT__OPERA_LT_
 			else return;
 		}
 
-		if(e["__stopNow"]) {
+		if(e.timeStamp && e["__stopNow"] === e.timeStamp) {
 			e.stopPropagation();
 		}
 		else return listener.apply(thisObj, arguments);
 	};
 
 	_Event_prototype["stopImmediatePropagation"] = function() {
-		this["__stopNow"] = true;
+		this["__stopNow"] = (this.timeStamp || (this.timeStamp = (new Date).getTime()));
 	}
 }
 
 //fix [add|remove]EventListener for all browsers that support it natively
-if(__GCC__LEGACY_BROWSERS_SUPPORT__ && __GCC__LEGACY_BROWSERS_SUPPORT__OPERA_LT_12_50__ && "addEventListener" in _testElement && 
+if(__GCC__LEGACY_BROWSERS_SUPPORT__ && __GCC__LEGACY_BROWSERS_SUPPORT__OPERA_LT_12_10__ && "addEventListener" in _testElement &&
 	!_testElement.addEventListener["__shim__"]//Indicator that this is not native implementation
   ) {
   	// FF fails when you "forgot" the optional parameter for addEventListener and removeEventListener
@@ -1938,7 +1998,7 @@ if(__GCC__INCLUDE_EXTRAS__ && __GCC__INCLUDE_EXTRAS__DOMSTRINGCOLLECTION__) {//E
 if(__GCC__LEGACY_BROWSERS_SUPPORT__) {
 
 //[Opera lt 12]
-if(__GCC__LEGACY_BROWSERS_SUPPORT__OPERA_LT_12_50__) {
+if(__GCC__LEGACY_BROWSERS_SUPPORT__OPERA_LT_12_10__) {
 	if(!_Event_prototype["AT_TARGET"]) {
 		_Event_prototype["AT_TARGET"] = 2;
 		_Event_prototype["BUBBLING_PHASE"] = 3;
@@ -2240,29 +2300,30 @@ if(!_testElement["prepend"]) {
 		var resultNode = null
 		  , i = 0
 		  , maxLength = nodes.length
-		  , curLength
 		;
-		
-		nodes = _Array_map_.call(nodes, function (node) {
-			return typeof node === "string" ?
-				document.createTextNode(node) :
-				node;
-		});
-		
+
+		nodes = _Array_map_.call(nodes, dom4_mutationMacro.replaceStringWithTextNode);
+
 		if (maxLength === 1) {
-			resultNode = nodes[0];
+			return nodes[0];
 		} else {
 			resultNode = document.createDocumentFragment();
 
-			//nodes can be a live NodeList so we can't use forEach and need to check nodes.length after each appendChild
-			for(i = 0, maxLength = nodes.length, curLength ; i < (curLength = nodes.length) ; ++i) {
-				i -= (maxLength - curLength);
+            //nodes can be a live NodeList so we can't iterate NodeList directly
+            nodes = Array["from"](nodes);
+
+			for(i = 0 ; i < maxLength ; ++i) {
 				resultNode.appendChild(nodes[i]);
-			}			
+			}
 		}
-		
+
 		return resultNode;
 	};
+    dom4_mutationMacro.replaceStringWithTextNode = function(string) {
+        return typeof node === "string" ?
+            document.createTextNode(node) :
+            node;
+    };
 	
 	_Element_prototype["after"] = function () {
 		this.parentNode && this.parentNode.insertBefore(dom4_mutationMacro(arguments), this.nextSibling);
@@ -2608,6 +2669,48 @@ if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL_DOM4_API__) {
 		}
 	});
 
+}//if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL_DOM4_API__)
+
+//Implements RadioNodeList :- http://www.whatwg.org/specs/web-apps/current-work/multipage/common-dom-interfaces.html#radionodelist
+if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL_DOM4_API__) {
+    _tmp_ = document.createElement("form");
+
+    _tmp_.innerHTML = "<input type=radio name=t value=1><input type=radio checked name=t value=2>";
+
+    if(_tmp_.t["value"] === 2)return;
+
+    _tmp_ = _tmp_.t.constructor.prototype;
+
+    Object.defineProperty(_tmp_, "value", {
+        get: function() {
+            if(!this[0] || !("form" in this[0]))return;
+
+            var k = this.length
+                , el
+            ;
+
+            while(el = this[--k]) {
+                if (el.checked) {
+                    return el.value;
+                }
+            }
+        },
+        set: function(value) {
+            if(!this[0] || !("form" in this[0]))return;
+
+            var k = this.length
+                , el
+            ;
+
+            while(el = this[--k]) {
+                if (el.checked) {
+                    el.value = value;
+                    return el.value;
+                }
+            }
+        },
+        configurable: true
+    });
 }//if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL_DOM4_API__)
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  NodeList.prototype  ==================================  */
 /*  ======================================================================================  */

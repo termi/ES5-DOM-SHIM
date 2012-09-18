@@ -9,8 +9,9 @@
 <PUBLIC:PROPERTY NAME="reversed" GET="w" />
 <PUBLIC:PROPERTY NAME="control" GET="q" />
 <PUBLIC:PROPERTY NAME="labels" GET="l" />
+<PUBLIC:PROPERTY NAME="selectionStart" GET="m" PUT="o" />
+<PUBLIC:PROPERTY NAME="selectionEnd" GET="r" PUT="t" />
 <PUBLIC:PROPERTY NAME="textContent" GET="z" PUT="x" />
-
 <PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_DISCONNECTED" GET="_g1" />
 <PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_PRECEDING" GET="_g2" />
 <PUBLIC:PROPERTY NAME="DOCUMENT_POSITION_FOLLOWING" GET="_g4" />
@@ -37,6 +38,10 @@ i=ep.getpreviousElementSibling,
 k=ep.getchildElementCount,
 q=ep.getcontrol,
 l=ep.getlabels,
+m=ep.getselectionStart,
+o=ep.setselectionStart,
+r=ep.getselectionEnd,
+t=ep.setselectionEnd,
 w=ep.getreversed,
 z=np.gettextContent,
 x=np.settextContent,
