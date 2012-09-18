@@ -3056,7 +3056,7 @@ _Element_prototype.getAttribute = function(name, flag) {
     else {
         if(!(upperName in this) && (typeof (result = this[name]) === "string")) {
             result = this[upperName] = this[name];
-            delete this[name];
+            this["__removeAttribute__"](name);
             result += "";
         }
         else result = null;

@@ -2677,9 +2677,9 @@ if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL_DOM4_API__) {
 
     _tmp_.innerHTML = "<input type=radio name=t value=1><input type=radio checked name=t value=2>";
 
-    if(_tmp_.t["value"] === 2)return;
+    if(_tmp_["t"] && _tmp_["t"]["value"] === 2)return;
 
-    _tmp_ = _tmp_.t.constructor.prototype;
+    _tmp_ = (_tmp_ = _tmp_["t"]) && (_tmp_ = _tmp_.constructor) && _tmp_.prototype || global["NodeList"];
 
     Object.defineProperty(_tmp_, "value", {
         get: function() {
