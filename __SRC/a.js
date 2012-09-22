@@ -1095,6 +1095,11 @@ if(__GCC__SCRIPT_BUGFIXING__ && __GCC__SCRIPT_BUGFIXING_ARRAY_PROTOTYPE_SPLICE__
 // [bugfix, ielt9, old browsers] 
 // IE < 9 bug: [1,2].splice(0).join("") == "" but should be "12"
 if([1,2].splice(0).length != 2) {
+    /**
+     * @param {number} start
+     * @param {number} deleteCount
+     * @return {Array}
+     */
 	Array.prototype.splice = function(start, deleteCount) {
         if(start === void 0 && deleteCount === void 0)return [];
 
@@ -1571,8 +1576,7 @@ _append(String.prototype, {
 	 * 'Hello'.startsWith('He') // true
 	 */
   , "startsWith" : function(substring, fromIndex) {
-  		return this.lastIndexOf(substring, fromIndex) === (fromIndex | 0);
-  		//return this.indexOf(value) == ((position -= position % 1) || 0);
+        return this.indexOf(value, fromIndex |= 0) === fromIndex;
 	}
 
 	/**
@@ -1582,11 +1586,9 @@ _append(String.prototype, {
 	 * @return {boolean}
 	 */
   , "endsWith" : function(substring, fromIndex) {
-		substring += "";
-		return this.substr(-substring.length - (fromIndex | 0), fromIndex) == substring;
-		//var length = this.length - value.length;
-  		//position = typeof position == "undefined" ? length : ((position -= position % 1) || 0);
-  		//return length > -1 && this.indexOf(value, position) == position;
+        //var size = (substring += "").length;
+        //return this.lastIndexOf(substring, this.length - 1 - size - (fromIndex || 0)) == size;
+        return this.lastIndexOf(value, position) === (position >= 0 ? position | 0 : this.length - 1);
 	}
 
 	/**
@@ -2320,9 +2322,9 @@ if(!_testElement["prepend"]) {
 		return resultNode;
 	};
     dom4_mutationMacro.replaceStringWithTextNode = function(string) {
-        return typeof node === "string" ?
-            document.createTextNode(node) :
-            node;
+        return typeof string === "string" ?
+            document.createTextNode(string) :
+            string;
     };
 	
 	_Element_prototype["after"] = function () {
