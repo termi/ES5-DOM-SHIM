@@ -1576,7 +1576,7 @@ _append(String.prototype, {
 	 * 'Hello'.startsWith('He') // true
 	 */
   , "startsWith" : function(substring, fromIndex) {
-        return this.indexOf(value, fromIndex |= 0) === fromIndex;
+        return this.indexOf(substring, fromIndex |= 0) === fromIndex;
 	}
 
 	/**
@@ -1588,7 +1588,7 @@ _append(String.prototype, {
   , "endsWith" : function(substring, fromIndex) {
         //var size = (substring += "").length;
         //return this.lastIndexOf(substring, this.length - 1 - size - (fromIndex || 0)) == size;
-        return this.lastIndexOf(value, position) === (position >= 0 ? position | 0 : this.length - 1);
+        return this.lastIndexOf(substring, fromIndex) === (fromIndex >= 0 ? fromIndex | 0 : this.length - 1);
 	}
 
 	/**
@@ -2675,44 +2675,50 @@ if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL_DOM4_API__) {
 
 //Implements RadioNodeList :- http://www.whatwg.org/specs/web-apps/current-work/multipage/common-dom-interfaces.html#radionodelist
 if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL_DOM4_API__) {
+    // using _tmp_ variable as only variable we need
+
     _tmp_ = document.createElement("form");
 
     _tmp_.innerHTML = "<input type=radio name=t value=1><input type=radio checked name=t value=2>";
 
-    if(_tmp_["t"] && _tmp_["t"]["value"] === 2)return;
+    if(_tmp_["t"] && _tmp_["t"]["value"] !== 2) {// Browser do not support RadioNodeList
+        _tmp_ = (_tmp_ = _tmp_["t"]) && (_tmp_ = _tmp_.constructor) && _tmp_.prototype || (_tmp_ = global["NodeList"]) && _tmp_.prototype;
 
-    _tmp_ = (_tmp_ = _tmp_["t"]) && (_tmp_ = _tmp_.constructor) && _tmp_.prototype || global["NodeList"];
+        if(_tmp_
+            && _tmp_ !== Object.prototype//Safari 4 return Collection as a result of form["inputname"], and the prototype of Collection is Object.prototype :(
+            ) {
+            Object.defineProperty(_tmp_, "value", {
+                get: function() {
+                    if(!this[0] || !("form" in this[0]))return;
 
-    Object.defineProperty(_tmp_, "value", {
-        get: function() {
-            if(!this[0] || !("form" in this[0]))return;
+                    var k = this.length
+                        , el
+                        ;
 
-            var k = this.length
-                , el
-            ;
+                    while(el = this[--k]) {
+                        if (el.checked) {
+                            return el.value;
+                        }
+                    }
+                },
+                set: function(value) {
+                    if(!this[0] || !("form" in this[0]))return;
 
-            while(el = this[--k]) {
-                if (el.checked) {
-                    return el.value;
-                }
-            }
-        },
-        set: function(value) {
-            if(!this[0] || !("form" in this[0]))return;
+                    var k = this.length
+                        , el
+                        ;
 
-            var k = this.length
-                , el
-            ;
-
-            while(el = this[--k]) {
-                if (el.checked) {
-                    el.value = value;
-                    return el.value;
-                }
-            }
-        },
-        configurable: true
-    });
+                    while(el = this[--k]) {
+                        if (el.checked) {
+                            el.value = value;
+                            return el.value;
+                        }
+                    }
+                },
+                configurable: true
+            });
+        }
+    }
 }//if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL_DOM4_API__)
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  NodeList.prototype  ==================================  */
 /*  ======================================================================================  */
