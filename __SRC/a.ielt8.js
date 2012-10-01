@@ -1947,7 +1947,7 @@ if(!global.getComputedStyle) {//IE < 9
 		var propDescription
 			, _CSSStyleDeclProt
 			;
-		if((_CSSStyleDeclProt = global.CSSStyleDeclaration) && (_CSSStyleDeclProt = _CSSStyleDeclProt.prototype) && (!("float" in _currentStyle) || !("opacity" in _currentStyle))) {
+		if((_CSSStyleDeclProt = global["CSSStyleDeclaration"]) && (_CSSStyleDeclProt = _CSSStyleDeclProt.prototype) && (!("float" in _currentStyle) || !("opacity" in _currentStyle))) {
 			if(!("float" in _currentStyle)) {//TODO:: testing
 				propDescription = Object.getOwnPropertyDescriptor(_CSSStyleDeclProt, "float");
 				if(propDescription) {
