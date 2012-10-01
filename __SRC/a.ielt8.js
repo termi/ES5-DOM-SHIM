@@ -9,7 +9,7 @@
 // ==/ClosureCompiler==
 /**
  * ES5 and DOM shim for IE < 8
- * @version 0.7 alpha-2
+ * @version 0.7 alpha-3
  * TODO::
  * 1. http://www.positioniseverything.net/explorer.html
  */
@@ -135,7 +135,7 @@ var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use 
 
   	/**
   	 * @const
-     * Use native and probably broken function or Quick, but non-full-standart
+     * Use native and probably broken function or Quick and safety for large string but non-full-standard function
 	 * For system use only
 	 * More standart solution in a.js
 	 */
@@ -529,6 +529,7 @@ if(!_tmp_) {
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  String.prototype  ==================================  */
 /*  =======================================================================================  */
 
+// String.prototype.substr shim
 //[BUGFIX, IE lt 9] IE < 9 substr() with negative value not working in IE
 if("ab".substr(-1) !== "b") {
 	//String.prototype._itlt9_substr_ = String.prototype.substr;
@@ -751,6 +752,8 @@ if(!("pageXOffset" in global)) {
 
 	  	/** @this {_ielt9_Event} */
 	  	"preventDefault" : function() {
+        if(this.cancelable === false)return;
+
 	  		_ielt9_Event.getNativeEvent.call(this)["returnValue"] = false;
 	  		_ielt9_Event.destroyLinkToNativeEvent.call(this);
 	  		this["defaultPrevented"] = true;
@@ -991,7 +994,7 @@ function commonHandle(nativeEvent) {
 
 				try {
 					//Передаём контекст и объект event, результат сохраним в event['result'] для передачи значения дальше по цепочке
-					if(
+					if( handler &&
 						(
 							_event['result'] = _Function_call.call(handler, context || thisObj, _event)
 						)
@@ -1926,10 +1929,9 @@ if(!global.getComputedStyle) {//IE < 9
 	 * @return {CSSStyleDeclaration} Стиль элемента
 	 */
 	global.getComputedStyle = function(element, pseudoElt) {
-		if(!("getPropertyValue" in element.currentStyle)) {
-			element.runtimeStyle.getPropertyValue = function(propertyName) {
-				return element.currentStyle.getAttribute(propertyName);
-			};
+        var _currentStyle = element.currentStyle || element.runtimeStyle;
+		if(!("getPropertyValue" in _currentStyle)) {
+			element.runtimeStyle.getPropertyValue = _CSSStyleDeclaration_prototype_methods["getPropertyValue"].bind(element);
 
 			element.runtimeStyle.setProperty = element.runtimeStyle.removeProperty = function() {
 				_throwDOMException("NO_MODIFICATION_ALLOWED_ERR");
@@ -1945,8 +1947,8 @@ if(!global.getComputedStyle) {//IE < 9
 		var propDescription
 			, _CSSStyleDeclProt
 			;
-		if((_CSSStyleDeclProt = global.CSSStyleDeclaration) && (_CSSStyleDeclProt = _CSSStyleDeclProt.prototype) && !("float" in element.currentStyle) || !("opacity" in element.currentStyle)) {
-			if(!("float" in element.currentStyle)) {//TODO:: testing
+		if((_CSSStyleDeclProt = global.CSSStyleDeclaration) && (_CSSStyleDeclProt = _CSSStyleDeclProt.prototype) && (!("float" in _currentStyle) || !("opacity" in _currentStyle))) {
+			if(!("float" in _currentStyle)) {//TODO:: testing
 				propDescription = Object.getOwnPropertyDescriptor(_CSSStyleDeclProt, "float");
 				if(propDescription) {
 					delete _CSSStyleDeclProt["float"];
@@ -1963,7 +1965,7 @@ if(!global.getComputedStyle) {//IE < 9
 				}
 			}
 
-			if(!("opacity" in element.currentStyle)) {//TODO:: testing
+			if(!("opacity" in _currentStyle)) {//TODO:: testing
 				propDescription = Object.getOwnPropertyDescriptor(_CSSStyleDeclProt, "opacity");
 				if(propDescription) {
 					delete _CSSStyleDeclProt["opacity"];
@@ -1981,14 +1983,14 @@ if(!global.getComputedStyle) {//IE < 9
 			}
 		}
 		else {
-			if(!("float" in element.currentStyle)) {
+			if(!("float" in _currentStyle)) {
 				element.runtimeStyle["float"] = {
 					valueOf : _unSafeBind.call(function(){
 						return this.runtimeStyle.styleFloat || this.style.styleFloat
 					}, element)
 				}
 			}
-			if(!("opacity" in element.currentStyle)) {
+			if(!("opacity" in _currentStyle)) {
 				element.runtimeStyle["opacity"] = {
 					valueOf : _unSafeBind.call(function(){
 						return this.runtimeStyle["msOpacity"] || this.style["msOpacity"] || style_getOpacityFromMSFilter.call(this.style) || style_getOpacityFromMSFilter.call(this.runtimeStyle);

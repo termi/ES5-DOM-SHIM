@@ -412,6 +412,7 @@ else if(__GCC__LEGACY_BROWSERS_SUPPORT__ && __GCC__LEGACY_BROWSERS_SUPPORT__IELT
 if(!global["HTMLDocument"])global["HTMLDocument"] = global["Document"];//For IE9
 if(__GCC__LEGACY_BROWSERS_SUPPORT__ && __GCC__LEGACY_BROWSERS_SUPPORT__IELT9__) {
 	if(!global["Document"])global["Document"] = global["HTMLDocument"];//For IE8
+    if(!global["DocumentFragment"])global["DocumentFragment"] = global["HTMLDocument"];
 }
 //TODO:: for IE < 8 :: if(!global["Document"] && !global["HTMLDocument"])global["Document"] = global["HTMLDocument"] = ??;//for IE < 8
 
@@ -2038,7 +2039,7 @@ try {
 	global.getComputedStyle(_testElement)
 }
 catch(e) {
-	global.getComputedStyle = _unsafe_Function_bind_(function(obj, pseudoElt) {
+	global.getComputedStyle = _unsafe_Function_bind_.call(function(obj, pseudoElt) {
 		return this.call(global, obj, pseudoElt || null)
 	}, global.getComputedStyle);
 }
@@ -2361,10 +2362,11 @@ if(!_testElement["prepend"]) {
 	}
 }
 
+
 if(!("find" in document)) {
 	RE_document_find_scopedreplacer = /(\:scope)(?=[ >~+])/;
 
-	document["find"] = DocumentFragment.prototype["find"] = function(selector, refNodes) {
+	document["find"] = global["Document"].prototype["find"] = global["DocumentFragment"].prototype["find"] = function(selector, refNodes) {
 		refNodes && ("length" in refNodes || (refNodes = [refNodes])) || (refNodes = [this]);
 
 		var result
@@ -2390,7 +2392,7 @@ if(!("find" in document)) {
 		return result || null;
 	};
 
-	document["findAll"] = DocumentFragment.prototype["findAll"] = function(selector, refNodes) {
+	document["findAll"] = global["Document"].prototype["findAll"] = global["DocumentFragment"].prototype["findAll"] = function(selector, refNodes) {
 		refNodes && ("length" in refNodes || (refNodes = [refNodes])) || (refNodes = [this]);
 
 		var result = []
