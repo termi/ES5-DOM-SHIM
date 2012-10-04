@@ -75,10 +75,9 @@ __Status__: Stable Beta
 
 (pseudocode)
 
-IF \_\_GCC\_\_INCLUDE_EXTRAS\_\_ == false ->
- broken Object.defineProperty will be deleted
+IF \_\_GCC\_\_INCLUDE\_EXTRAS\_\_ == false -> Broken Object.defineProperty and Object.defineProperties will be deleted
 
-IF \_\_GCC\_\_INCLUDE_EXTRAS\_\_ == true:
+IF \_\_GCC\_\_INCLUDE\_EXTRAS\_\_ == true ->
 
  - Exporting these objects to global (window)
 	1. browser
@@ -91,26 +90,25 @@ IF \_\_GCC\_\_INCLUDE_EXTRAS\_\_ == true:
 	4. Array.prototype.unique()
 	5. String.random(length)
 
-Note: if you don't need Extras set [GCC](https://developers.google.com/closure/compiler/) flag __\_\_GCC\_\_INCLUDE_EXTRAS\_\___ in a.js and recompile a.js using [Google Closure Compiler](closure-compiler.appspot.com/home) \([GCC online](closure-compiler.appspot.com/home)\)
+Note: if you don't need Extras set [GCC](https://developers.google.com/closure/compiler/) flag __\_\_GCC\_\_INCLUDE\_EXTRAS\_\___ to __false__ in a.js and recompile a.js using [Google Closure Compiler](closure-compiler.appspot.com/home) \([GCC online](closure-compiler.appspot.com/home)\)
 
 ## Customisation
-In addition to \_\_GCC\_\_INCLUDE_EXTRAS\_\_ [GCC](https://developers.google.com/closure/compiler/) flag there are a bunch of over flags to enable/disable ES5/6 and DOM3/4 shims. After flags set you need to recompile a.js using [Google Closure Compiler](closure-compiler.appspot.com/home) \([GCC online](closure-compiler.appspot.com/home)\)
+In addition to \_\_GCC\_\_INCLUDE\_EXTRAS\_\_ [GCC](https://developers.google.com/closure/compiler/) flag there are a bunch of over flags to enable/disable ES5/6 and DOM3/4 shims in a.js file. After set flags you need to recompile a.js using [Google Closure Compiler](closure-compiler.appspot.com/home) \([GCC online](closure-compiler.appspot.com/home)\)
 
 ## DEBUG
 
-[GCC](https://developers.google.com/closure/compiler/) flag \_\_GCC\_\_IS\_DEBUG\_\_
- - Fix console from https://github.com/theshock/console-cap/blob/master/console.js
+If [GCC](https://developers.google.com/closure/compiler/) flag \_\_GCC\_\_IS\_DEBUG\_\_ == **true** -> Console fix from https://github.com/theshock/console-cap/blob/master/console.js
  
-## Same-domain limitation
+## IE < 8 Same-domain limitation
 
 IE requires that the .htc behavior file must be in the same domain as the HTML page which uses it. If you try to load the behavior from a different domain, you will get an "Access Denied" error.
 Note that the domain must be exactly the same; that means that http://www.foo.com is a different domain than http://foo.com.
 http://css3pie.com/documentation/known-issues/#x-domain
 
-### Solve Same-domain limitation
+### IE < 8 Solve Same-domain limitation
 Russian instruction in extra/SameDomainLimitation.SOLVE_RUS.odt
 
-### Temporary testing
+## Temporary testing
 http://jsperf.com/es5-dom-shim-test
 
 ## Known issues:
