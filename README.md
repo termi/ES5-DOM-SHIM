@@ -7,7 +7,9 @@ based on:
 - https://github.com/Raynos/DOM-shim
 
 __Status__: Stable Beta
-[__Demo__](http://h123.ru/ES5-DOM-SHIM/simple/index.html) Try it in IE7 (or in IE6 ¬_¬)! And take a look at the source
+
+* [__Simple Demo__](http://h123.ru/-/examples/ES6-DOM4-SHIM/simple/) Try it in IE7 (or in IE6 ¬_¬)! And take a look at the source
+* [__Complex Demo__](http://h123.ru/-/examples/ES6-DOM4-SHIM/simple/) Not working in IE6 due lack of CSS
 
 ## Goal
 
@@ -39,7 +41,6 @@ __Status__: Stable Beta
  - That's all cautions
  
 ## Install
-###`(Note: if you don't need EXSTRAs use a.noexstras.js instead of a.js)`
  - For modern browsers:
   Add main script in `head` section
   
@@ -70,12 +71,14 @@ __Status__: Stable Beta
 			
   2. Put `a.ielt8.htc` to the root of your site
 
-## EXSTRAs
+## EXSTRAS
 
-IF INCLUDE_EXTRAS == false ->
+(pseudocode)
+
+IF \_\_GCC\_\_INCLUDE_EXTRAS\_\_ == false ->
  broken Object.defineProperty will be deleted
 
-INCLUDE_EXTRAS:
+IF \_\_GCC\_\_INCLUDE_EXTRAS\_\_ == true:
 
  - Exporting these objects to global (window)
 	1. browser
@@ -84,13 +87,19 @@ INCLUDE_EXTRAS:
  - Extending objects
 	1. Object.append(object, donor, [donor2, ...])
 	2. Object.extend(object, donor, [donor2, ...]) (Object.append with overwrite exists properties)
-	3. Object.inherit(Child, Parent)
+	3. Object.inherits(Child, Parent)
 	4. Array.prototype.unique()
 	5. String.random(length)
 
+Note: if you don't need Extras set [GCC](https://developers.google.com/closure/compiler/) flag __\_\_GCC\_\_INCLUDE_EXTRAS\_\___ in a.js and recompile a.js using [Google Closure Compiler](closure-compiler.appspot.com/home) \([GCC online](closure-compiler.appspot.com/home)\)
+
+## Customisation
+In addition to \_\_GCC\_\_INCLUDE_EXTRAS\_\_ [GCC](https://developers.google.com/closure/compiler/) flag there are a bunch of over flags to enable/disable ES5/6 and DOM3/4 shims. After flags set you need to recompile a.js using [Google Closure Compiler](closure-compiler.appspot.com/home) \([GCC online](closure-compiler.appspot.com/home)\)
+
 ## DEBUG
 
- - Fix console From https://github.com/theshock/console-cap/blob/master/console.js
+[GCC](https://developers.google.com/closure/compiler/) flag \_\_GCC\_\_IS\_DEBUG\_\_
+ - Fix console from https://github.com/theshock/console-cap/blob/master/console.js
  
 ## Same-domain limitation
 
@@ -106,7 +115,7 @@ http://jsperf.com/es5-dom-shim-test
 
 ## Known issues:
 0. Lack of test cases
-1. Same-domain limitation (can be solve only on server)
+1. Same-domain limitation (can be solve only on server) for IE < 8
 2. Incompatibility with http://code.google.com/p/ie7-js/ [working on it]
 
 ## TODO
