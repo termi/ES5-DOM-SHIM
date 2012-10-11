@@ -94,6 +94,8 @@ var __GCC__DOM_API_POLYFILL__ = true;
 	var __GCC__DOM_API_POLYFILL_DOM_EVENTS_LVL3__ = true;
 	/**'reversed' for <ol> with DOM API @define {boolean} */
 	var __GCC__DOM_API_POLYFILL__REVERSE_POLYFILL__ = true;
+		/**Auto init 'reversed' for <ol> in DOMContentLoaded @define {boolean} */
+		var __GCC__DOM_API_POLYFILL__REVERSE_POLYFILL__AUTO_INIT__ = true;
 	/**
 	* HTML*Element.labels
 	* HTMLLabelElement.control
@@ -281,6 +283,8 @@ var /** @type {boolean} */
 
   , _tmp_function
 
+  , Object_inherits__helper
+
   // ------------------------------ ==================  querySelector[All], match, find[All]  ================== ------------------------------
 	/** @type {RegExp} @const */
   , RE__selector__easySelector = /^(\w+)?((?:\.(?:[\w\-]+))+)?$|^#([\w\-]+$)/
@@ -301,12 +305,12 @@ var /** @type {boolean} */
 
   , implementation_stopImmediatePropagation
 
+  , _native_preventDefault
+
 	// ------------------------------ ==================  Utils.Dom  ================== ------------------------------
   , DOMStringCollection
 
   , DOMStringCollection_init
-
-  , DOMStringCollection_init_add
 
   , DOMStringCollection_getNodeClassName
 
@@ -462,6 +466,11 @@ if(!Object["extend"])Object["extend"] = function(obj, ravArgs) {
 }
 	
 if(__GCC__INCLUDE_EXTRAS__OBJECT_INHERITS__) {
+
+Object_inherits__helper = function(obj, propName){
+	obj[propName] = Object.getOwnPropertyDescriptor(this, propName);
+	return obj;
+};
 /**
  * Inherits one Child 'class' (function) from Parent 'class' (function). Note: you need to apply Parent constructor in Child constructor manualy (<class>.superclass.constructor.apply(this, <arguments>))
  * @param {Function} Child
@@ -475,10 +484,14 @@ if(__GCC__INCLUDE_EXTRAS__OBJECT_INHERITS__) {
  *  test.say();
  */
 Object["inherits"] = function(Child, Parent) {
-	Child.prototype = Object.create((Child["superclass"] = Parent).prototype, (Child.prototype && Object.getOwnPropertyNames(Child.prototype) || []).reduce(function(obj, propName){
-		obj[propName] = Object.getOwnPropertyDescriptor(this, propName);
-		return obj;
-	}.bind(Child.prototype), {"constructor" : { "value" : Child, "enumerable" : false }}));
+	Child.prototype = Object.create(
+		(Child["superclass"] = Parent).prototype
+		, (Child.prototype && Object.getOwnPropertyNames(Child.prototype) || [])
+				.reduce(
+					Object_inherits__helper.bind(Child.prototype)
+					, {"constructor" : { "value" : Child, "enumerable" : false }}
+				)
+	);
 };
 }
 
@@ -562,6 +575,7 @@ if(!Function.prototype.bind)Function.prototype.bind = function (object, var_args
 if(__GCC__ECMA_SCRIPT5__) {
 _append(Object, {
 	/**
+	 * Object.keys
 	 * ES5 15.2.3.14
 	 * http://es5.github.com/#x15.2.3.14
 	 * https://developer.mozilla.org/en/JavaScript/Reference/global_Objects/Object/keys
@@ -607,6 +621,7 @@ _append(Object, {
 	})()
 
 	/**
+	 * Object.getOwnPropertyNames
 	 * ES5 15.2.3.4
 	 * http://es5.github.com/#x15.2.3.4
 	 * Returns an array of all properties (enumerable or not) found upon a given object.
@@ -618,6 +633,7 @@ _append(Object, {
 	}
 
 	/**
+	 * Object.seal
 	 * ES5 15.2.3.8
 	 * http://es5.github.com/#x15.2.3.8
 	 * this is misleading and breaks feature-detection, but
@@ -629,6 +645,7 @@ _append(Object, {
   , seal : functionReturnFirstParam
 
 	/**
+	 * Object.freeze
 	 * ES5 15.2.3.9
 	 * http://es5.github.com/#x15.2.3.9
 	 * this is misleading and breaks feature-detection, but
@@ -639,7 +656,9 @@ _append(Object, {
 	 */
   , freeze : functionReturnFirstParam
 
-	/** ES5 15.2.3.10
+	/**
+	 * Object.preventExtensions
+	 * ES5 15.2.3.10
 	 * http://es5.github.com/#x15.2.3.10
 	 * this is misleading and breaks feature-detection, but
 	 * allows "securable" code to "gracefully" degrade to working
@@ -649,21 +668,27 @@ _append(Object, {
 	 */
   , preventExtensions : functionReturnFirstParam
 
-	/** ES5 15.2.3.11
+	/**
+	 * Object.isSealed
+	 * ES5 15.2.3.11
 	 * http://es5.github.com/#x15.2.3.11
 	 * @param {!Object} object
 	 * @param {boolean} is sealed?
 	 */
   , isSealed : functionReturnFalse
 
-	/** ES5 15.2.3.12
+	/**
+	 * Object.isFrozen
+	 * ES5 15.2.3.12
 	 * http://es5.github.com/#x15.2.3.12
 	 * @param {!Object} object
 	 * @param {boolean} is frozen?
 	 */
   , isFrozen : functionReturnFalse
 
-	/** ES5 15.2.3.13
+	/**
+	 * Object.isExtensible
+	 * ES5 15.2.3.13
 	 * http://es5.github.com/#x15.2.3.13
 	 * @param {!Object} object
 	 * @param {boolean} is extensible?
@@ -685,6 +710,11 @@ _append(Object, {
     }
 
 	/**
+	 * Object.getPrototypeOf
+	 * WARNING!!!: This implementation works not as native
+	 *  For examples:
+	 *  Object.getPrototypeOf(({}).constructor.prototype) == null
+	 *  ({}).constructor.prototype.constructor.prototype == ({}).constructor.prototype
 	 * ES5 15.2.3.2
 	 * http://es5.github.com/#x15.2.3.2
 	 * https://github.com/kriskowal/es5-shim/issues#issue/2
@@ -702,6 +732,7 @@ _append(Object, {
 	}
 
 	/**
+	 * Object.create
 	 * https://developer.mozilla.org/en/JavaScript/Reference/global_Objects/Object/create
 	 * JavaScript 1.8.5
 	 * ES5 15.2.3.5
@@ -735,6 +766,9 @@ _append(Object, {
 
 	//TODO: to ECMA SCRIPT 6 section
 	//from https://github.com/paulmillr/es6-shim/blob/master/es6-shim.js
+	/**
+	 * Object.is
+	 * */
   , "is" : function(x, y) {
 	  if (x === y) {
 	    // 0 === -0, but they are not identical
@@ -744,7 +778,6 @@ _append(Object, {
 	      return true;
 	    }
 	  }
-
 	  // NaN !== NaN, but they are identical.
 	  // NaNs are the only non-reflexive value, i.e., if x !== x,
 	  // then x is a NaN.
@@ -753,6 +786,9 @@ _append(Object, {
 	  return x !== x && y !== y;
 	}
 
+	/**
+	 * Object.isnt
+	 * */
   , "isnt" : function(x, y) {
 	  return !Object["is"](x, y);
 	}
@@ -1178,6 +1214,7 @@ _append(Array, {
 if (__GCC__ECMA_SCRIPT5__) {
 _append(Array.prototype, {
 	/**
+	 * Array.prototype.reduce
 	 * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/Reduce
 	 *
 	 * Apply a function against an accumulator and each value of the array (from left-to-right) as to reduce it to a single value.
@@ -1210,6 +1247,7 @@ _append(Array.prototype, {
 	}
 
 	/**
+	 * Array.prototype.reduceRight
 	 * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/reduceRight
 	 *
 	Apply a function simultaneously against two values of the array (from right-to-left) as to reduce it to a single value.
@@ -1246,7 +1284,9 @@ _append(Array.prototype, {
 	}
 
 
-	/** ES5 15.4.4.18
+	/**
+	 * Array.prototype.forEach
+	 * ES5 15.4.4.18
 	 * http://es5.github.com/#x15.4.4.18
 	 * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/array/forEach
 	 * Executes a provided function once per array element.
@@ -1265,7 +1305,9 @@ _append(Array.prototype, {
 		}			
 	}
 
-	/** ES5 15.4.4.14
+	/**
+	 * Array.prototype.indexOf
+	 * ES5 15.4.4.14
 	 * http://es5.github.com/#x15.4.4.14
 	 * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/indexOf
 	 * 
@@ -1280,7 +1322,7 @@ _append(Array.prototype, {
 		var thisArray = _toObject(this),
 			length = thisArray.length >>> 0;
 
-		if((fromIndex = ~~fromIndex) > length)return -1;
+		if(!length || (fromIndex = ~~fromIndex) >= length)return -1;
 
 		for (
 		  // initialize counter (allow for negative startIndex)
@@ -1320,7 +1362,9 @@ _append(Array.prototype, {
 		return -1;
 	};*/
 
-	/** ES5 15.4.4.15
+	/**
+	 * Array.prototype.lastIndexOf
+	 * ES5 15.4.4.15
 	 * http://es5.github.com/#x15.4.4.15
 	 * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/lastIndexOf
 	 * Returns the last index at which a given element can be found in the array, or -1 if it is not present. The array is searched backwards, starting at fromIndex.
@@ -1350,6 +1394,7 @@ _append(Array.prototype, {
 	}
 
 	/**
+	 * Array.prototype.every
 	 * ES5 15.4.4.16
 	 * http://es5.github.com/#x15.4.4.16
 	 * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/every
@@ -1369,6 +1414,7 @@ _append(Array.prototype, {
 	}
 
 	/**
+	 * Array.prototype.some
 	 * ES5 15.4.4.17
 	 * http://es5.github.com/#x15.4.4.17
 	 * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/some
@@ -1382,6 +1428,7 @@ _append(Array.prototype, {
 	}
 
 	/**
+	 * Array.prototype.filter
 	 * http://es5.github.com/#x15.4.4.17
 	 * https://developer.mozilla.org/en/JavaScript/Reference/global_Objects/Array/filter
 	 * Creates a new array with all elements that pass the test implemented by the provided function.
@@ -1407,6 +1454,7 @@ _append(Array.prototype, {
 	}
 
 	/**
+	 * Array.prototype.map
 	 * http://es5.github.com/#x15.4.4.19
 	 * https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/map
 	 * Creates a new array with the results of calling a provided function on every element in this array.
@@ -1428,6 +1476,7 @@ _append(Array.prototype, {
 	}
 
 	/**
+	 * Array.prototype.contains
 	 * Check if given object locate in current array
 	 * @param {*} object object to locate in the current array.
 	 * @return {boolean}
@@ -1731,7 +1780,7 @@ if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL_DOM_EVENTS_LVL3__) {
 	
 	try {
 		_Custom_Event_prototype = (global["CustomEvent"] || Event).prototype;//use global to prevent Exception if the is not CustomEvent || CustomEvent.prototype
-		var c = new CustomEvent("magic");
+		new CustomEvent("magic");
 	} catch (e) {
 		global["CustomEvent"] = _CustomEvent;
 	
@@ -1742,8 +1791,26 @@ else {
 	_Event_prototype = Event.prototype;
 }
 
+//create temporary event for feature detection
+try {
+	_tmp_ = document.createEvent("Event")
+}
+catch(e) {
+	_tmp_ = {};
+}
+
+//Browser not implement Event.prototype.defaultPrevented
+if(__GCC__LEGACY_BROWSERS_SUPPORT__ && !("defaultPrevented" in _tmp_)) {
+	Object.defineProperty(_Event_prototype, "defaultPrevented", {"value" : false});
+	_native_preventDefault = _Event_prototype.preventDefault;
+	_Event_prototype.preventDefault = function() {
+		this["defaultPrevented"] = true;
+		_native_preventDefault.apply(this, arguments);
+	};
+}
+
 //Browser not implement Event.prototype.stopImmediatePropagation
-if(__GCC__LEGACY_BROWSERS_SUPPORT__ && __GCC__LEGACY_BROWSERS_SUPPORT__OPERA_LT_12_10__ && !_Event_prototype["stopImmediatePropagation"]) {
+if(__GCC__LEGACY_BROWSERS_SUPPORT__ && __GCC__LEGACY_BROWSERS_SUPPORT__OPERA_LT_12_10__ && !("stopImmediatePropagation" in _tmp_)) {
 	implementation_stopImmediatePropagation = function(e) {
 		var listener = this._listener,
 			thisObj = this._this;
@@ -1865,9 +1932,8 @@ if(DEBUG && !document.addEventListener) {
 /*  =======================================================================================  */
 /*  =================================  Utils.Dom  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL_CLASSLIST__) {
+if(__GCC__DOM_API_POLYFILL__ && (__GCC__DOM_API_POLYFILL_CLASSLIST__ || __GCC__INCLUDE_EXTRAS__DOMSTRINGCOLLECTION__)) {
 /**
- * __Non-standart__
  * DOMStringCollection
  * DOMSettableTokenList like object
  * http://www.w3.org/TR/html5/common-dom-interfaces.html#domsettabletokenlist-0
@@ -1886,7 +1952,7 @@ DOMStringCollection = function(getter, setter, object_this) {
 	this.length = 0;
 	this.value = "";
 
-	this.DOMStringCollection_check_currentValue_and_Token("1");//"1" - fakse token, need only thisObj.value check
+	this.DOMStringCollection_check_currentValue_and_Token("1");//"1" - fake token, need only for thisObj.value check
 };
 /**
  * @param {DOMStringCollection} _DOMStringCollection
@@ -1902,89 +1968,123 @@ DOMStringCollection_init = function(_DOMStringCollection, _string) {
 		while(thisObj.length > 0)
 			delete thisObj[--thisObj.length];
 
-		thisObj.value = "";
+		thisObj["value"] = "";
 	}
 
 	if(string) {
 		if(string = _String_trim_.call(string)) {
-			_String_split_.call(string, RE_DOMSettableTokenList_spaces).forEach(DOMStringCollection_init_add, thisObj);
+			_String_split_.call(string, RE_DOMSettableTokenList_spaces).forEach(DOMStringCollection_init.add, thisObj);
 		}
-		thisObj.value = _string;//empty value should stringify to contain the attribute's whitespace
+		thisObj["value"] = _string;//empty value should stringify to contain the attribute's whitespace
 	}			
 
-	if(isChange && thisObj._setter)thisObj._setter.call(thisObj._object_this, thisObj.value);
+	if(isChange && thisObj._setter)thisObj._setter.call(thisObj._object_this, thisObj["value"]);
 };
 /**
  * @param {string} token
  * @this {DOMStringCollection}
  */
-DOMStringCollection_init_add = function(token) {
+DOMStringCollection_init.add = function(token) {
 	this[this.length++] = token;
+};
+
+DOMStringCollection_init.remove_method_helper = function(find, p1, offset, string) {
+	return offset && find.length + offset < string.length ? " " : "";
 };
 
 _append(DOMStringCollection.prototype, {
 	DOMStringCollection_check_currentValue_and_Token : function(token) {
 		var string = this._getter.call(this._object_this);
-		if(string != this.value)DOMStringCollection_init(this, string);
+		if(string != this["value"])DOMStringCollection_init(this, string);
 
+		if(token === void 0)_throwDOMException("WRONG_ARGUMENTS_ERR");
 		if(token === "")_throwDOMException("SYNTAX_ERR");
 		if(_String_contains_.call(token + "", " "))_throwDOMException("INVALID_CHARACTER_ERR");
 	},
-	"add": function(token) {
-		var thisObj = this, v = thisObj.value;
+	"add": function() {
+		var tokens = arguments
+			, i = 0
+			, l = tokens.length
+			, token
+			, thisObj = this
+			, v = thisObj["value"]
+			, contains
+		;
 
-		if(thisObj.contains(token)//DOMStringCollection_check_currentValue_and_Token(token) here
-			)return;
+		do {
+			token = tokens[i];
+			contains = thisObj.contains(token);//DOMStringCollection_check_currentValue_and_Token(token) here
 
-		thisObj.value += ((v && !v.match(RE_DOMSettableTokenList_lastSpaces) ? " " : "") + token);
+			if(!contains){
+				v += ((i > 0 || v && !v.match(RE_DOMSettableTokenList_lastSpaces) ? " " : "") + token);
 
-		this[this.length++] = token;
+				this[this.length++] = token;
+			}
+		}
+		while(++i < l);
 
-		if(thisObj._setter)thisObj._setter.call(thisObj._object_this, thisObj.value);
+		thisObj["value"] = v;
+		if(thisObj._setter)thisObj._setter.call(thisObj._object_this, thisObj["value"]);
 	},
-	"remove": function(token) {
-		this.DOMStringCollection_check_currentValue_and_Token(token);
+	"remove": function() {
+		var tokens = arguments
+			, i = 0
+			, l = tokens.length
+			, token
+			, thisObj = this
+			, v = thisObj["value"]
+			, k
+			, itemsArray = _String_split_.call(thisObj["value"], " ")
+		;
 
-		var i, itemsArray, thisObj = this;
+		do {
+			token = tokens[i];
 
-		thisObj.value = thisObj.value.replace(new RegExp("((?:\ +|^)" + token + "(?:\ +|$))", "g"), function(find, p1, offset, string) {
-			return offset && find.length + offset < string.length ? " " : "";
-		});
+			this.DOMStringCollection_check_currentValue_and_Token(token);
 
-		itemsArray = _String_split_.call(thisObj.value, " ");
+			v = v.replace(new RegExp("((?:\\ +|^)" + token + "(?:\\ +|$))", "g"), DOMStringCollection_init.remove_method_helper);
+		}
+		while(++i < l);
 
-		for(i = thisObj.length - 1 ; i > 0  ; --i) {
-			if(!(thisObj[i] = itemsArray[i])) {
+		for(k = thisObj.length - 1 ; k > 0  ; --k) {
+			if(!(thisObj[k] = itemsArray[k])) {
 				thisObj.length--;
-				delete thisObj[i];
+				delete thisObj[k];
 			}
 		}
 
-		if(thisObj._setter)thisObj._setter.call(thisObj._object_this, thisObj.value)
+		thisObj["value"] = v;
+		if(thisObj._setter)thisObj._setter.call(thisObj._object_this, thisObj["value"]);
 	},
 	"contains": function(token) {
 		this.DOMStringCollection_check_currentValue_and_Token(token);
 
-		return _String_contains_.call(" " + this.value + " ", " " + token + " ");
+		return _String_contains_.call(" " + this["value"] + " ", " " + token + " ");
 	},
 	"item": function(index) {
 		this.DOMStringCollection_check_currentValue_and_Token("1");//"1" - fakse token, need only thisObj.value check
 
 		return this[index] || null;
 	},
-	"toggle": function(token) {
-		var result = thisObj.contains(token); //DOMStringCollection_checkToken(token) here;
+	"toggle": function(token, forse) {
+		var thisObj = this
+			, result = thisObj.contains(token)//DOMStringCollection_checkToken(token) here;
+			, method = result ?
+				forse !== true && "remove"
+				:
+				forse !== false && "add"
+		;
 
-		this[result ? 'add' : 'remove'](token);
+		if(method)this[method](token);
 
 		return result;
 	}
 });
 
 DOMStringCollection.prototype.toString = function() {//_append function do not overwrite Object.prototype.toString
-	return this.value || ""
+	return this["value"] || ""
 };
-}//if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL_CLASSLIST__)
+}//if(__GCC__DOM_API_POLYFILL__ && (__GCC__DOM_API_POLYFILL_CLASSLIST__ || __GCC__INCLUDE_EXTRAS__DOMSTRINGCOLLECTION__))
 
 if(__GCC__INCLUDE_EXTRAS__ && __GCC__INCLUDE_EXTRAS__DOMSTRINGCOLLECTION__) {//Export DOMStringCollection
 	global["DOMStringCollection"] = DOMStringCollection;
@@ -2052,34 +2152,95 @@ catch(e) {
 
 
 /*  Some of from https://github.com/Raynos/DOM-shim/  */
-
+if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL_CLASSLIST__) {
+_tmp_ = !("classList" in _testElement) ?
+	void 0//doesn't support classList
+	:
+	(_testElement["classList"]["add"](1, 2), _testElement["classList"]["contains"](2)) && true || false//false - support old version of classList
+;
 //https://developer.mozilla.org/en/DOM/Element.classList
 //Add JS 1.8 Element property classList	   
 // IE < 8 support in a.ielt8.js and a.ielt8.htc
-if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL_CLASSLIST__ && !("classList" in _testElement)) {
-	DOMStringCollection_setNodeClassName = function(newValue) {
-		this.className = newValue;
-	};
-	DOMStringCollection_getNodeClassName = function() {
-		return this.className;
-	};
+if(!_tmp_) {
+	if(_tmp_ === void 0) {
+		DOMStringCollection_setNodeClassName = function(newValue) {
+			this.className = newValue;
+		};
+		DOMStringCollection_getNodeClassName = function() {
+			return this.className;
+		};
 
-	Object.defineProperty(_Element_prototype, "classList", {
-		"get" : function() {
-			if(!this.tagName)return void 0;
+		Object.defineProperty(_Element_prototype, "classList", {
+			"get" : function() {
+				if(!this.tagName)return void 0;
 
-			var thisObj = this,
-				cont = thisObj["_"] || (thisObj["_"] = {});//Положим S_ELEMENT_CACHED_CLASSLIST_NAME в контейнер "_";
+				var thisObj = this,
+					cont = thisObj["_"] || (thisObj["_"] = {});//Put S_ELEMENT_CACHED_CLASSLIST_NAME in container "_";
 
-			if(!cont[S_ELEMENT_CACHED_CLASSLIST_NAME]) {
-				cont[S_ELEMENT_CACHED_CLASSLIST_NAME] = 
-					new DOMStringCollection(DOMStringCollection_getNodeClassName, DOMStringCollection_setNodeClassName, thisObj);
+				if(!cont[S_ELEMENT_CACHED_CLASSLIST_NAME]) {
+					cont[S_ELEMENT_CACHED_CLASSLIST_NAME] =
+						new DOMStringCollection(DOMStringCollection_getNodeClassName, DOMStringCollection_setNodeClassName, thisObj);
+				}
+
+				return cont[S_ELEMENT_CACHED_CLASSLIST_NAME];
 			}
-
-			return cont[S_ELEMENT_CACHED_CLASSLIST_NAME];
-		}
-	});
+		});
+	}
+	else if(_tmp_ === false && (_tmp_ = global["DOMTokenList"]) && (_tmp_ = _tmp_.prototype)) {//Polyfill for nevest DOM[Settable]TokenList standart
+		//see http://dom.spec.whatwg.org/#dom-domtokenlist-toggle
+		// Polyfill:
+		//  DOMTokenList.prototype.add(tokens...)
+		//  DOMTokenList.prototype.remove(tokens...)
+		//  DOMTokenList.prototype.toggle(token, force)
+		(function(_old_add, _old_remove) {
+			var _configurable, _enumerable, _writable;
+			_configurable = _enumerable = _writable = true;
+			Object.defineProperties(_tmp_, {
+				"add" : {
+					"configurable" : _configurable
+					, "enumerable" : _enumerable
+					, "writable" : _writable
+					, "value" : function() {
+						var tokens = arguments
+							, token
+							, i = 0
+							, l = tokens.length
+							;
+						do {
+							token = tokens[i];
+							_old_add.call(this, token);
+						}
+						while(++i < l);
+					}
+				}
+				, "remove" : {
+					"configurable" : _configurable
+					, "enumerable" : _enumerable
+					, "writable" : _writable
+					, "value" : function() {
+						var tokens = arguments
+							, token
+							, i = 0
+							, l = tokens.length
+							;
+						do {
+							token = tokens[i];
+							_old_remove.call(this, token);
+						}
+						while(++i < l);
+					}
+				}
+				, "toggle" : {
+					"configurable" : _configurable
+					, "enumerable" : _enumerable
+					, "writable" : _writable
+					, "value" : DOMStringCollection.prototype["toggle"]
+				}
+			});
+		})(_tmp_["add"], _tmp_["remove"]);
+	}
 }
+}//if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL_CLASSLIST__)
 
 if(__GCC__DOM_API_POLYFILL__) {
 //https://developer.mozilla.org/en/DOM/Node.parentElement
@@ -2185,6 +2346,7 @@ try {
 	}
 }
 
+// Node.prototype.cloneNode
 // Firefox fails on .cloneNode thinking argument is not optional
 // Opera agress that its not optional.
 // FROM https://github.com/Raynos/DOM-shim/blob/master/src/all/bugs.js
@@ -2217,6 +2379,7 @@ try {
 
 
 if(__GCC__DOM_API_POLYFILL__) {
+//Element.prototype.matchesSelector
 if(!_Element_prototype.matchesSelector) {
 	_Element_prototype.matchesSelector =
 		_Element_prototype["webkitMatchesSelector"] ||
@@ -2296,6 +2459,7 @@ if(!document.documentElement.matchesSelector)document.documentElement.matchesSel
 //New DOM4 API
 if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL_DOM4_API__) {
 
+//Element.prototype.matches
 if(!("matches" in _Element_prototype))_Element_prototype["matches"] = document.documentElement["matches"] = _Element_prototype.matchesSelector;
 
 if(!_testElement["prepend"]) {
@@ -2327,42 +2491,60 @@ if(!_testElement["prepend"]) {
             document.createTextNode(string) :
             string;
     };
-	
-	_Element_prototype["after"] = function () {
+
+	//Element.prototype.remove
+	if(!_Element_prototype["after"])_Element_prototype["after"] = function () {
 		this.parentNode && this.parentNode.insertBefore(dom4_mutationMacro(arguments), this.nextSibling);
 	};
 
-	_Element_prototype["before"] = function () {
+	//Element.prototype.remove
+	if(!_Element_prototype["before"])_Element_prototype["before"] = function () {
 		this.parentNode && this.parentNode.insertBefore(dom4_mutationMacro(arguments), this);
 	};
 
-	_Element_prototype["append"] = function () {
+	//Element.prototype.remove
+	if(!_Element_prototype["append"])_Element_prototype["append"] = function () {
 		this.appendChild(dom4_mutationMacro(arguments));
 	};
-	
-	_Element_prototype["prepend"] = function () {
+
+	//Element.prototype.remove
+	if(!_Element_prototype["prepend"])_Element_prototype["prepend"] = function () {
 		this.insertBefore(dom4_mutationMacro(arguments), this.firstChild);
 	};
 
-	_Element_prototype["replace"] = function () {
+	//Element.prototype.remove
+	if(!_Element_prototype["replace"])_Element_prototype["replace"] = function () {
 		this.parentNode && this.parentNode.replaceChild(dom4_mutationMacro(arguments), this);
 	};
 
-	_Element_prototype["remove"] = function () {
+	//Element.prototype.remove
+	//Google Chrome has Element.prototype.remove from version 24 (or 23)
+	if(!_Element_prototype["remove"])_Element_prototype["remove"] = function () {
 		this.parentNode && this.parentNode.removeChild(this);
 	};
 
+	//Document.prototype.prepend
+	//DocumentFragment.prototype.prepend
+	//document.prepend
+	//Document.prototype.append
+	//DocumentFragment.prototype.append
+	//document.append
 	if(!("prepend" in document)) {
-		document["prepend"] = function() {
+		document["prepend"] = global["Document"].prototype["prepend"] = global["DocumentFragment"].prototype["prepend"] = function() {
 			_Element_prototype["prepend"].apply(this.documentElement, arguments)
 		};
-		document["append"] = function() {
+		document["append"] = global["Document"].prototype["append"] = global["DocumentFragment"].prototype["append"] = function() {
 			_Element_prototype["append"].apply(this.documentElement, arguments)
 		}
 	}
 }
 
-
+//Document.prototype.find
+//DocumentFragment.prototype.find
+//document.find
+//Document.prototype.findAll
+//DocumentFragment.prototype.findAll
+//document.findAll
 if(!("find" in document)) {
 	RE_document_find_scopedreplacer = /(\:scope)(?=[ >~+])/;
 
@@ -2439,6 +2621,8 @@ if(!("find" in document)) {
 		return result;
 	};
 }
+//Element.prototype.find
+//Element.prototype.findAll
 if(!("find" in _Element_prototype)) {
 	//TODO:: add ':scope' support
 	// http://lists.w3.org/Archives/Public/public-webapps/2011OctDec/0316.html (Re: QSA, the problem with ":scope", and naming)
@@ -2459,6 +2643,15 @@ if(!("find" in _Element_prototype)) {
 /*  ================================  HTMLTextAreaElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 /*  ================================  HTMLSelectElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
+//HTMLInputElement.prototype.labels
+//HTMLButtonElement.prototype.labels
+//HTMLKeygenElement.prototype.labels
+//HTMLMeterElement.prototype.labels
+//HTMLOutputElement.prototype.labels
+//HTMLProgressElement.prototype.labels
+//HTMLTextAreaElement.prototype.labels
+//HTMLSelectElement.prototype.labels
+//all that methods via Element.prototype.labels
 if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL__LABELS_AND_CONTROL_POLYFILL__) {
 	_labelable_elements = " INPUT BUTTON KEYGEN METER OUTPUT PROGRESS TEXTAREA SELECT ";
 	/*
@@ -2504,7 +2697,7 @@ if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL__LABELS_AND_CONTROL_POLY
 
 if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL__LABELS_AND_CONTROL_POLYFILL__) {
 	/*
-	Implement HTMLLabelElement.control
+	Implement HTMLLabelElement.prototype.control
 	https://developer.mozilla.org/en/DOM/HTMLLabelElement
 	http://www.w3.org/TR/html5/forms.html#dom-label-control
 	*/
@@ -2552,6 +2745,7 @@ if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL__LABELS_AND_CONTROL_POLY
 /*  ================================  HTMLSelectElement.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
 /*
+ * HTMLSelectElement.prototype.reversed
  * Reverse Ordered Lists in HTML5
  * a polyfill for the ordered-list reversed attribute
  * Based on https://gist.github.com/1671548
@@ -2640,21 +2834,28 @@ if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL__REVERSE_POLYFILL__ && !
 	});
 
 	//Auto init
-	OL_reversed_autoInitFunction = function() {
-		document.removeEventListener('DOMContentLoaded', OL_reversed_autoInitFunction, false);
-		OL_reversed_autoInitFunction = void 0;
-		_forEach(document.getElementsByTagName("ol"), OL_reversed_Shim);
-	};
-	if(document.readyState == 'complete')
-		OL_reversed_autoInitFunction();
-	else 
-		document.addEventListener('DOMContentLoaded', OL_reversed_autoInitFunction, false);
-}//__GCC__INCLUDE_EXTRAS__
+	if(__GCC__DOM_API_POLYFILL__REVERSE_POLYFILL__AUTO_INIT__) {
+		OL_reversed_autoInitFunction = function() {
+			document.removeEventListener('DOMContentLoaded', OL_reversed_autoInitFunction, false);
+			OL_reversed_autoInitFunction = void 0;
+			_forEach(document.getElementsByTagName("ol"), OL_reversed_Shim);
+		};
+		if(document.readyState == 'complete')
+			OL_reversed_autoInitFunction();
+		else
+			document.addEventListener('DOMContentLoaded', OL_reversed_autoInitFunction, false);
+	}
+}//if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL__REVERSE_POLYFILL__)
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  HTMLLabelElement.prototype  ==================================  */
 /*  ======================================================================================  */
 
 /*  =======================================================================================  */
 /*  ================================  NodeList.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
+
+if(__GCC__LEGACY_BROWSERS_SUPPORT__ && __GCC__LEGACY_BROWSERS_SUPPORT__OPERA_LT_12_10__) {
+	//TODO::
+	// In Opera < 12.10 (document.querySelectorAll("div").constructor == NodeList) == false
+}
 
 if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL_DOM4_API__) {
 

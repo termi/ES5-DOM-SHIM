@@ -76,8 +76,6 @@ global["_"] = {
 };
 
 var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use in a.js
-	
-  , __temporary__DOMContentLoaded_container = {}
 
 	/** @const */
   , document_createDocumentFragment = document.createDocumentFragment
@@ -313,6 +311,8 @@ var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use 
 
 	/** @type {Array.<Node>} */
   , _event_captureHandlerNodes = []
+
+  , __is__DOMContentLoaded
 
 	// ------------------------------ ==================  HTML5 shiv  ================== ------------------------------
 
@@ -905,9 +905,9 @@ if(  __GCC__UNSTABLE_FUNCTIONS__ ) {
 		if(l) {
 			_event_globalIsCaptureIndicator = true;
 			nativeEvent.eventPhase = 1;
-			for(k = l - 1 ; k >= 0 ; --k)commonHandle.call(_event_captureHandlerNodes[k], nativeEvent);
+			for(k = l - 1 ; k >= 0 ; --k)commonHandler.call(_event_captureHandlerNodes[k], nativeEvent);
 			nativeEvent.eventPhase = 3;
-			for(i = 0 ; i < l ; ++i)commonHandle.call(_event_captureHandlerNodes[i], nativeEvent);
+			for(i = 0 ; i < l ; ++i)commonHandler.call(_event_captureHandlerNodes[i], nativeEvent);
 			_event_globalIsCaptureIndicator = false;
 			_event_captureHandlerNodes = [];
 		}
@@ -915,7 +915,7 @@ if(  __GCC__UNSTABLE_FUNCTIONS__ ) {
 }
 
 // вспомогательный универсальный обработчик. Вызывается в контексте элемента всегда this = element
-function commonHandle(nativeEvent) {
+function commonHandler(nativeEvent) {
 	if(fixEvent === void 0) {//фильтруем редко возникающую ошибку, когда событие отрабатывает после unload'а страницы. 
 		return;
 	}
@@ -1033,12 +1033,10 @@ function commonHandle(nativeEvent) {
 
 	if(thisObj === document && !_event.cancelBubble && _event.eventPhase === 3) {
 		//Emelate bubbling from document to defaultView (window) | 2 from 2
-		commonHandle.call(thisObj.defaultView, _event);
+		commonHandler.call(thisObj.defaultView, _event);
 		nativeEvent.cancelBubble = true;//to prevent dubble event fire on window object. First emulated, second native bubbling
 	}
 }
-
-
 
 if(!document.addEventListener) {
 	_Node_prototype.addEventListener = _document_documentElement.addEventListener = global.addEventListener = document.addEventListener = function(_type, _handler, useCapture) {
@@ -1075,74 +1073,60 @@ if(!document.addEventListener) {
 
 		if(!_)_ = thisObj["_"] = {};
 		//_ = _[_event_phase] || (_[_event_phase] = {});
-		
-		if(_type === "DOMContentLoaded") {//IE
-			if (document.readyState == 'complete')return;
 
-			if(thisObj === global)thisObj = document;
+		switch(_type) {
+			case "DOMContentLoaded":
+				if (document.readyState == 'complete')return;
 
-			_useInteractive = true;
-			
-			if(!__temporary__DOMContentLoaded_container[_type]) {
-				__temporary__DOMContentLoaded_container[_type] = true;
-				/*var a = document.getElementById("__ie_onload");
-				if(!a) {
-					document.write("<script id=\"__ie_onload\" defer=\"defer\" src=\"javascript:void(0)\"><\/script>");
-					a = document.getElementById("__ie_onload");
-					a.onreadystatechange = function(e) {
-						var n = this;
-						if(n.readyState == "complete") {
-							if(n.alreadyDone)return;
-							n.alreadyDone = true;
-							commonHandle.call(thisObj, {"type" : _type});
-						}
+				if(thisObj === global)thisObj = document;
+
+				_useInteractive = true;
+
+				if(!__is__DOMContentLoaded) {
+					__is__DOMContentLoaded = true;
+
+					function poll() {
+						try { document.documentElement.doScroll('left'); } catch(e) { setTimeout(poll, 50); return; }
+						commonHandler.call(thisObj, {"type" : _type, "isTrusted" : true, "__custom_event" : void 0});
 					}
-				}*/
 
-				///document.attachEvent( "onreadystatechange", DOMContentLoaded ); if ( !ready && document.readyState === "complete" ) {
-
-
-				function poll() {
-					try { document.documentElement.doScroll('left'); } catch(e) { setTimeout(poll, 50); return; }
-					commonHandle.call(thisObj, {"type" : _type, "isTrusted" : true, "__custom_event" : void 0});
+					if ("createEventObject" in document && "doScroll" in document.documentElement) {
+						try { if(!global.frameElement)poll() } catch(e) { }
+					}
 				}
+			break;
+			case "load":
+				if("tagName" in thisObj && thisObj.tagName.toUpperCase() === "SCRIPT") {//[script:onload]
+					//FROM https://github.com/jrburke/requirejs/blob/master/require.js
+					//Probably IE. IE (at least 6-8) do not fire
+					//script onload right after executing the script, so
+					//we cannot tie the anonymous define call to a name.
+					//However, IE reports the script as being in "interactive"
+					//readyState at the time of the define call.
+					_useInteractive = true;
 
-				if ("createEventObject" in document && "doScroll" in document.documentElement) {
-					try { if(!global.frameElement)poll() } catch(e) { }
+					//Need to use old school onreadystate here since
+					//when the event fires and the node is not attached
+					//to the DOM, the evt.srcElement is null, so use
+					//a closure to remember the node.
+					thisObj.onreadystatechange = function (evt) {
+						evt = evt || window.event;
+						//Script loaded but not executed.
+						//Clear loaded handler, set the real one that
+						//waits for script execution.
+						if (thisObj.readyState === 'loaded') {
+							thisObj.onreadystatechange = null;
+							thisObj.attachEvent("onreadystatechange", _unSafeBind.call(commonHandler, thisObj, {"type" : _type}));
+						}
+					};
+					_type = "readystatechange";
 				}
-			}
+			break;
+			case "DOMMouseScroll":
+				_type = "mousewheel";//TODO:: Test it
+
+			break;
 		}
-		/* TODO:: DOMAttrModified
-		else if(_type == "DOMAttrModified") {
-		
-		}
-		*/
-		else if(_type === "load" && "tagName" in thisObj && thisObj.tagName.toUpperCase() === "SCRIPT") {//[script:onload]
-			//FROM https://github.com/jrburke/requirejs/blob/master/require.js
-			//Probably IE. IE (at least 6-8) do not fire
-			//script onload right after executing the script, so
-			//we cannot tie the anonymous define call to a name.
-			//However, IE reports the script as being in "interactive"
-			//readyState at the time of the define call.
-			_useInteractive = true;
-			
-			//Need to use old school onreadystate here since
-			//when the event fires and the node is not attached
-			//to the DOM, the evt.srcElement is null, so use
-			//a closure to remember the node.
-			thisObj.onreadystatechange = function (evt) {
-				evt = evt || window.event;
-				//Script loaded but not executed.
-				//Clear loaded handler, set the real one that
-				//waits for script execution.
-				if (thisObj.readyState === 'loaded') {
-					thisObj.onreadystatechange = null;
-					thisObj.attachEvent("onreadystatechange", _unSafeBind.call(commonHandle, thisObj, {"type" : _type}));
-				}
-			};
-			_type = "readystatechange";
-		}
-		else if(_type === "DOMMouseScroll")_type = "mousewheel";//TODO:: Test it
 		
 		/*
 		TODO::
@@ -1161,7 +1145,7 @@ if(!document.addEventListener) {
 		//Основная его задача - передать вызов универсальному обработчику commonHandle с правильным указанием текущего элемента this. 
 		//Как и events, _[handleUUID] достаточно инициализовать один раз для любых событий.
 		if(!(_callback = _[_event_handleUUID])) {
-			_callback = _[_event_handleUUID] = _unSafeBind.call(commonHandle, thisObj);
+			_callback = _[_event_handleUUID] = _unSafeBind.call(commonHandler, thisObj);
 		}
 
 		//Если обработчиков такого типа событий не существует - инициализуем events[type] и вешаем
@@ -1278,7 +1262,7 @@ if(!document.dispatchEvent) {
 				while(!_event.cancelBubble && node) {//Если мы вызвали stopPropogation() - больше не всплываем событие
 					if((dom0event in node && typeof node[dom0event] == "function" && (_event["__dom0__"] = node[dom0event])) ||
 					   ("_" in node && _event_eventsUUID in node["_"]))//Признак того, что на элемент могли навесить событие
-						commonHandle.call(node, _event);
+						commonHandler.call(node, _event);
 					//Если у события отключено всплытие - не всплываем его
 					node = _event.bubbles ? (node === document ? document.defaultView : node.parentNode) : null;
 					if("__dom0__" in _event)_event["__dom0__"] = void 0;
@@ -1334,7 +1318,7 @@ _.push(function() {
 			selRange.select();
 		}
 		/**
-		 * @param {boolean=} needStart true - return start point, otherwise endPoint
+		 * @param {boolean=} needStart true - return start point, otherwise - end point
 		 */
 		, _getSelectionStart_or_End = function(needStart) {
 			var thisObj = this
@@ -1354,8 +1338,6 @@ _.push(function() {
 
 			curElement = document.activeElement;
 			selection = document["selection"];
-			range = selection["createRange"]();
-			stored_range = range["duplicate"]();
 
 			if(thisObj["_"]) {
 				current__stop_events__1 = thisObj["_"]["__stop_events__"];
@@ -1368,8 +1350,12 @@ _.push(function() {
 			
 			try {
 				thisObj.focus();
-	
+				range = selection["createRange"]();
+				stored_range = range["duplicate"]();
+
 				if(nodeName == "TEXTAREA") {
+					//TODO: compare with http://stackoverflow.com/a/4207763/1587897
+					//TODO: has issue with new lines?
 					str = thisObj.value;
 					range = stored_range;
 	

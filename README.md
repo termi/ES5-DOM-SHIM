@@ -30,9 +30,9 @@ __Status__: Stable Beta
  - and more
 
 ## Cost
- - For W3C browsers: ~8KiB
- - For IE8: ~16KiB
- - For IE6/7: ~18KiB
+ - For W3C browsers: ~8KiB gziped
+ - For IE8: ~16KiB gziped
+ - For IE6/7: ~18KiB gziped
 
 ## Caution !!!
 
@@ -90,14 +90,14 @@ IF \_\_GCC\_\_INCLUDE\_EXTRAS\_\_ == true ->
 	4. Array.prototype.unique()
 	5. String.random(length)
 
-Note: if you don't need Extras set [GCC](https://developers.google.com/closure/compiler/) flag __\_\_GCC\_\_INCLUDE\_EXTRAS\_\___ to __false__ in a.js and recompile a.js using [Google Closure Compiler](closure-compiler.appspot.com/home) \([GCC online](closure-compiler.appspot.com/home)\)
+Note: if you don't need Extras set [GCC](https://developers.google.com/closure/compiler/) flag **\_\_GCC\_\_INCLUDE\_EXTRAS\_\_** to **false** in a.js and recompile a.js using [Google Closure Compiler](closure-compiler.appspot.com/home) \([GCC online](closure-compiler.appspot.com/home)\)
 
 ## Customisation
-In addition to \_\_GCC\_\_INCLUDE\_EXTRAS\_\_ [GCC](https://developers.google.com/closure/compiler/) flag there are a bunch of over flags to enable/disable ES5/6 and DOM3/4 shims in a.js file. After set flags you need to recompile a.js using [Google Closure Compiler](closure-compiler.appspot.com/home) \([GCC online](closure-compiler.appspot.com/home)\)
+In addition to **\_\_GCC\_\_INCLUDE\_EXTRAS\_\_** [GCC](https://developers.google.com/closure/compiler/) flag there are a bunch of over flags to enable/disable ES5/6 and DOM3/4 shims in a.js file. After set flags you need to recompile a.js using [Google Closure Compiler](closure-compiler.appspot.com/home) \([GCC online](closure-compiler.appspot.com/home)\)
 
 ## DEBUG
 
-If [GCC](https://developers.google.com/closure/compiler/) flag \_\_GCC\_\_IS\_DEBUG\_\_ == **true** -> Console fix from https://github.com/theshock/console-cap/blob/master/console.js
+If [GCC](https://developers.google.com/closure/compiler/) flag **\_\_GCC\_\_IS\_DEBUG\_\_** == **true** -> Console fix from https://github.com/theshock/console-cap/blob/master/console.js
  
 ## IE < 8 Same-domain limitation
 
