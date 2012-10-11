@@ -2193,50 +2193,31 @@ if(!_tmp_) {
 		//  DOMTokenList.prototype.remove(tokens...)
 		//  DOMTokenList.prototype.toggle(token, force)
 		(function(_old_add, _old_remove) {
-			var _configurable, _enumerable, _writable;
-			_configurable = _enumerable = _writable = true;
-			Object.defineProperties(_tmp_, {
-				"add" : {
-					"configurable" : _configurable
-					, "enumerable" : _enumerable
-					, "writable" : _writable
-					, "value" : function() {
-						var tokens = arguments
-							, token
-							, i = 0
-							, l = tokens.length
-							;
-						do {
-							token = tokens[i];
-							_old_add.call(this, token);
-						}
-						while(++i < l);
-					}
+			_tmp_["add"] = function() {
+				var tokens = arguments
+					, token
+					, i = 0
+					, l = tokens.length
+					;
+				do {
+					token = tokens[i];
+					_old_add.call(this, token);
 				}
-				, "remove" : {
-					"configurable" : _configurable
-					, "enumerable" : _enumerable
-					, "writable" : _writable
-					, "value" : function() {
-						var tokens = arguments
-							, token
-							, i = 0
-							, l = tokens.length
-							;
-						do {
-							token = tokens[i];
-							_old_remove.call(this, token);
-						}
-						while(++i < l);
-					}
+				while(++i < l);
+			};
+			_tmp_["remove"] = function() {
+				var tokens = arguments
+					, token
+					, i = 0
+					, l = tokens.length
+					;
+				do {
+					token = tokens[i];
+					_old_remove.call(this, token);
 				}
-				, "toggle" : {
-					"configurable" : _configurable
-					, "enumerable" : _enumerable
-					, "writable" : _writable
-					, "value" : DOMStringCollection.prototype["toggle"]
-				}
-			});
+				while(++i < l);
+			};
+			_tmp_["toggle"] = DOMStringCollection.prototype["toggle"];
 		})(_tmp_["add"], _tmp_["remove"]);
 	}
 }
