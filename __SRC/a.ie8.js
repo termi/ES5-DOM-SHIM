@@ -180,6 +180,8 @@ var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use 
   	/** @type {Node} */
   , _testElement = document.createElement('p')
 
+  , _function_noop = function(){}
+
   , _txtTextElement
 	
   , _Node_prototype = global["Node"].prototype
@@ -311,6 +313,9 @@ var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use 
 
 	/** @type {Array.<Node>} */
   , _event_captureHandlerNodes = []
+
+	/** @type {Object} */
+  , customEventsMap
 
   , __is__DOMContentLoaded
 
@@ -1037,6 +1042,168 @@ function commonHandler(nativeEvent) {
 		nativeEvent.cancelBubble = true;//to prevent dubble event fire on window object. First emulated, second native bubbling
 	}
 }
+
+customEventsMap = {
+	"DOMContentLoaded" : {
+		pool : _function_noop
+
+		, defaultPoll : function() {
+			var eventContainer = this;
+			try { document.documentElement.doScroll('left'); } catch(e) { setTimeout(function(){eventContainer.poll();eventContainer = void 0;}, 50); return; }
+			commonHandler.call(document, {"type" : "DOMContentLoaded", "isTrusted" : true, "__custom_event" : void 0});
+		}
+
+		, attach : function(node, type) {
+			if(node !== global && node !== document)return false;
+
+			var eventContainer = this;
+
+			if(!eventContainer.attached) {
+				eventContainer.attached = true;
+
+				eventContainer.poll = eventContainer.defaultPoll;
+
+				if ("createEventObject" in document && "doScroll" in document.documentElement) {
+					try { if(!global.frameElement)eventContainer.poll() } catch(e) { }
+				}
+			}
+
+			return {
+				def : false
+				, node : document
+			};
+		}
+
+		, detach : function(node, type) {
+			if(node !== global && node !== document)return false;
+
+			var eventContainer = this;
+
+			if(eventContainer.attached) {
+				eventContainer.pool = _function_noop;
+			}
+
+			return {
+				def : false
+				, node : document
+			}
+		}
+	}
+
+	, "load" : {
+		interactiveHandler : function(evt) {
+			evt = evt || window.event;
+
+			var node = evt.srcElement;
+
+			commonHandler.call(node, {"type" : "load"});
+		}
+
+		, loadedHandler : function _loadedHandler(evt) {
+			evt = evt || window.event;
+
+			var node = evt.srcElement
+				, eventContainer = _loadedHandler._this
+			;
+
+			//Script loaded but not executed.
+			//Clear loaded handler, set the real one that
+			//waits for script execution.
+			if (node.readyState === 'loaded') {
+				node.detachEvent("onreadystatechange", eventContainer.loadedHandler);
+				node.attachEvent("onreadystatechange", eventContainer.interactiveHandler);
+			}
+		}
+
+		, init : function() {
+			this.loadedHandler._this = this;
+			delete this.init;
+		}
+
+		, attach : function(node, type) {
+			if((node.tagName || "").toUpperCase() === "SCRIPT") {
+				//FROM https://github.com/jrburke/requirejs/blob/master/require.js
+				//Probably IE. IE (at least 6-8) do not fire
+				//script onload right after executing the script, so
+				//we cannot tie the anonymous define call to a name.
+				//However, IE reports the script as being in "interactive"
+				//readyState at the time of the define call.
+
+				//Need to use old school onreadystate here since
+				//when the event fires and the node is not attached
+				//to the DOM, the evt.srcElement is null, so use
+				//a closure to remember the node.
+				node.attachEvent("onreadystatechange", this.loadedHandler);
+
+				return {
+					def : false
+				}
+			}
+			else return true;
+		}
+
+		, detach : function(node, type) {
+			if((node.tagName || "").toUpperCase() === "SCRIPT") {
+				node.detachEvent("onreadystatechange", this.loadedHandler);
+
+				return {
+					def : false
+				}
+			}
+			else return true;
+		}
+	}
+
+	, "DOMMouseScroll" : {
+		customType : "mousewheel"
+	}
+
+	, "input" : {//TODO::
+		customEventIsCommonHandlerName : "is" + _event_handleUUID + "_input_"
+
+		, propertyChangeHandler : function _propertyChangeHandler(evt) {
+			evt = evt || event;
+			if(evt.propertyName == "value") {
+				var node = evt.srcElement
+					, eventContainer = _propertyChangeHandler._this
+				;
+				node.detachEvent("onpropertychange", eventContainer.propertyChangeHandler);
+
+				commonHandler.call(document, {"type" : "DOMContentLoaded", "isTrusted" : true, "__custom_event" : void 0});
+			}
+		}
+
+		, keypressHandler : function _keypressHandler(evt) {
+			evt = evt || event;
+
+			var node = evt.srcElement
+				, eventContainer = _keypressHandler._this
+				, _ = node["_"]
+				, oldValue = []
+			;
+
+			node.attachEvent("onpropertychange", eventContainer.propertyChangeHandler)
+		}
+
+		, init : function() {
+			this.propertyChangeHandler._this = this;
+			this.keypressHandler._this = this;
+			delete this.init;
+		}
+
+		, attach : function(node, type) {
+			var _ = node["_"];
+			if(!_[this.customEventIsCommonHandlerName]) {
+				_[this.customEventIsCommonHandlerName] = true;
+			}
+		}
+
+		, detach : function(node, type) {
+
+		}
+	}
+};
+
 
 if(!document.addEventListener) {
 	_Node_prototype.addEventListener = _document_documentElement.addEventListener = global.addEventListener = document.addEventListener = function(_type, _handler, useCapture) {
