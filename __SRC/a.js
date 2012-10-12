@@ -3114,14 +3114,14 @@ https://github.com/csnover/js-iso8601
 https://raw.github.com/csnover/js-iso8601/master/iso8601.min.js
 ?
 */
-if (!_Native_Date.parse/* || "Date.parse is buggy"*/) {
+if (!_Native_Date.parse || "Date.parse is buggy") {
     // Date.length === 7
     _Shimed_Date = function(Y, M, D, h, m, s, ms) {
         var length = arguments.length;
         if (this instanceof _Native_Date) {
             var date = length == 1 && String(Y) === Y ? // isString(Y)
                 // We explicitly pass it through parse:
-                new _Native_Date(_Shimed_Date.parse(Y)) :
+                new _Native_Date(Date.parse(Y)) :
                 // We have to manually make calls depending on argument
                 // length here
                 length >= 7 ? new _Native_Date(Y, M, D, h, m, s, ms) :
