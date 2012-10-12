@@ -363,7 +363,7 @@ var /** @type {boolean} */
 
   , _Shimed_Date_monthes
 
-  , _Shimed_Date_leapYears
+  , _Shimed_Date_dayFromMonth
 
   , _Shimed_Date_test_negDate = -62198755200000
 
@@ -3114,14 +3114,14 @@ https://github.com/csnover/js-iso8601
 https://raw.github.com/csnover/js-iso8601/master/iso8601.min.js
 ?
 */
-if (!_Native_Date.parse/* || "Date.parse is buggy"*/) {
+if (!_Native_Date.parse || "Date.parse is buggy") {
     // Date.length === 7
     _Shimed_Date = function(Y, M, D, h, m, s, ms) {
         var length = arguments.length;
         if (this instanceof _Native_Date) {
             var date = length == 1 && String(Y) === Y ? // isString(Y)
                 // We explicitly pass it through parse:
-                new _Native_Date(_Shimed_Date.parse(Y)) :
+                new _Native_Date(Date.parse(Y)) :
                 // We have to manually make calls depending on argument
                 // length here
                 length >= 7 ? new _Native_Date(Y, M, D, h, m, s, ms) :
@@ -3141,7 +3141,7 @@ if (!_Native_Date.parse/* || "Date.parse is buggy"*/) {
 
     // 15.9.1.15 Date Time String Format.
     _Shimed_Date_isoDateExpression = new RegExp("^" +
-        "(\\d{4}|[\+\-]\\d{6})" + // four-digit year capture or sign + 6-digit extended year
+        "(\\d{4}|[\\+\\-]\\d{6})" + // four-digit year capture or sign + 6-digit extended year
         "(?:-(\\d{2})" + // optional month capture
         "(?:-(\\d{2})" + // optional day capture
         "(?:" + // capture hours:minutes:seconds.milliseconds
@@ -3163,9 +3163,15 @@ if (!_Native_Date.parse/* || "Date.parse is buggy"*/) {
 
 	_Shimed_Date_monthes = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365];
 
-	// Returns count of leap years before "year" since 0 CE
-	_Shimed_Date_leapYears = function(year) {
-	    return Math.ceil(year / 4) - Math.ceil(year / 100) + Math.ceil(year / 400);
+	_Shimed_Date_dayFromMonth = function(year, month) {
+	    var t = month > 1 ? 1 : 0;
+            return (
+				_Shimed_Date_monthes[month] +
+                Math.floor((year - 1969 + t) / 4) -
+                Math.floor((year - 1901 + t) / 100) +
+                Math.floor((year - 1601 + t) / 400) +
+                365 * (year - 1970)
+            );
 	};
 
 	// Copy any custom methods a 3rd party library may have added
@@ -3187,39 +3193,47 @@ if (!_Native_Date.parse/* || "Date.parse is buggy"*/) {
 	        // provide default values if necessary
 	        // parse the UTC offset component
 	        var year = Number(match[1]),
-	            month = Number(match[2] || 1),
-	            day = Number(match[3] || 1),
+                month = Number(match[2] || 1) - 1,
+                day = Number(match[3] || 1) - 1,
 	            hour = Number(match[4] || 0),
 	            minute = Number(match[5] || 0),
 	            second = Number(match[6] || 0),
 	            millisecond = Number(match[7] || 0),
-	            // When time zone is missed, local offset should be used (ES 5.1 bug)
+				// When time zone is missed, local offset should be used
+				// (ES 5.1 bug)
 	            // see https://bugs.ecmascript.org/show_bug.cgi?id=112
-	            offset = match[8] ? 0 : Number(new Date(1970, 0)),
+                offset = !match[4] || match[8] ?
+                        0 : Number(new Date(1970, 0)),
 	            signOffset = match[9] === "-" ? 1 : -1,
 	            hourOffset = Number(match[10] || 0),
 	            minuteOffset = Number(match[11] || 0),    
-	            leapYears0 = _Shimed_Date_leapYears(year),
-	            leapYears1 = _Shimed_Date_leapYears(year + 1),
 	            result;
-
-	        if (hour < (minute > 0 || second > 0 || millisecond > 0 ? 24 : 25) &&
-	            minute < 60 &&
-	            second < 60 &&
-	            millisecond < 1000 &&
-	            hourOffset < 24 && // detect invalid offsets
-	            minuteOffset < 60 &&
-	            month > 0 &&
-	            month < 13 &&
-	            day > 0 &&
-	            day < (1 + _Shimed_Date_monthes[month] - _Shimed_Date_monthes[month - 1] + (month === 2 ? leapYears1 - leapYears0 : 0))) {
-
-		            result = 365 * (year - 1970) + (month > 2 ? leapYears1 : leapYears0) - _Shimed_Date_leapYears(1970) + _Shimed_Date_monthes[month - 1] + day - 1;
-		            result = (((result * 24 + hour + hourOffset * signOffset) * 60 + minute + minuteOffset * signOffset) * 60 + second) * 1000 + millisecond + offset;
+                if (
+                    hour < (
+                        minute > 0 || second > 0 || millisecond > 0 ?
+                        24 : 25
+                    ) &&
+                    minute < 60 && second < 60 && millisecond < 1000 &&
+                    month > -1 && month < 12 && hourOffset < 24 &&
+                    minuteOffset < 60 && // detect invalid offsets
+                    day > -1 &&
+                    day < (
+						_Shimed_Date_dayFromMonth(year, month + 1) -
+							_Shimed_Date_dayFromMonth(year, month)
+                    )
+                ) {
+                    result = (
+                        (_Shimed_Date_dayFromMonth(year, month) + day) * 24 +
+                        hour +
+                        hourOffset * signOffset
+                    ) * 60;
+                    result = (
+                        (result + minute + minuteOffset * signOffset) * 60 +
+                        second
+                    ) * 1000 + millisecond + offset;
 		            if (-8.64e15 <= result && result <= 8.64e15) {
 		                return result;
 		            }
-		            
 	        }
 	        return NaN;
 	    }
@@ -3319,7 +3333,7 @@ if(!__GCC__INCLUDE_EXTRAS__) {
 // no need any more
 _append = _tmp_ = _testElement = nodeList_methods_fromArray = _document_createElement = _Event =
 	_CustomEvent = _Event_prototype = _Custom_Event_prototype = _tmp_function =
-	_Element_prototype = _Shimed_Date = functionReturnFalse = definePropertyWorksOnObject = definePropertyWorksOnDom = void 0;
+	_Element_prototype = _Shimed_Date = functionReturnFalse = definePropertyWorksOnObject = definePropertyWorksOnDom = null;
 
 
 
