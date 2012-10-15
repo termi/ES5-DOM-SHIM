@@ -280,6 +280,12 @@ var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use 
 		}
 	}
 
+  , ATTRIBUTES_CUSTOM = {
+		'for': 'htmlFor',
+		'class': 'className',
+		'value': 'defaultValue'
+	}
+
 	// ------------------------------ ==================  Events  ================== ------------------------------
   , _ielt9_Event
 	/** @type {Object} */
@@ -759,14 +765,14 @@ _Event_prototype = function_tmp.prototype = {
     "preventDefault" : function() {
         if(this.cancelable === false)return;
 
-        _ielt9_Event.getNativeEvent.call(this)["returnValue"] = false;
+        _ielt9_Event.getNativeEvent.call(this)["returnValue"] = this["returnValue"] = false;
         _ielt9_Event.destroyLinkToNativeEvent.call(this);
         this["defaultPrevented"] = true;
     } ,
 
     /** @this {_ielt9_Event} */
     "stopPropagation" : function() {
-        _ielt9_Event.getNativeEvent.call(this)["cancelBubble"] = true;
+        _ielt9_Event.getNativeEvent.call(this)["cancelBubble"] = this["cancelBubble"] = true;
         _ielt9_Event.destroyLinkToNativeEvent.call(this);
     } ,
 
@@ -972,7 +978,7 @@ function commonHandler(nativeEvent) {
 		// save event properties in fake 'event' object to allow store 'event' and use it in future
 			_event = nativeEvent["__customEvent__"] = new _ielt9_Event(nativeEvent);
 			_event.initEvent(nativeEvent.type, nativeEvent.bubbles, nativeEvent.cancelable);
-			fixEvent(_event);
+			fixEvent.call(this, _event);
 			_event.isTrusted = true;
 			_event["__custom_event"] = void 0;
 		}
@@ -2361,16 +2367,36 @@ if(_Function_call.call(document_createElement, document, "x-x").cloneNode().oute
 /*  ================================= Only for IE8 =======================================  */
 
 /** @const */
-var RE_REPLACER_FOR_ELEMENTS_BY_CLASSNAME = /\s+(?=\S)|^/g;
+var RE_REPLACER_FOR_ELEMENTS_BY_CLASSNAME = /\s+(?=\S)|^/g
+
+	, _native_Node_getAttribute = _Element_prototype.getAttribute
+
+	, _native_Node_setAttribute = _Element_prototype.setAttribute
+
+	, _native_Node_removeAttribute = _Element_prototype.removeAttribute
+;
 
 //separate properties and attributes
 _Element_prototype.setAttribute = function(name, value) {
-	this[name.toUpperCase()] = value + "";
+	if(ATTRIBUTES_CUSTOM[name] !== void 0) {
+		name = ATTRIBUTES_CUSTOM[name];
+	}
+	else {
+		name = name.toUpperCase();
+	}
+	return _native_Node_setAttribute.call(this, name, value + "");
 };
 _Element_prototype.getAttribute = function(name) {
-	var upperName = name.toUpperCase()
-	  , result = this[upperName]
+	var upperName
+	  , result
 	;
+
+	if(ATTRIBUTES_CUSTOM[name] !== void 0) {
+		return _native_Node_getAttribute.call(this, ATTRIBUTES_CUSTOM[name])
+	}
+
+	upperName = name.toUpperCase();
+	result = this[upperName];
 
 	if(!result) {
 		if(!(upperName in this) && (typeof (result = this[name]) === "string")) {
@@ -2383,11 +2409,19 @@ _Element_prototype.getAttribute = function(name) {
 	return result ? result + "" : null;
 };
 _Element_prototype.removeAttribute = function(name) {
-	var upperName = name.toUpperCase()
-        , result = upperName in this
+	var upperName
+        , result
     ;
 
+	if(ATTRIBUTES_CUSTOM[name] !== void 0) {
+		return _native_Node_removeAttribute.call(this, ATTRIBUTES_CUSTOM[name])
+	}
+
+	upperName = name.toUpperCase();
+	result = upperName in this;
+
 	if(result || this.getAttribute(name) !== null) {
+		_native_Node_removeAttribute.call(this, upperName);
 		delete this[upperName];
 	}
 

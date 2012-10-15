@@ -278,6 +278,12 @@ var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use 
 		}
 	}
 
+  , ATTRIBUTES_CUSTOM = {
+		'for': 'htmlFor',
+		'class': 'className',
+		'value': 'defaultValue'
+	}
+
 	// ------------------------------ ==================  Events  ================== ------------------------------
   , _ielt9_Event
 	/** @type {Object} */
@@ -754,14 +760,14 @@ if(!("pageXOffset" in global)) {
 	  	"preventDefault" : function() {
         if(this.cancelable === false)return;
 
-	  		_ielt9_Event.getNativeEvent.call(this)["returnValue"] = false;
+	  		_ielt9_Event.getNativeEvent.call(this)["returnValue"] = this["returnValue"] = false;
 	  		_ielt9_Event.destroyLinkToNativeEvent.call(this);
 	  		this["defaultPrevented"] = true;
 	  	} ,
 
 	  	/** @this {_ielt9_Event} */
 	  	"stopPropagation" : function() {
-	  		_ielt9_Event.getNativeEvent.call(this)["cancelBubble"] = true;
+	  		_ielt9_Event.getNativeEvent.call(this)["cancelBubble"] = this["cancelBubble"] = true;
 	  		_ielt9_Event.destroyLinkToNativeEvent.call(this);
 	  	} ,
 
@@ -967,7 +973,7 @@ function commonHandler(nativeEvent) {
 			// save event properties in fake 'event' object to allow store 'event' and use it in future
 			_event = nativeEvent["__customEvent__"] = new _ielt9_Event(nativeEvent);
 			_event.initEvent(nativeEvent.type, nativeEvent.bubbles, nativeEvent.cancelable);
-			fixEvent(_event);
+			fixEvent.call(this, _event);
 			_event.isTrusted = true;
 			_event["__custom_event"] = void 0;
 		}
@@ -3020,21 +3026,33 @@ if(!document[_tmp_]) {
 
 _Element_prototype.setAttribute = function(name, val, flag) {
 	if(flag == void 0) {
-		name = name.toUpperCase();
+		if(ATTRIBUTES_CUSTOM[name] !== void 0) {
+			name = ATTRIBUTES_CUSTOM[name];
+		}
+		else {
+			name = name.toUpperCase();
+		}
 		val = val + "";
 		flag = 1;
 	}
+
 	return Function.prototype.call.call(this["__setAttribute__"], this, name, val, flag);
 };
 _Element_prototype.getAttribute = function(name, flag) {
-	var upperName = name.toUpperCase()
+	var upperName
         , result
         , needAttributeShim
 	;
 
 	if(needAttributeShim = (flag == void 0)) {
-        upperName = name.toUpperCase();
 		flag = 1;
+	}
+
+	if(ATTRIBUTES_CUSTOM[name] !== void 0) {
+		upperName = ATTRIBUTES_CUSTOM[name];
+	}
+	else {
+		upperName = name.toUpperCase();
 	}
 
     result = _Function_call.call(this["__getAttribute__"], this, upperName, flag);
@@ -3059,7 +3077,13 @@ _Element_prototype.removeAttribute = function(name, flag) {
 
 	if(flag == void 0) {
 		flag = 1;
-        upperName = name.toUpperCase();
+		if(ATTRIBUTES_CUSTOM[name] !== void 0) {
+			name = ATTRIBUTES_CUSTOM[name];
+		}
+		else {
+			upperName = name.toUpperCase();
+		}
+
         result = upperName in this;
 
         if(!result && this.getAttribute(name) !== null) {
