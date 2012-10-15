@@ -754,14 +754,14 @@ _Event_prototype = function_tmp.prototype = {
     "preventDefault" : function() {
         if(this.cancelable === false)return;
 
-        _ielt9_Event.getNativeEvent.call(this)["returnValue"] = false;
+        _ielt9_Event.getNativeEvent.call(this)["returnValue"] = this["returnValue"] = false;
         _ielt9_Event.destroyLinkToNativeEvent.call(this);
         this["defaultPrevented"] = true;
     } ,
 
     /** @this {_ielt9_Event} */
     "stopPropagation" : function() {
-        _ielt9_Event.getNativeEvent.call(this)["cancelBubble"] = true;
+        _ielt9_Event.getNativeEvent.call(this)["cancelBubble"] = this["cancelBubble"] = true;
         _ielt9_Event.destroyLinkToNativeEvent.call(this);
     } ,
 
