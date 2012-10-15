@@ -2415,16 +2415,17 @@ if(!_Element_prototype.matchesSelector) {
 								}
 						}
 					}
+					else {
+						if(!/([,>+~ ])/.test(selector) && (parent = thisObj.parentNode) && parent.querySelector) {
+							match = parent.querySelector(selector) === thisObj;
+						}
 
-					if(!/([,>+~ ])/.test(selector) && (parent = thisObj.parentNode) && parent.querySelector) {
-						match = parent.querySelector(selector) === thisObj;
-					}
-
-					if(!match && (parent = thisObj.ownerDocument)) {
-						tmp = parent.querySelectorAll(selector);
-						i = -1;
-						while(!match && tmp[++i]) {
-							match = tmp[i] === thisObj;
+						if(!match && (parent = thisObj.ownerDocument)) {
+							tmp = parent.querySelectorAll(selector);
+							i = -1;
+							while(!match && tmp[++i]) {
+								match = tmp[i] === thisObj;
+							}
 						}
 					}
 				}

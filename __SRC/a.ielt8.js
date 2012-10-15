@@ -967,7 +967,7 @@ function commonHandler(nativeEvent) {
 			// save event properties in fake 'event' object to allow store 'event' and use it in future
 			_event = nativeEvent["__customEvent__"] = new _ielt9_Event(nativeEvent);
 			_event.initEvent(nativeEvent.type, nativeEvent.bubbles, nativeEvent.cancelable);
-			fixEvent(_event);
+			fixEvent.call(this, _event);
 			_event.isTrusted = true;
 			_event["__custom_event"] = void 0;
 		}
