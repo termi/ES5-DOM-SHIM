@@ -278,6 +278,12 @@ var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use 
 		}
 	}
 
+  , ATTRIBUTES_CUSTOM = {
+		'for': 'htmlFor',
+		'class': 'className',
+		'value': 'defaultValue'
+	}
+
 	// ------------------------------ ==================  Events  ================== ------------------------------
   , _ielt9_Event
 	/** @type {Object} */
@@ -3020,21 +3026,33 @@ if(!document[_tmp_]) {
 
 _Element_prototype.setAttribute = function(name, val, flag) {
 	if(flag == void 0) {
-		name = name.toUpperCase();
+		if(ATTRIBUTES_CUSTOM[name] !== void 0) {
+			name = ATTRIBUTES_CUSTOM[name];
+		}
+		else {
+			name = name.toUpperCase();
+		}
 		val = val + "";
 		flag = 1;
 	}
+
 	return Function.prototype.call.call(this["__setAttribute__"], this, name, val, flag);
 };
 _Element_prototype.getAttribute = function(name, flag) {
-	var upperName = name.toUpperCase()
+	var upperName
         , result
         , needAttributeShim
 	;
 
 	if(needAttributeShim = (flag == void 0)) {
-        upperName = name.toUpperCase();
 		flag = 1;
+	}
+
+	if(ATTRIBUTES_CUSTOM[name] !== void 0) {
+		upperName = ATTRIBUTES_CUSTOM[name];
+	}
+	else {
+		upperName = name.toUpperCase();
 	}
 
     result = _Function_call.call(this["__getAttribute__"], this, upperName, flag);
@@ -3059,7 +3077,13 @@ _Element_prototype.removeAttribute = function(name, flag) {
 
 	if(flag == void 0) {
 		flag = 1;
-        upperName = name.toUpperCase();
+		if(ATTRIBUTES_CUSTOM[name] !== void 0) {
+			name = ATTRIBUTES_CUSTOM[name];
+		}
+		else {
+			upperName = name.toUpperCase();
+		}
+
         result = upperName in this;
 
         if(!result && this.getAttribute(name) !== null) {
