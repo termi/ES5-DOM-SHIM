@@ -9,7 +9,7 @@
 // ==/ClosureCompiler==
 
 /**
- * @version 0.7 alpha-3
+ * @version 0.8.1
  * TODO::
  * 0. eng comments
  * 1. HTMLCanvasElement.toBlob (https://developer.mozilla.org/en/DOM/HTMLCanvasElement | http://stackoverflow.com/questions/4998908/convert-data-uri-to-file-then-append-to-formdata#answer-5100158)
@@ -24,6 +24,7 @@
  *   i) https://gist.github.com/3153964
  *   ii) http://blog.stchur.com/2007/03/15/mouseenter-and-mouseleave-events-for-firefox-and-other-non-ie-browsers/
  *   iii) https://developer.mozilla.org/en-US/docs/DOM/DOM_event_reference/mouseleave | https://developer.mozilla.org/en-US/docs/DOM/DOM_event_reference/mouseenter
+ * 9. https://bugzilla.mozilla.org/show_bug.cgi?id=486002 (Node.compareDocumentPosition returns spurious preceding|following bits for disconnected nodes) :: https://bugzilla.mozilla.org/attachment.cgi?id=671404&action=diff
  */
 
 
@@ -124,11 +125,10 @@ var __GCC__LEGACY_BROWSERS_SUPPORT__ = true;
 
 
 
-;(
 /**
  * @type {Window}
  * @const */
-function(global) {
+void function(global) {
 
 "use strict";
 
@@ -137,11 +137,8 @@ var DEBUG = __GCC__IS_DEBUG__;
 
 
 
-var /** @type {boolean} */
-    _browser_msie
-
-	/** @const */
-  , _Object_prototype = Object.prototype
+var /** @const */
+	_Object_prototype = Object.prototype
   
 	/** @const */
   , _Function_apply_ = Function.prototype.apply
@@ -154,6 +151,9 @@ var /** @type {boolean} */
 
 	/** @const */
   , _Array_splice_ = Array.prototype.splice
+
+	/** @type {number} */
+  , _browser_msie
 
   , _String_contains_
 
@@ -171,7 +171,7 @@ var /** @type {boolean} */
 			args = _Array_slice_.call(arguments, 1);
 		return function () {
 			return _Function_apply_.call(__method, object, args.concat(_Array_slice_.call(arguments)));
-		}
+		};
 	}
 
 	/** @const */
@@ -211,7 +211,7 @@ var /** @type {boolean} */
   , NEED_PREPARE_STRING = __GCC__LEGACY_BROWSERS_SUPPORT__ && __GCC__LEGACY_BROWSERS_SUPPORT__IELT9__ && (function(strObj) {
 		// Check failure of by-index access of string characters (IE < 9)
 		// and failure of `0 in strObj` (Rhino)
-		return strObj[0] != "a" || !(0 in strObj);
+		return strObj[0] !== "a" || !(0 in strObj);
 	})(Object("a"))
 
 	/**
@@ -317,7 +317,7 @@ var /** @type {boolean} */
   , DOMStringCollection_setNodeClassName
 
 	// ------------------------------ ==================  es5-shim  ================== ------------------------------
-  , _forEach
+  , _Array_forEach
 
   , _shimed_Array_every
 
@@ -400,13 +400,13 @@ if(__GCC__INCLUDE_EXTRAS__ && __GCC__INCLUDE_EXTRAS__BROWSER__) {
 	browser["msie"] = browser["msie"] && !browser["opera"];
 
 	if(__GCC__LEGACY_BROWSERS_SUPPORT__ && __GCC__LEGACY_BROWSERS_SUPPORT__IELT9__) {
-		_browser_msie = browser["msie"] || void 0;
+		_browser_msie = browser["msie"] || null;
 	}
 	
 	global["browser"] = browser;//Export
 }//if(__GCC__INCLUDE_EXTRAS__)
 else if(__GCC__LEGACY_BROWSERS_SUPPORT__ && __GCC__LEGACY_BROWSERS_SUPPORT__IELT9__) {
-	_browser_msie = (_browser_msie = /msie (\d+)/i.exec(navigator.userAgent) || []) && +_browser_msie[1] || void 0;
+	_browser_msie = (_browser_msie = /msie (\d+)/i.exec(navigator.userAgent) || []) && +_browser_msie[1] || null;
 }
 //Browser sniffing :) END
 
@@ -902,7 +902,7 @@ if (!Object.defineProperty || definePropertyFallback) {
         } else {
             if (!object.__defineGetter__) {
                 if(__GCC__LEGACY_BROWSERS_SUPPORT__ && __GCC__LEGACY_BROWSERS_SUPPORT__IELT9__ &&
-	               Object.defineProperty["ielt8"]) {//[ielt9 ie8]
+	               Object.defineProperty["sham"]) {//[ielt9 ie8]
 					if(descriptor["get"] !== void 0)
 						object["get" + property] = descriptor["get"];
 					if(descriptor["set"] !== void 0)
@@ -925,7 +925,7 @@ if (!Object.defineProperty || definePropertyFallback) {
 
 if(__GCC__LEGACY_BROWSERS_SUPPORT__ && __GCC__LEGACY_BROWSERS_SUPPORT__IELT9__ ) {
 	//[ielt8] Set `Object.defineProperty["ielt8"] = true` for IE < 8
-	if(_Element_prototype["ie"] && _browser_msie < 8)_Element_prototype["ielt8"] = Object.defineProperty["ielt8"] = true;	
+	if(_Element_prototype["ie"] && _browser_msie < 8)_Element_prototype["ielt8"] = Object.defineProperty["sham"] = true;
 }
 
 // ES5 15.2.3.7
@@ -1049,7 +1049,7 @@ if (!Object.getOwnPropertyDescriptor || getOwnPropertyDescriptorFallback) {
             // Once we have getter and setter we can put values back.
             object.__proto__ = _prototype;
         }
-		else if(__GCC__LEGACY_BROWSERS_SUPPORT__ && __GCC__LEGACY_BROWSERS_SUPPORT__IELT9__ && Object.defineProperty["ielt8"]) {//[ielt9 ie8]
+		else if(__GCC__LEGACY_BROWSERS_SUPPORT__ && __GCC__LEGACY_BROWSERS_SUPPORT__IELT9__ && Object.defineProperty["sham"]) {//[ielt9 ie8]
 			getter = object["get" + property];
 			setter = object["set" + property];
 		}
@@ -1373,9 +1373,10 @@ _append(Array.prototype, {
 	 * @return {number}
 	 */
   , lastIndexOf : function(searchElement, fromIndex) {
-		var thisArray = _toObject(this),
-			length = thisArray.length >>> 0,
-			i;
+		var thisArray = _toObject(this)
+			, length = thisArray.length >>> 0
+			, i
+		;
 
 		if(!length)return -1;
 
@@ -1407,7 +1408,7 @@ _append(Array.prototype, {
   , every : function(callback, thisObject, _option_isAll) {
 		if(_option_isAll === void 0)_option_isAll = true;//Default value = true
 		var result = _option_isAll;
-		_forEach(this, function(value, index) {
+		_Array_forEach(this, function(value, index) {
 			if(result == _option_isAll)result = !!_call_function(callback, thisObject, value, index, this);
 		}, this);
 		return result;
@@ -1510,7 +1511,7 @@ if(!Array.prototype["unique"])Array.prototype["unique"] = (function(a) {
 
 }//if(__GCC__INCLUDE_EXTRAS__)
 
-_forEach = _unsafe_Function_bind_.call(Function.prototype.call, Array.prototype.forEach);
+_Array_forEach = _unsafe_Function_bind_.call(Function.prototype.call, Array.prototype.forEach);
 _Array_map_ = Array.prototype.map;
 _shimed_Array_every = Array.prototype.every;
 
@@ -1863,7 +1864,7 @@ if(__GCC__LEGACY_BROWSERS_SUPPORT__ && __GCC__LEGACY_BROWSERS_SUPPORT__OPERA_LT_
 			  , _event_eventsUUID = "_e_8vj"
 			;
 
-			_forEach(
+			_Array_forEach(
 				[global["HTMLDocument"] && global["HTMLDocument"].prototype || global["document"],
 				 global["Window"] && global["Window"].prototype || global,
 				 _Element_prototype],
@@ -2194,28 +2195,10 @@ if(!_tmp_) {
 		//  DOMTokenList.prototype.toggle(token, force)
 		(function(_old_add, _old_remove) {
 			_tmp_["add"] = function() {
-				var tokens = arguments
-					, token
-					, i = 0
-					, l = tokens.length
-					;
-				do {
-					token = tokens[i];
-					_old_add.call(this, token);
-				}
-				while(++i < l);
+				_Array_forEach(arguments, _old_add, this);
 			};
 			_tmp_["remove"] = function() {
-				var tokens = arguments
-					, token
-					, i = 0
-					, l = tokens.length
-					;
-				do {
-					token = tokens[i];
-					_old_remove.call(this, token);
-				}
-				while(++i < l);
+				_Array_forEach(arguments, _old_remove, this);
 			};
 			_tmp_["toggle"] = DOMStringCollection.prototype["toggle"];
 		})(_tmp_["add"], _tmp_["remove"]);
@@ -2776,7 +2759,7 @@ if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL__REVERSE_POLYFILL__ && !
 			if(count === null)
 				count = children.length;
 
-			_forEach(children, function(child) {
+			_Array_forEach(children, function(child) {
 				child["value"] = count--;
 			});
 		}
@@ -2787,7 +2770,7 @@ if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL__REVERSE_POLYFILL__ && !
 				children[0]["value"] = count || 0;
 			}
 
-			_forEach(children, function(child) {
+			_Array_forEach(children, function(child) {
 				child.removeAttribute("value");
 			});
 		}
@@ -2820,7 +2803,7 @@ if(__GCC__DOM_API_POLYFILL__ && __GCC__DOM_API_POLYFILL__REVERSE_POLYFILL__ && !
 		OL_reversed_autoInitFunction = function() {
 			document.removeEventListener('DOMContentLoaded', OL_reversed_autoInitFunction, false);
 			OL_reversed_autoInitFunction = void 0;
-			_forEach(document.getElementsByTagName("ol"), OL_reversed_Shim);
+			_Array_forEach(document.getElementsByTagName("ol"), OL_reversed_Shim);
 		};
 		if(document.readyState == 'complete')
 			OL_reversed_autoInitFunction();
@@ -3023,7 +3006,10 @@ if(__GCC__SCRIPT_BUGFIXING__ && __GCC__SCRIPT_BUGFIXING_DATE__) {
 // string format defined in 15.9.1.15. All fields are present in the String.
 // The time zone is always UTC, denoted by the suffix Z. If the time value of
 // this object is not a finite Number a RangeError exception is thrown.
-if(!_Native_Date.prototype.toISOString || (_String_contains_.call(new _Native_Date(_Shimed_Date_test_negDate).toISOString(), _Shimed_Date_test_yearStr)) || (new _Native_Date(-1).toISOString() !== '1969-12-31T23:59:59.999Z'))
+if(!_Native_Date.prototype.toISOString
+   || (new _Native_Date(-1).toISOString() !== '1969-12-31T23:59:59.999Z')
+   || (_String_contains_.call(new _Native_Date(_Shimed_Date_test_negDate).toISOString(), _Shimed_Date_test_yearStr))
+   ) {
     _Native_Date.prototype.toISOString = function() {
         var result,
         	length,
@@ -3059,6 +3045,7 @@ if(!_Native_Date.prototype.toISOString || (_String_contains_.call(new _Native_Da
         return year + "-" + result.slice(0, 2).join("-") + "T" + result.slice(2).join(":") + "." +
             ("000" + this.getUTCMilliseconds()).slice(-3) + "Z";
     };
+}
 
 // ES5 15.9.4.4
 // http://es5.github.com/#x15.9.4.4
@@ -3204,7 +3191,7 @@ if (!_Native_Date.parse || "Date.parse is buggy") {
 				// (ES 5.1 bug)
 	            // see https://bugs.ecmascript.org/show_bug.cgi?id=112
                 offset = !match[4] || match[8] ?
-                        0 : Number(new Date(1970, 0)),
+                        0 : Number(new _Native_Date(1970, 0)),
 	            signOffset = match[9] === "-" ? 1 : -1,
 	            hourOffset = Number(match[10] || 0),
 	            minuteOffset = Number(match[11] || 0),    
@@ -3340,4 +3327,4 @@ _append = _tmp_ = _testElement = nodeList_methods_fromArray = _document_createEl
 
 
 
-})(window);
+}(window);

@@ -40,7 +40,7 @@ __Status__: Stable Beta
  - The a.ielt8.htc requests should respond with the mime type "text/x-component"
  - That's all cautions
  
-## Install
+## Installation
  - For modern browsers:
   Add main script in `head` section
   

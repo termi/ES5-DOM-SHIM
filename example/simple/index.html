@@ -117,6 +117,10 @@ function main() {
 	
 	j = document.querySelector(".test");
 	j.addEventListener("someEvent", function(){console.log(3, "j someEvent capture")}, true);
+
+    document.addEventListener("nonBublingSomeEvent", function() {
+        console.error("THIS HANDLER SHOULD NEVER FIRED");
+    });
 	
 	//$("test2").addEventListener("someEvent", console.log.bind(null, "test2 someEvent capture"), true);
 	
@@ -124,7 +128,8 @@ function main() {
 	
 	var testInterval = setInterval(function() {
 		j.dispatchEvent(new CustomEvent("someEvent", {bubbles : true, detail : ++att > 3 ? att = 0 : att}));
-	}, 1000)
+        j.dispatchEvent(new CustomEvent("nonBublingSomeEvent", {bubbles : false}));
+	}, 1000);
 	
 	
 	window.stopIt = function() {
