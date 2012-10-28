@@ -687,144 +687,143 @@ if(!("pageXOffset" in global)) {
 /*  ======================================================================================  */
 /*  ======================================  Events  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-	/** @constructor */
-	function_tmp = global["Event"] = function() {
-		//new operator for Event supported in a.js
-		_throw("");
-	};
+/** @constructor */
+function_tmp = global["Event"] = function() {
+	//new operator for Event supported in a.js
+	_throw("");
+};
 
-	_EventInitFunctions = {
-		/**
-		 * @param {string=} _type
-		 * @param {boolean=} _bubbles
-		 * @param {boolean=} _cancelable
-		 */
-		"initEvent" : function(_type, _bubbles, _cancelable) {
-			if(_type == void 0 || _bubbles == void 0 || _cancelable == void 0) {
-				//WRONG_ARGUMENTS_ERR
-				_throw('WRONG_ARGUMENTS_ERR');
-			}
-			var thisObj = this;
-
-			thisObj.type = _type;
-			//this.cancelBubble = //TODO:: <-- testing | Need this ???
-			//	!(this.bubbles = _bubbles);
-			thisObj.bubbles = _bubbles;
-			thisObj.cancelable = _cancelable;//https://developer.mozilla.org/en/DOM/event.cancelable
-
-			thisObj.isTrusted = false;
-			thisObj.target = null;
-
-			if(!thisObj.timeStamp)thisObj.timeStamp = +new _Native_Date();
+_EventInitFunctions = {
+	/**
+	 * @param {string=} _type
+	 * @param {boolean=} _bubbles
+	 * @param {boolean=} _cancelable
+	 */
+	"initEvent" : function(_type, _bubbles, _cancelable) {
+		if(_type == void 0 || _bubbles == void 0 || _cancelable == void 0) {
+			//WRONG_ARGUMENTS_ERR
+			_throw('WRONG_ARGUMENTS_ERR');
 		}
-		,
-		"initCustomEvent" : function(_type, _bubbles, _cancelable, _detail) {
-			//https://developer.mozilla.org/en/DOM/CustomEvent
-			_EventInitFunctions["initEvent"].call(this, _type, _bubbles, _cancelable);
+		var thisObj = this;
 
-			this.detail = _detail;
-		}
-		,
-		"initUIEvent" : function(_type, _bubbles, _cancelable, _view, _detail) {
-			//https://developer.mozilla.org/en/DOM/event.initUIEvent
-			_EventInitFunctions["initCustomEvent"].call(this, _type, _bubbles, _cancelable, _detail);
+		thisObj.type = _type;
+		//this.cancelBubble = //TODO:: <-- testing | Need this ???
+		//	!(this.bubbles = _bubbles);
+		thisObj.bubbles = _bubbles;
+		thisObj.cancelable = _cancelable;//https://developer.mozilla.org/en/DOM/event.cancelable
 
-			this.view = _view;
-		}
-		,
-		"initMouseEvent" : function(_type, _bubbles, _cancelable, _view,
-		                                            _detail, _screenX, _screenY, _clientX, _clientY,
-		                                            _ctrlKey, _altKey, _shiftKey, _metaKey,
-		                                            _button, _relatedTarget) {
-			var thisObj = this;
-			//https://developer.mozilla.org/en/DOM/event.initMouseEvent
-			_EventInitFunctions["initUIEvent"].call(thisObj, _type, _bubbles, _cancelable, _view, _detail);
+		thisObj.isTrusted = false;
+		thisObj.target = null;
 
-			thisObj.screenX = _screenX;
-			thisObj.screenY = _screenY;
-			thisObj.clientX = _clientX;
-			thisObj.clientY = _clientY;
-			thisObj.ctrlKey = _ctrlKey;
-			thisObj.altKey = _altKey;
-			thisObj.shiftKey = _shiftKey;
-			thisObj.metaKey = _metaKey;
-			thisObj.button = _button;
-			thisObj.relatedTarget = _relatedTarget;
-		}
-	};
+		if(!thisObj.timeStamp)thisObj.timeStamp = +new _Native_Date();
+	}
+	,
+	"initCustomEvent" : function(_type, _bubbles, _cancelable, _detail) {
+		//https://developer.mozilla.org/en/DOM/CustomEvent
+		_EventInitFunctions["initEvent"].call(this, _type, _bubbles, _cancelable);
 
-	_Event_prototype = function_tmp.prototype = {
-		constructor : function_tmp,
+		this.detail = _detail;
+	}
+	,
+	"initUIEvent" : function(_type, _bubbles, _cancelable, _view, _detail) {
+		//https://developer.mozilla.org/en/DOM/event.initUIEvent
+		_EventInitFunctions["initCustomEvent"].call(this, _type, _bubbles, _cancelable, _detail);
 
-	  	/** @this {_ielt9_Event} */
-	  	"preventDefault" : function() {
+		this.view = _view;
+	}
+	,
+	"initMouseEvent" : function(_type, _bubbles, _cancelable, _view,
+												_detail, _screenX, _screenY, _clientX, _clientY,
+												_ctrlKey, _altKey, _shiftKey, _metaKey,
+												_button, _relatedTarget) {
+		var thisObj = this;
+		//https://developer.mozilla.org/en/DOM/event.initMouseEvent
+		_EventInitFunctions["initUIEvent"].call(thisObj, _type, _bubbles, _cancelable, _view, _detail);
+
+		thisObj.screenX = _screenX;
+		thisObj.screenY = _screenY;
+		thisObj.clientX = _clientX;
+		thisObj.clientY = _clientY;
+		thisObj.ctrlKey = _ctrlKey;
+		thisObj.altKey = _altKey;
+		thisObj.shiftKey = _shiftKey;
+		thisObj.metaKey = _metaKey;
+		thisObj.button = _button;
+		thisObj.relatedTarget = _relatedTarget;
+	}
+};
+
+_Event_prototype = function_tmp.prototype = {
+	constructor : function_tmp,
+
+    /** @this {_ielt9_Event} @lends {function_tmp.prototype}*/
+    "preventDefault" : function() {
         if(this.cancelable === false)return;
 
-	  		_ielt9_Event.getNativeEvent.call(this)["returnValue"] = this["returnValue"] = false;
-	  		_ielt9_Event.destroyLinkToNativeEvent.call(this);
-	  		this["defaultPrevented"] = true;
-	  	} ,
+        _ielt9_Event.getNativeEvent.call(this)["returnValue"] = this["returnValue"] = false;
+        _ielt9_Event.destroyLinkToNativeEvent.call(this);
+        this["defaultPrevented"] = true;
+    } ,
 
-	  	/** @this {_ielt9_Event} */
-	  	"stopPropagation" : function() {
-	  		_ielt9_Event.getNativeEvent.call(this)["cancelBubble"] = this["cancelBubble"] = true;
-	  		_ielt9_Event.destroyLinkToNativeEvent.call(this);
-	  	} ,
+    /** @this {_ielt9_Event} @lends {function_tmp.prototype} */
+    "stopPropagation" : function() {
+        _ielt9_Event.getNativeEvent.call(this)["cancelBubble"] = this["cancelBubble"] = true;
+        _ielt9_Event.destroyLinkToNativeEvent.call(this);
+    }
+};
+/** @this {_ielt9_Event} */
+_Event_prototype["stopImmediatePropagation"] = function() {
+	this["__stopNow"] = true;
+	this.stopPropagation();
+};
+_Event_prototype["defaultPrevented"] = false;
 
-	  	/** @this {_ielt9_Event} */
-	  	"stopImmediatePropagation" : function() {
-			this["__stopNow"] = true;
-			this.stopPropagation();
-		}
-
+for(_tmp_ in _EventInitFunctions)if(_hasOwnProperty(_EventInitFunctions, _tmp_)) {
+	_Event_prototype[_tmp_] = function() {
+		_EventInitFunctions[arguments.callee["name"]].apply(this, arguments);
+		_safeExtend(this[_event_nativeEventPropName], this);
 	};
+	_Event_prototype[_tmp_]["name"] = _tmp_;
+}
 
-	for(_tmp_ in _EventInitFunctions)if(_hasOwnProperty(_EventInitFunctions, _tmp_)) {
-		_Event_prototype[_tmp_] = function() {
-			_EventInitFunctions[arguments.callee["name"]].apply(this, arguments);
-			_safeExtend(this[_event_nativeEventPropName], this);
-		};
-		_Event_prototype[_tmp_]["name"] = _tmp_;
+/** @constructor Event constructor for document.createEvent and commonHandle */
+_ielt9_Event = function(nativeEvent) {
+	this[_event_nativeEventPropName] = nativeEvent;
+
+	nativeEvent.returnValue = true;//default value
+
+	_safeExtend(this, nativeEvent);
+};
+
+/** @this {_ielt9_Event} */
+_ielt9_Event.getNativeEvent = function() {
+	var nativeEvent = this[_event_nativeEventPropName];
+	if(nativeEvent === void 0) {
+		_throw("WRONG_THIS_ERR")
+	}
+	else if(nativeEvent === null) {
+		//_ielt9_Event.destroyLinkToNativeEvent was fired
+		nativeEvent = _ielt9_Event.getNativeEvent.fakeObject;
 	}
 
-	/** @constructor Event constructor for document.createEvent and commonHandle */
-	_ielt9_Event = function(nativeEvent) {
-		this[_event_nativeEventPropName] = nativeEvent;
+	return nativeEvent;
+};
+_ielt9_Event.getNativeEvent.fakeObject = {};
 
-		nativeEvent.returnValue = true;//default value
+/** @this {_ielt9_Event} */
+_ielt9_Event.destroyLinkToNativeEvent = function() {
+	if(this[_event_nativeEventPropName]) {
+		this[_event_nativeEventPropName] = null;
+	}
+};
 
-		_safeExtend(this, nativeEvent);
-	};
-
-	/** @this {_ielt9_Event} */
-	_ielt9_Event.getNativeEvent = function() {
-		var nativeEvent = this[_event_nativeEventPropName];
-  		if(nativeEvent === void 0) {
-  			_throw("WRONG_THIS_ERR")
-  		}
-		else if(nativeEvent === null) {
-			//_ielt9_Event.destroyLinkToNativeEvent was fired
-			nativeEvent = _ielt9_Event.getNativeEvent.fakeObject;
-		}
-
-  		return nativeEvent;
-	};
-	_ielt9_Event.getNativeEvent.fakeObject = {};
-
-	/** @this {_ielt9_Event} */
-	_ielt9_Event.destroyLinkToNativeEvent = function() {
-		if(this[_event_nativeEventPropName]) {
-			this[_event_nativeEventPropName] = null;
-		}
-	};
-
-	//inherit _ielt9_Event from Event
-	/** @constructor */
-	function_tmp = function() { };
-	function_tmp.prototype = _Event_prototype;
-	function_tmp = new function_tmp;
-	function_tmp.constructor = _ielt9_Event;
-	_ielt9_Event.prototype = function_tmp;
+//inherit _ielt9_Event from Event
+/** @constructor */
+function_tmp = function() { };
+function_tmp.prototype = _Event_prototype;
+function_tmp = new function_tmp;
+function_tmp.constructor = _ielt9_Event;
+_ielt9_Event.prototype = function_tmp;
 
 
 //fix [add|remove]EventListener & dispatchEvent for IE < 9
@@ -2462,7 +2461,7 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
     , /** @type {Node} */brother
     , /** @type {number} */combinatorType = selectorCombinatorTypeMap[selectorArr[1] || ""] || 0
     , /** @type {boolean} */combinatorTypeMoreThen_2 = combinatorType > 2
-    , /** @type {(string|undefined)} */tag = selectorArr[2]
+    , /** @type {(string|undefined)} */tag = selectorArr[2] || "*"
     , /** @type {boolean} */needCheck_tag = !!tag
     , /** @type {(string|undefined)} */id = selectorArr[3]
     , /** @type {boolean} */needCheck_id = !!id
@@ -2550,7 +2549,7 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
           }
         }
 
-      preResult = needCheck_id = void 0;
+      preResult = needCheck_id = needCheck_tag = void 0;
     }
   }
 
@@ -2570,7 +2569,7 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
             canWeReturnUnsafeArray = canWeReturnUnsafeArray && !needCheck_classes;
           }
           else {
-            preResult = root.getElementsByTagName(tag || "*");
+            preResult = root.getElementsByTagName(tag);
           }
         }
         else {//id

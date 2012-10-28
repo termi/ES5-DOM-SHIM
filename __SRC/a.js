@@ -2194,28 +2194,10 @@ if(!_tmp_) {
 		//  DOMTokenList.prototype.toggle(token, force)
 		(function(_old_add, _old_remove) {
 			_tmp_["add"] = function() {
-				var tokens = arguments
-					, token
-					, i = 0
-					, l = tokens.length
-					;
-				do {
-					token = tokens[i];
-					_old_add.call(this, token);
-				}
-				while(++i < l);
+				_forEach(arguments, _old_add, this);
 			};
 			_tmp_["remove"] = function() {
-				var tokens = arguments
-					, token
-					, i = 0
-					, l = tokens.length
-					;
-				do {
-					token = tokens[i];
-					_old_remove.call(this, token);
-				}
-				while(++i < l);
+				_forEach(arguments, _old_remove, this);
 			};
 			_tmp_["toggle"] = DOMStringCollection.prototype["toggle"];
 		})(_tmp_["add"], _tmp_["remove"]);

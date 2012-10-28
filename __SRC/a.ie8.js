@@ -756,7 +756,7 @@ _EventInitFunctions = {
 _Event_prototype = function_tmp.prototype = {
 	constructor : function_tmp,
 
-    /** @this {_ielt9_Event} */
+    /** @this {_ielt9_Event} @lends {function_tmp.prototype}*/
     "preventDefault" : function() {
         if(this.cancelable === false)return;
 
@@ -765,19 +765,18 @@ _Event_prototype = function_tmp.prototype = {
         this["defaultPrevented"] = true;
     } ,
 
-    /** @this {_ielt9_Event} */
+    /** @this {_ielt9_Event} @lends {function_tmp.prototype} */
     "stopPropagation" : function() {
         _ielt9_Event.getNativeEvent.call(this)["cancelBubble"] = this["cancelBubble"] = true;
         _ielt9_Event.destroyLinkToNativeEvent.call(this);
-    } ,
-
-    /** @this {_ielt9_Event} */
-    "stopImmediatePropagation" : function() {
-		this["__stopNow"] = true;
-		this.stopPropagation();
-	}
-
+    }
 };
+/** @this {_ielt9_Event} */
+_Event_prototype["stopImmediatePropagation"] = function() {
+	this["__stopNow"] = true;
+	this.stopPropagation();
+};
+_Event_prototype["defaultPrevented"] = false;
 
 for(_tmp_ in _EventInitFunctions)if(_hasOwnProperty(_EventInitFunctions, _tmp_)) {
 	_Event_prototype[_tmp_] = function() {
