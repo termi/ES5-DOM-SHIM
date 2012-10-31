@@ -2461,7 +2461,7 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
     , /** @type {Node} */brother
     , /** @type {number} */combinatorType = selectorCombinatorTypeMap[selectorArr[1] || ""] || 0
     , /** @type {boolean} */combinatorTypeMoreThen_2 = combinatorType > 2
-    , /** @type {(string|undefined)} */tag = selectorArr[2] || "*"
+    , /** @type {(string|undefined)} */tag = selectorArr[2]
     , /** @type {boolean} */needCheck_tag = !!tag
     , /** @type {(string|undefined)} */id = selectorArr[3]
     , /** @type {boolean} */needCheck_id = !!id
@@ -2537,7 +2537,13 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
   //prepear
   if(combinatorType == 1) {
     if(!needCheck_id) {
-      needCheck_tag = false;
+	  if(!tag) {
+		tag = "*";
+		needCheck_tag = true;
+	  }
+      else {
+		needCheck_tag = false;
+	  }
     }
     else {
         preResult = document.getElementsByName(id);
