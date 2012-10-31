@@ -278,10 +278,35 @@ var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use 
 		}
 	}
 
+
+
   , ATTRIBUTES_CUSTOM = {
 		'for': 'htmlFor',
 		'class': 'className',
 		'value': 'defaultValue'
+	}
+
+	// attribute referencing URI data values need special treatment in IE | From nwmatcher
+  , ATTRIBUTE_URIDATA = {
+		'action': null,
+		'cite': null,
+		'codebase': null,
+		'data': null,
+		'href': null,
+		'longdesc': null,
+		'lowsrc': null,
+		'src': null,
+		'usemap': null
+	}
+  , DEFAULT_ATTRIBUTES_MAP = {
+		'id': true,
+		'value': true,
+		'checked': true,
+		'disabled': true,
+		'ismap': true,
+		'multiple': true,
+		'readonly': true,
+		'selected': true
 	}
 
 	// ------------------------------ ==================  Events  ================== ------------------------------
@@ -2209,25 +2234,62 @@ var RE_REPLACER_FOR_ELEMENTS_BY_CLASSNAME = /\s+(?=\S)|^/g
 ;
 
 //separate properties and attributes
-_Element_prototype.setAttribute = function(name, value) {
-	if(ATTRIBUTES_CUSTOM[name] !== void 0) {
-		name = ATTRIBUTES_CUSTOM[name];
+DEFAULT_ATTRIBUTES_MAP.elementsToCheck = {};
+DEFAULT_ATTRIBUTES_MAP.checkIfAttributeDefault = function(node, attrName) {
+	if(attrName in this) {
+		return this[attrName];
 	}
-	else {
+
+	var nodeName = node.nodeName
+		, result
+	;
+	if(!(node = DEFAULT_ATTRIBUTES_MAP.elementsToCheck[nodeName])) {
+		node = DEFAULT_ATTRIBUTES_MAP.elementsToCheck[nodeName] = document_createElement(nodeName);
+	}
+
+	result = _native_Node_getAttribute.call(node, attrName) !== null;
+	if(!result) {
+		result =
+			(result = node.constructor)
+			&& (result = result.prototype)
+			&& (result = Object.getOwnPropertyDescriptor(result, attrName))
+			&& /\[native\scode\]/.test(result["get"] + "")
+		;
+	}
+
+	return this[attrName] = result;
+};
+_Element_prototype.setAttribute = function(name, value) {
+	var lowerName = name.toLowerCase();
+
+	if(ATTRIBUTES_CUSTOM[lowerName] !== void 0) {
+		name = ATTRIBUTES_CUSTOM[lowerName];
+	}
+	else if(ATTRIBUTE_URIDATA[lowerName] === void 0 && lowerName.indexOf("data-") !== 0 && !DEFAULT_ATTRIBUTES_MAP.checkIfAttributeDefault(this, lowerName)) {
 		name = name.toUpperCase();
 	}
+
 	return _native_Node_setAttribute.call(this, name, value + "");
 };
 _Element_prototype.getAttribute = function(name) {
 	var upperName
-	  , result
+		, lowerName = name.toLowerCase()
+		, result
 	;
 
-	if(ATTRIBUTES_CUSTOM[name] !== void 0) {
-		return _native_Node_getAttribute.call(this, ATTRIBUTES_CUSTOM[name])
+	if(ATTRIBUTES_CUSTOM[lowerName] !== void 0) {
+		return _native_Node_getAttribute.call(this, ATTRIBUTES_CUSTOM[lowerName])
+	}
+	else if(ATTRIBUTE_URIDATA[lowerName] !== void 0) {
+		return (result = this.attributes) && (result = result[lowerName]) && (result = result.nodeValue) && (result + "") || null;
+	}
+	else if(lowerName.indexOf("data-") !== 0 && !DEFAULT_ATTRIBUTES_MAP.checkIfAttributeDefault(this, lowerName)) {
+		upperName = name.toUpperCase();
+	}
+	else {
+		return _native_Node_getAttribute.call(this, name);
 	}
 
-	upperName = name.toUpperCase();
 	result = this[upperName];
 
 	if(!result) {
@@ -2242,14 +2304,20 @@ _Element_prototype.getAttribute = function(name) {
 };
 _Element_prototype.removeAttribute = function(name) {
 	var upperName
+		, lowerName = name.toLowerCase()
         , result
     ;
 
-	if(ATTRIBUTES_CUSTOM[name] !== void 0) {
-		return _native_Node_removeAttribute.call(this, ATTRIBUTES_CUSTOM[name])
+	if(ATTRIBUTES_CUSTOM[lowerName] !== void 0) {
+		return _native_Node_removeAttribute.call(this, ATTRIBUTES_CUSTOM[lowerName])
+	}
+	else if(ATTRIBUTE_URIDATA[lowerName] === void 0 && lowerName.indexOf("data-") !== 0 && !DEFAULT_ATTRIBUTES_MAP.checkIfAttributeDefault(this, lowerName)) {
+		upperName = name.toUpperCase();
+	}
+	else {
+		return _native_Node_removeAttribute.call(this, name);
 	}
 
-	upperName = name.toUpperCase();
 	result = upperName in this;
 
 	if(result || this.getAttribute(name) !== null) {

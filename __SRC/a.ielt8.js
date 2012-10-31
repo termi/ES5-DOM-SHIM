@@ -284,6 +284,29 @@ var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use 
 		'value': 'defaultValue'
 	}
 
+	// attribute referencing URI data values need special treatment in IE | From nwmatcher
+  , ATTRIBUTE_URIDATA = {
+		'action': null,
+		'cite': null,
+		'codebase': null,
+		'data': null,
+		'href': null,
+		'longdesc': null,
+		'lowsrc': null,
+		'src': null,
+		'usemap': null
+	}
+  , DEFAULT_ATTRIBUTES_MAP = {
+		'id': true,
+		'value': true,
+		'checked': true,
+		'disabled': true,
+		'ismap': true,
+		'multiple': true,
+		'readonly': true,
+		'selected': true
+	}
+
 	// ------------------------------ ==================  Events  ================== ------------------------------
   , _ielt9_Event
 	/** @type {Object} */
@@ -2394,11 +2417,9 @@ var
     */
   }
   /** @type {Object} @const */
-  , attributeSpecialCase = {
-        "href" : function(node) {
-          return _Function_call.call(node, node["__getAttribute__"] || node.getAttribute, "href", 2);
-        }
-      }
+  , urnAttributeGetFunction = function(node, attr) {
+      return _Function_call.call(node["__getAttribute__"] || node.getAttribute, node, attr, 2);
+    }
   /** @type {Object} @const */
   , attributeSpecialSpecified = {"coords" : 1, "id" : 1, "name" : 1}
 
@@ -2613,7 +2634,7 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
               u = child.attributes;
 
               while(match && (css3Attr_add = css3Attr[++kr]) && (match = (c = css3Attr_add[1]) in u)) {
-                if(c in attributeSpecialCase)nodeAttrCurrent_value = attributeSpecialCase[c](child);
+                if(c in ATTRIBUTE_URIDATA)nodeAttrCurrent_value = urnAttributeGetFunction(child, c);
                 else {
                   nodeAttrCurrent_value = u[c];
                   nodeAttrCurrent_value = (nodeAttrCurrent_value && (nodeAttrCurrent_value.specified || c in attributeSpecialSpecified) && nodeAttrCurrent_value.nodeValue !== "") ? nodeAttrCurrent_value.nodeValue : null;
@@ -3026,22 +3047,44 @@ if(!document[_tmp_]) {
 }
 //SHIM export
 
+DEFAULT_ATTRIBUTES_MAP.elementsToCheck = {};
+DEFAULT_ATTRIBUTES_MAP.checkIfAttributeDefault = function(node, attrName) {
+	if(attrName in this) {
+		return this[attrName];
+	}
+
+	var nodeName = node.nodeName;
+	if(!(node = DEFAULT_ATTRIBUTES_MAP.elementsToCheck[nodeName])) {
+		node = DEFAULT_ATTRIBUTES_MAP.elementsToCheck[nodeName] = document_createElement(nodeName);
+	}
+
+	return this[attrName] = (node.getAttribute(attrName) !== null);
+};
+
 _Element_prototype.setAttribute = function(name, val, flag) {
 	if(flag == void 0) {
-		if(ATTRIBUTES_CUSTOM[name] !== void 0) {
-			name = ATTRIBUTES_CUSTOM[name];
+		var lowerName = name.toLowerCase();
+
+		flag = 1;
+
+		if(ATTRIBUTES_CUSTOM[lowerName] !== void 0) {
+			name = ATTRIBUTES_CUSTOM[lowerName];
 		}
-		else {
+		else if(ATTRIBUTE_URIDATA[lowerName] !== void 0) {
+			flag = 2;
+		}
+		else if(lowerName.indexOf("data-") !== 0 && !DEFAULT_ATTRIBUTES_MAP.checkIfAttributeDefault(this, lowerName)) {
 			name = name.toUpperCase();
 		}
+
 		val = val + "";
-		flag = 1;
 	}
 
 	return Function.prototype.call.call(this["__setAttribute__"], this, name, val, flag);
 };
 _Element_prototype.getAttribute = function(name, flag) {
 	var upperName
+		, lowerName = name.toLowerCase()
         , result
         , needAttributeShim
 	;
@@ -3050,11 +3093,18 @@ _Element_prototype.getAttribute = function(name, flag) {
 		flag = 1;
 	}
 
-	if(ATTRIBUTES_CUSTOM[name] !== void 0) {
-		upperName = ATTRIBUTES_CUSTOM[name];
+
+	if(ATTRIBUTES_CUSTOM[lowerName] !== void 0) {
+		upperName = ATTRIBUTES_CUSTOM[lowerName];
+	}
+	else if(ATTRIBUTE_URIDATA[lowerName] !== void 0) {
+		return _Function_call.call(this["__getAttribute__"], this, name, 2);
+	}
+	else if(lowerName.indexOf("data-") !== 0 && !DEFAULT_ATTRIBUTES_MAP.checkIfAttributeDefault(this, lowerName)) {
+		upperName = name.toUpperCase();
 	}
 	else {
-		upperName = name.toUpperCase();
+		upperName = name;
 	}
 
     result = _Function_call.call(this["__getAttribute__"], this, upperName, flag);
@@ -3074,25 +3124,34 @@ _Element_prototype.getAttribute = function(name, flag) {
 };
 _Element_prototype.removeAttribute = function(name, flag) {
     var upperName
+		, lowerName
         , result
     ;
 
 	if(flag == void 0) {
 		flag = 1;
-		if(ATTRIBUTES_CUSTOM[name] !== void 0) {
-			name = ATTRIBUTES_CUSTOM[name];
+		lowerName = name.toLowerCase();
+
+		if(ATTRIBUTES_CUSTOM[lowerName] !== void 0) {
+			upperName = ATTRIBUTES_CUSTOM[lowerName];
 		}
-		else {
+		else if(ATTRIBUTE_URIDATA[lowerName] !== void 0) {
+			flag = 2;
+		}
+		else if(lowerName.indexOf("data-") !== 0 && !DEFAULT_ATTRIBUTES_MAP.checkIfAttributeDefault(this, lowerName)) {
 			upperName = name.toUpperCase();
 		}
 
-        result = upperName in this;
+		if(upperName) {
+			result = upperName in this;
 
-        if(!result && this.getAttribute(name) !== null) {
-            delete this[upperName];
-            return true;
-        }
+			if(!result && this.getAttribute(name) !== null) {
+				delete this[upperName];
+				return true;
+			}
+		}
 	}
+
 	return _Function_call.call(this["__removeAttribute__"], this, upperName || name, flag);
 };
 
