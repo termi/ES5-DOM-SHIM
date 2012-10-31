@@ -1580,15 +1580,30 @@ _.push(function() {
 			elem = elem["element"];
 		}
 
-		var box = elem.getBoundingClientRect(),//It might be an error here
-			body = document.body;
+		var box = elem.getBoundingClientRect()//It might be an error here
+			, _body
+			, _documentElement
+			, _doc
+		;
 
-		if(!_document_documentElement.contains(elem))
-			return X_else_Y ? box.left : box.top;
+		if((_doc = elem.ownerDocument) !== document) {
+			_body = _doc && _doc.body;
+			_documentElement = _doc && _doc.documentElement;
+			if(!_body || !_documentElement) {
+				return X_else_Y ? box.left : box.top;
+			}
+		}
+		else {
+			_body = document.body;
+			_documentElement = _document_documentElement;
+		}
+
 
 	 	return X_else_Y ?
-	 		box.left + _getScrollX() - (_document_documentElement.clientLeft || body.clientLeft || 0) :
-	 		box.top + _getScrollY() - (_document_documentElement.clientTop || body.clientTop || 0);
+	 		(box.left + _getScrollX() - (_documentElement.clientLeft || _body.clientLeft || 0))
+			:
+	 		(box.top + _getScrollY() - (_documentElement.clientTop || _body.clientTop || 0))
+		;
 	}
 
 	/**
