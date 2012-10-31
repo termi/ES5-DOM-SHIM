@@ -2539,11 +2539,9 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
     if(!needCheck_id) {
 	  if(!tag) {
 		tag = "*";
-		needCheck_tag = true;
+		needCheck_nodeType = !needCheck_classes;
 	  }
-      else {
-		needCheck_tag = false;
-	  }
+      needCheck_tag = false;
     }
     else {
         preResult = document.getElementsByName(id);
