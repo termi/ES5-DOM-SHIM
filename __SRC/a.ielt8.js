@@ -3250,7 +3250,12 @@ _Node_prototype["__ielt8__element_init__"] = function __ielt8__element_init__() 
 			thisObj["__nativeCloneNode__"] = thisObj.cloneNode;
 			thisObj.cloneNode = _Node_prototype.cloneNode;
 		}
-		if(_Node_prototype.contains)thisObj.contains = _Node_prototype.contains;
+		/*
+		NOT WORKING FOR IE < 8
+		TODO: do something with IE < 8
+		if(_Node_prototype.contains) {
+			thisObj.contains = _Node_prototype.contains;
+		}*/
 	}
 	catch(e) {
 		//console.error(e.message)
