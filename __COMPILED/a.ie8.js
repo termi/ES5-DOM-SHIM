@@ -1,4 +1,4 @@
-/* ES6/DOM4 polyfill for IE8 | @version 0.7 alpha-3 | MIT License | github.com/termi */
+/* ES6/DOM4 polyfill for IE8 | @version 0.7 final | MIT License | github.com/termi */
 ;(function() {
 var k=void 0,l=!0,p=null,r=!1;function J(){return function(){}}
 (function(d,t){function u(a){if(!("__isFixed"in a)){var b="button"in a&&a.button;a.__isFixed=l;if("click"===a.type||"dblclick"===a.type)a.detail===k&&(a.detail="click"===a.type?1:2),!a.button&&u.b!==k&&(b=u.b);t(a,A);a.defaultPrevented||(a.defaultPrevented=r);a.target||(a.target=a.srcElement||document);a.relatedTarget===k&&a.fromElement&&(a.relatedTarget=a.fromElement==a.target?a.toElement:a.fromElement);"clientX"in a&&a.pageX==p&&(a.pageX=a.clientX+K()-(m.clientLeft||0),a.pageY=a.clientY+L()-(m.clientTop||

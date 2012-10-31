@@ -1,4 +1,4 @@
-﻿/** @license ES6/DOM4 polyfill | @version 0.7 alpha-3 | MIT License | github.com/termi */
+﻿/** @license ES6/DOM4 polyfill | @version 0.7 final | MIT License | github.com/termi */
 
 // ==ClosureCompiler==
 // @compilation_level ADVANCED_OPTIMIZATIONS

@@ -1,4 +1,4 @@
-/** @license ES6/DOM4 polyfill for IE < 8 | @version 0.7 alpha-3 | MIT License | github.com/termi */
+/** @license ES6/DOM4 polyfill for IE < 8 | @version 0.7 final | MIT License | github.com/termi */
 
 // ==ClosureCompiler==
 // @compilation_level ADVANCED_OPTIMIZATIONS
@@ -2875,8 +2875,7 @@ function queryManySelector(selector, onlyOne, root) {
   selElements = root;
 
   while(rule = rules.shift()) {
-
-    nextRule = rules[1];
+    nextRule = rules[0];
     lastRule = !nextRule || nextRule.charAt(0) === ',';
 
     //if(nextRule && nextRule.length > 1 && !resultKeys)resultKeys = {};

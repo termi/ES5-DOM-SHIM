@@ -1,4 +1,4 @@
-/* ES6/DOM4 polyfill | @version 0.7 alpha-3 | MIT License | github.com/termi */
+/* ES6/DOM4 polyfill | @version 0.7 final | MIT License | github.com/termi */
 ;(function() {"use strict";
 var g=void 0,h=!0,i=null,l=!1,m=window,n,q=Object.prototype,aa=Function.prototype.apply,r=Array.prototype.slice,s=String.prototype.split,ca=Array.prototype.splice,t,da,ea,u=Function.prototype.bind||function(a,b){var c=this,d=r.call(arguments,1);return function(){return aa.call(c,a,d.concat(r.call(arguments)))}},v=u.call(Function.prototype.call,q.hasOwnProperty);function w(a,b,c){return aa.call(a,b,r.call(arguments,2))}
 function x(a,b){for(var c=1;c<arguments.length;c++){var d=arguments[c],e;for(e in d)v(d,e)&&!v(a,e)&&(a[e]=d[e])}return a}var fa="a"!=Object("a")[0]||!(0 in Object("a"));function y(a,b){if(a==i&&!b)throw new TypeError;return fa&&"string"==typeof a&&a?s.call(a,""):Object(a)}var ga=q.toString;function ha(a){var b=Object.create(DOMException.prototype);b.code=DOMException[a];b.message=a+": DOM Exception "+b.code;throw b;}function ia(){return l}function ja(a){return a}
