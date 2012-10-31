@@ -1,4 +1,4 @@
-/** @license ES6/DOM4 polyfill for IE < 8 | @version 0.7 alpha-3 | MIT License | github.com/termi */
+/** @license ES6/DOM4 polyfill for IE < 8 | @version 0.7 final | MIT License | github.com/termi */
 
 // ==ClosureCompiler==
 // @compilation_level ADVANCED_OPTIMIZATIONS
@@ -293,6 +293,39 @@ var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use 
 		'for': 'htmlFor',
 		'class': 'className',
 		'value': 'defaultValue'
+	}
+
+	// attribute referencing URI data values need special treatment in IE | From nwmatcher
+  , ATTRIBUTE_URIDATA = {
+		'action': null,
+		'cite': null,
+		'codebase': null,
+		'data': null,
+		'href': null,
+		'longdesc': null,
+		'lowsrc': null,
+		'src': null,
+		'usemap': null
+	}
+  , DEFAULT_ATTRIBUTES_MAP = {
+		'id': true,
+		'value': true,
+		'checked': true,
+		'disabled': true,
+		'ismap': true,
+		'multiple': true,
+		'readonly': true,
+		'selected': true
+	}
+
+  // boolean attributes should return attribute name instead of true/false | From nwmatcher
+  , ATTRIBUTE_BOOLEAN = {
+		'checked': null,
+		'disabled': null,
+		'ismap': null,
+		'multiple': null,
+		'readonly': null,
+		'selected': null
 	}
 
 	// ------------------------------ ==================  Events  ================== ------------------------------
@@ -1612,15 +1645,30 @@ _.push(function() {
 			elem = elem["element"];
 		}
 
-		var box = elem.getBoundingClientRect(),//It might be an error here
-			body = document.body;
+		var box = elem.getBoundingClientRect()//It might be an error here
+			, _body
+			, _documentElement
+			, _doc
+		;
 
-		if(!_document_documentElement.contains(elem))
-			return X_else_Y ? box.left : box.top;
+		if((_doc = elem.ownerDocument) !== document) {
+			_body = _doc && _doc.body;
+			_documentElement = _doc && _doc.documentElement;
+			if(!_body || !_documentElement) {
+				return X_else_Y ? box.left : box.top;
+			}
+		}
+		else {
+			_body = document.body;
+			_documentElement = _document_documentElement;
+		}
+
 
 	 	return X_else_Y ?
-	 		box.left + _getScrollX() - (_document_documentElement.clientLeft || body.clientLeft || 0) :
-	 		box.top + _getScrollY() - (_document_documentElement.clientTop || body.clientTop || 0);
+	 		(box.left + _getScrollX() - (_documentElement.clientLeft || _body.clientLeft || 0))
+			:
+	 		(box.top + _getScrollY() - (_documentElement.clientTop || _body.clientTop || 0))
+		;
 	}
 
 	/**
@@ -2451,11 +2499,9 @@ var
     */
   }
   /** @type {Object} @const */
-  , attributeSpecialCase = {
-        "href" : function(node) {
-          return _Function_call.call(node, node["__getAttribute__"] || node.getAttribute, "href", 2);
-        }
-      }
+  , urnAttributeGetFunction = function(node, attr) {
+      return _Function_call.call(node["__getAttribute__"] || node.getAttribute, node, attr, 2);
+    }
   /** @type {Object} @const */
   , attributeSpecialSpecified = {"coords" : 1, "id" : 1, "name" : 1}
 
@@ -2474,6 +2520,29 @@ var
   , getNextElement = function(node) {
 		while((node = node.nextSibling) && node.nodeType != 1) {}
 		return node;
+	}
+	, _getAttribute = function(node, attribute) {//Original from nwmatcher | Version for shimed IE < 8
+		attribute = attribute.toLowerCase();
+		var result;
+
+		if (ATTRIBUTES_CUSTOM[attribute] !== void 0) {
+			result = node[ATTRIBUTES_CUSTOM[attribute]];
+		}
+		else {
+			result =
+			// specific URI data attributes (parameter 2 to fix IE bug)
+			ATTRIBUTE_URIDATA[attribute] !== void 0 ?
+				node["__getAttribute__"](attribute, 2)
+				:
+				// boolean attributes should return name instead of true/false
+				ATTRIBUTE_BOOLEAN[attribute] !== void 0 ?
+					node["__getAttribute__"](attribute) ? attribute : null
+					:
+					((node = node.getAttributeNode(attribute)) && node.value)
+			;
+		}
+
+		return result;
 	}
 ;
 
@@ -2596,11 +2665,9 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
     if(!needCheck_id) {
 	  if(!tag) {
 		tag = "*";
-		needCheck_tag = true;
+		needCheck_nodeType = !needCheck_classes;
 	  }
-      else {
-        needCheck_tag = false;
-      }
+      needCheck_tag = false;
     }
     else {
         preResult = document.getElementsByName(id);
@@ -2671,14 +2738,15 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
               kr = -1;
               u = child.attributes;
 
-              while(match && (css3Attr_add = css3Attr[++kr]) && (match = (c = css3Attr_add[1]) in u)) {
-                if(c in attributeSpecialCase)nodeAttrCurrent_value = attributeSpecialCase[c](child);
-                else {
-                  nodeAttrCurrent_value = u[c];
-                  nodeAttrCurrent_value = (nodeAttrCurrent_value && (nodeAttrCurrent_value.specified || c in attributeSpecialSpecified) && nodeAttrCurrent_value.nodeValue !== "") ? nodeAttrCurrent_value.nodeValue : null;
-                }
+              while(
+				  match
+					  && (css3Attr_add = css3Attr[++kr])
+				  ) {
 
+				// Save attribute check operator in a temporary variable
                 a = css3Attr_add[2];
+				//current_AttrCheckObject[1] is an attribute name
+				nodeAttrCurrent_value = _getAttribute(child, css3Attr_add[1]);
 
                 if(nodeAttrCurrent_value === null) {
                   if(!(match = a == 8))
@@ -2934,8 +3002,7 @@ function queryManySelector(selector, onlyOne, root) {
   selElements = root;
 
   while(rule = rules.shift()) {
-
-    nextRule = rules[1];
+    nextRule = rules[0];
     lastRule = !nextRule || nextRule.charAt(0) === ',';
 
     //if(nextRule && nextRule.length > 1 && !resultKeys)resultKeys = {};
@@ -3086,22 +3153,44 @@ if(!document[_tmp_]) {
 }
 //SHIM export
 
+DEFAULT_ATTRIBUTES_MAP.elementsToCheck = {};
+DEFAULT_ATTRIBUTES_MAP.checkIfAttributeDefault = function(node, attrName) {
+	if(attrName in this) {
+		return this[attrName];
+	}
+
+	var nodeName = node.nodeName;
+	if(!(node = DEFAULT_ATTRIBUTES_MAP.elementsToCheck[nodeName])) {
+		node = DEFAULT_ATTRIBUTES_MAP.elementsToCheck[nodeName] = document_createElement(nodeName);
+	}
+
+	return this[attrName] = (node.getAttribute(attrName) !== null);
+};
+
 _Element_prototype.setAttribute = function(name, val, flag) {
 	if(flag == void 0) {
-		if(ATTRIBUTES_CUSTOM[name] !== void 0) {
-			name = ATTRIBUTES_CUSTOM[name];
+		var lowerName = name.toLowerCase();
+
+		flag = 1;
+
+		if(ATTRIBUTES_CUSTOM[lowerName] !== void 0) {
+			name = ATTRIBUTES_CUSTOM[lowerName];
 		}
-		else {
+		else if(ATTRIBUTE_URIDATA[lowerName] !== void 0) {
+			flag = 2;
+		}
+		else if(lowerName.indexOf("data-") !== 0 && !DEFAULT_ATTRIBUTES_MAP.checkIfAttributeDefault(this, lowerName)) {
 			name = name.toUpperCase();
 		}
+
 		val = val + "";
-		flag = 1;
 	}
 
 	return Function.prototype.call.call(this["__setAttribute__"], this, name, val, flag);
 };
 _Element_prototype.getAttribute = function(name, flag) {
 	var upperName
+		, lowerName = name.toLowerCase()
         , result
         , needAttributeShim
 	;
@@ -3110,11 +3199,18 @@ _Element_prototype.getAttribute = function(name, flag) {
 		flag = 1;
 	}
 
-	if(ATTRIBUTES_CUSTOM[name] !== void 0) {
-		upperName = ATTRIBUTES_CUSTOM[name];
+
+	if(ATTRIBUTES_CUSTOM[lowerName] !== void 0) {
+		upperName = ATTRIBUTES_CUSTOM[lowerName];
+	}
+	else if(ATTRIBUTE_URIDATA[lowerName] !== void 0) {
+		return _Function_call.call(this["__getAttribute__"], this, name, 2);
+	}
+	else if(lowerName.indexOf("data-") !== 0 && !DEFAULT_ATTRIBUTES_MAP.checkIfAttributeDefault(this, lowerName)) {
+		upperName = name.toUpperCase();
 	}
 	else {
-		upperName = name.toUpperCase();
+		upperName = name;
 	}
 
     result = _Function_call.call(this["__getAttribute__"], this, upperName, flag);
@@ -3134,25 +3230,25 @@ _Element_prototype.getAttribute = function(name, flag) {
 };
 _Element_prototype.removeAttribute = function(name, flag) {
     var upperName
+		, lowerName
         , result
     ;
 
 	if(flag == void 0) {
 		flag = 1;
-		if(ATTRIBUTES_CUSTOM[name] !== void 0) {
-			name = ATTRIBUTES_CUSTOM[name];
+		lowerName = name.toLowerCase();
+
+		if(ATTRIBUTES_CUSTOM[lowerName] !== void 0) {
+			upperName = ATTRIBUTES_CUSTOM[lowerName];
 		}
-		else {
+		else if(ATTRIBUTE_URIDATA[lowerName] !== void 0) {
+			flag = 2;
+		}
+		else if(lowerName.indexOf("data-") !== 0 && !DEFAULT_ATTRIBUTES_MAP.checkIfAttributeDefault(this, lowerName)) {
 			upperName = name.toUpperCase();
 		}
-
-        result = upperName in this;
-
-        if(!result && this.getAttribute(name) !== null) {
-            delete this[upperName];
-            return true;
-        }
 	}
+
 	return _Function_call.call(this["__removeAttribute__"], this, upperName || name, flag);
 };
 
@@ -3213,13 +3309,13 @@ _Node_prototype["__ielt8__element_init__"] = function __ielt8__element_init__() 
 
 	"setSelectionRange" in thisObj || (thisObj.setSelectionRange = _Element_prototype.setSelectionRange);
 
-	if(this.setAttribute != _Element_prototype.setAttribute) {
-        this["__setAttribute__"] = this.setAttribute;
-        this["__getAttribute__"] = this.getAttribute;
-        this["__removeAttribute__"] = this.removeAttribute;
-		this.setAttribute = _Element_prototype.setAttribute;
-		this.getAttribute = _Element_prototype.getAttribute;
-		this.removeAttribute = _Element_prototype.removeAttribute;
+	if(thisObj.setAttribute != _Element_prototype.setAttribute) {
+		thisObj["__setAttribute__"] = thisObj.setAttribute;
+		thisObj["__getAttribute__"] = thisObj.getAttribute;
+		thisObj["__removeAttribute__"] = thisObj.removeAttribute;
+		thisObj.setAttribute = _Element_prototype.setAttribute;
+		thisObj.getAttribute = _Element_prototype.getAttribute;
+		thisObj.removeAttribute = _Element_prototype.removeAttribute;
 	}
 
 	/*TODO::
@@ -3236,7 +3332,12 @@ _Node_prototype["__ielt8__element_init__"] = function __ielt8__element_init__() 
 			thisObj["__nativeCloneNode__"] = thisObj.cloneNode;
 			thisObj.cloneNode = _Node_prototype.cloneNode;
 		}
-		if(_Node_prototype.contains)thisObj.contains = _Node_prototype.contains;
+		/*
+		NOT WORKING FOR IE < 8
+		TODO: do something with IE < 8
+		if(_Node_prototype.contains) {
+			thisObj.contains = _Node_prototype.contains;
+		}*/
 	}
 	catch(e) {
 		//console.error(e.message)
