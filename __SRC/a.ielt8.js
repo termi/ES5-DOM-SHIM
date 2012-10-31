@@ -307,6 +307,16 @@ var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use 
 		'selected': true
 	}
 
+  // boolean attributes should return attribute name instead of true/false | From nwmatcher
+  , ATTRIBUTE_BOOLEAN = {
+		'checked': null,
+		'disabled': null,
+		'ismap': null,
+		'multiple': null,
+		'readonly': null,
+		'selected': null
+	}
+
 	// ------------------------------ ==================  Events  ================== ------------------------------
   , _ielt9_Event
 	/** @type {Object} */
@@ -2454,6 +2464,29 @@ var
 		while((node = node.nextSibling) && node.nodeType != 1) {}
 		return node;
 	}
+	, _getAttribute = function(node, attribute) {//Original from nwmatcher | Version for shimed IE < 8
+		attribute = attribute.toLowerCase();
+		var result;
+
+		if (ATTRIBUTES_CUSTOM[attribute] !== void 0) {
+			result = node[ATTRIBUTES_CUSTOM[attribute]];
+		}
+		else {
+			result =
+			// specific URI data attributes (parameter 2 to fix IE bug)
+			ATTRIBUTE_URIDATA[attribute] !== void 0 ?
+				node["__getAttribute__"](attribute, 2)
+				:
+				// boolean attributes should return name instead of true/false
+				ATTRIBUTE_BOOLEAN[attribute] !== void 0 ?
+					node["__getAttribute__"](attribute) ? attribute : null
+					:
+					((node = node.getAttributeNode(attribute)) && node.value)
+			;
+		}
+
+		return result;
+	}
 ;
 
 /*
@@ -2648,14 +2681,15 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
               kr = -1;
               u = child.attributes;
 
-              while(match && (css3Attr_add = css3Attr[++kr]) && (match = (c = css3Attr_add[1]) in u)) {
-                if(c in ATTRIBUTE_URIDATA)nodeAttrCurrent_value = urnAttributeGetFunction(child, c);
-                else {
-                  nodeAttrCurrent_value = u[c];
-                  nodeAttrCurrent_value = (nodeAttrCurrent_value && (nodeAttrCurrent_value.specified || c in attributeSpecialSpecified) && nodeAttrCurrent_value.nodeValue !== "") ? nodeAttrCurrent_value.nodeValue : null;
-                }
+              while(
+				  match
+					  && (css3Attr_add = css3Attr[++kr])
+				  ) {
 
+				// Save attribute check operator in a temporary variable
                 a = css3Attr_add[2];
+				//current_AttrCheckObject[1] is an attribute name
+				nodeAttrCurrent_value = _getAttribute(child, css3Attr_add[1]);
 
                 if(nodeAttrCurrent_value === null) {
                   if(!(match = a == 8))
@@ -3156,15 +3190,6 @@ _Element_prototype.removeAttribute = function(name, flag) {
 		else if(lowerName.indexOf("data-") !== 0 && !DEFAULT_ATTRIBUTES_MAP.checkIfAttributeDefault(this, lowerName)) {
 			upperName = name.toUpperCase();
 		}
-
-		if(upperName) {
-			result = upperName in this;
-
-			if(!result && this.getAttribute(name) !== null) {
-				delete this[upperName];
-				return true;
-			}
-		}
 	}
 
 	return _Function_call.call(this["__removeAttribute__"], this, upperName || name, flag);
@@ -3227,13 +3252,13 @@ _Node_prototype["__ielt8__element_init__"] = function __ielt8__element_init__() 
 
 	"setSelectionRange" in thisObj || (thisObj.setSelectionRange = _Element_prototype.setSelectionRange);
 
-	if(this.setAttribute != _Element_prototype.setAttribute) {
-        this["__setAttribute__"] = this.setAttribute;
-        this["__getAttribute__"] = this.getAttribute;
-        this["__removeAttribute__"] = this.removeAttribute;
-		this.setAttribute = _Element_prototype.setAttribute;
-		this.getAttribute = _Element_prototype.getAttribute;
-		this.removeAttribute = _Element_prototype.removeAttribute;
+	if(thisObj.setAttribute != _Element_prototype.setAttribute) {
+		thisObj["__setAttribute__"] = thisObj.setAttribute;
+		thisObj["__getAttribute__"] = thisObj.getAttribute;
+		thisObj["__removeAttribute__"] = thisObj.removeAttribute;
+		thisObj.setAttribute = _Element_prototype.setAttribute;
+		thisObj.getAttribute = _Element_prototype.getAttribute;
+		thisObj.removeAttribute = _Element_prototype.removeAttribute;
 	}
 
 	/*TODO::
