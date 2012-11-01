@@ -9,7 +9,7 @@ based on:
 __Status__: Stable Beta
 
 * [__Simple Demo__](http://h123.ru/-/examples/ES6-DOM4-SHIM/simple/) Try it in IE7 (or in IE6 ¬_¬)! And take a look at the source
-* [__Complex Demo__](http://h123.ru/-/examples/ES6-DOM4-SHIM/simple/) Not working in IE6 due lack of CSS
+* [__Complex Demo__](http://h123.ru/-/examples/ES6-DOM4-SHIM/parallax/) Not working in IE6 due lack of CSS
 
 ## Goal
 
