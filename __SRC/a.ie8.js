@@ -1,4 +1,4 @@
-/** @license ES6/DOM4 polyfill for IE8 | @version 0.7 final | MIT License | github.com/termi */
+/** @license ES6/DOM4 polyfill for IE8 | @version 0.8 | MIT License | github.com/termi */
 
 // ==ClosureCompiler==
 // @compilation_level ADVANCED_OPTIMIZATIONS
@@ -848,24 +848,21 @@ _Event_prototype = function_tmp.prototype = {
     "preventDefault" : function() {
         if(this.cancelable === false)return;
 
-		_ielt9_Event.getNativeEvent.call(this)["returnValue"] = this["returnValue"] = false;
-		_ielt9_Event.destroyLinkToNativeEvent.call(this);
-		this["defaultPrevented"] = true;
-	} ,
+        _ielt9_Event.getNativeEvent.call(this)["returnValue"] = this["returnValue"] = false;
+        _ielt9_Event.destroyLinkToNativeEvent.call(this);
+        this["defaultPrevented"] = true;
+    } ,
 
-	/** @this {_ielt9_Event} */
-	"stopPropagation" : function() {
-		_ielt9_Event.getNativeEvent.call(this)["cancelBubble"] = this["cancelBubble"] = true;
-		_ielt9_Event.destroyLinkToNativeEvent.call(this);
-	} ,
-
-	/** @this {_ielt9_Event} */
-	"stopImmediatePropagation" : function() {
-		this["__stopNow"] = true;
-		this.stopPropagation();
-	} ,
-
-	"defaultPrevented" : false
+    /** @this {_ielt9_Event} @lends {function_tmp.prototype} */
+    "stopPropagation" : function() {
+        _ielt9_Event.getNativeEvent.call(this)["cancelBubble"] = this["cancelBubble"] = true;
+        _ielt9_Event.destroyLinkToNativeEvent.call(this);
+    }
+};
+/** @this {_ielt9_Event} */
+_Event_prototype["stopImmediatePropagation"] = function() {
+	this["__stopNow"] = true;
+	this.stopPropagation();
 };
 _Event_prototype["defaultPrevented"] = false;
 
@@ -2560,6 +2557,7 @@ _Element_prototype.removeAttribute = function(name) {
 
 	return result;
 };
+
 
 //getElementsByClassName shim
 _tmp_ = "getElementsByClassName";

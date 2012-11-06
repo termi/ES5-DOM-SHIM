@@ -1,4 +1,4 @@
-/** @license ES6/DOM4 polyfill for IE < 8 | @version 0.7 final | MIT License | github.com/termi */
+/** @license ES6/DOM4 polyfill for IE < 8 | @version 0.8 | MIT License | github.com/termi */
 
 // ==ClosureCompiler==
 // @compilation_level ADVANCED_OPTIMIZATIONS
@@ -847,33 +847,30 @@ _EventInitFunctions = {
 		thisObj.relatedTarget = _relatedTarget;
 	}
 };
-
 _Event_prototype = function_tmp.prototype = {
 	constructor : function_tmp,
 
-	/** @this {_ielt9_Event} */
-	"preventDefault" : function() {
-		if(this.cancelable === false)return;
+    /** @this {_ielt9_Event} @lends {function_tmp.prototype}*/
+    "preventDefault" : function() {
+        if(this.cancelable === false)return;
 
-		_ielt9_Event.getNativeEvent.call(this)["returnValue"] = this["returnValue"] = false;
-		_ielt9_Event.destroyLinkToNativeEvent.call(this);
-		this["defaultPrevented"] = true;
-	} ,
+        _ielt9_Event.getNativeEvent.call(this)["returnValue"] = this["returnValue"] = false;
+        _ielt9_Event.destroyLinkToNativeEvent.call(this);
+        this["defaultPrevented"] = true;
+    } ,
 
-	/** @this {_ielt9_Event} */
-	"stopPropagation" : function() {
-		_ielt9_Event.getNativeEvent.call(this)["cancelBubble"] = this["cancelBubble"] = true;
-		_ielt9_Event.destroyLinkToNativeEvent.call(this);
-	} ,
-
-	/** @this {_ielt9_Event} */
-	"stopImmediatePropagation" : function() {
-		this["__stopNow"] = true;
-		this.stopPropagation();
-	} ,
-
-	"defaultPrevented" : false
+    /** @this {_ielt9_Event} @lends {function_tmp.prototype} */
+    "stopPropagation" : function() {
+        _ielt9_Event.getNativeEvent.call(this)["cancelBubble"] = this["cancelBubble"] = true;
+        _ielt9_Event.destroyLinkToNativeEvent.call(this);
+    }
 };
+/** @this {_ielt9_Event} */
+_Event_prototype["stopImmediatePropagation"] = function() {
+	this["__stopNow"] = true;
+	this.stopPropagation();
+};
+_Event_prototype["defaultPrevented"] = false;
 
 for(_tmp_ in _EventInitFunctions)if(_hasOwnProperty(_EventInitFunctions, _tmp_)) {
 	_Event_prototype[_tmp_] = function() {
@@ -3309,13 +3306,13 @@ _Node_prototype["__ielt8__element_init__"] = function __ielt8__element_init__() 
 
 	"setSelectionRange" in thisObj || (thisObj.setSelectionRange = _Element_prototype.setSelectionRange);
 
-	if(thisObj.setAttribute != _Element_prototype.setAttribute) {
-		thisObj["__setAttribute__"] = thisObj.setAttribute;
-		thisObj["__getAttribute__"] = thisObj.getAttribute;
-		thisObj["__removeAttribute__"] = thisObj.removeAttribute;
-		thisObj.setAttribute = _Element_prototype.setAttribute;
-		thisObj.getAttribute = _Element_prototype.getAttribute;
-		thisObj.removeAttribute = _Element_prototype.removeAttribute;
+	if(this.setAttribute != _Element_prototype.setAttribute) {
+        this["__setAttribute__"] = this.setAttribute;
+        this["__getAttribute__"] = this.getAttribute;
+        this["__removeAttribute__"] = this.removeAttribute;
+		this.setAttribute = _Element_prototype.setAttribute;
+		this.getAttribute = _Element_prototype.getAttribute;
+		this.removeAttribute = _Element_prototype.removeAttribute;
 	}
 
 	/*TODO::
@@ -3332,12 +3329,7 @@ _Node_prototype["__ielt8__element_init__"] = function __ielt8__element_init__() 
 			thisObj["__nativeCloneNode__"] = thisObj.cloneNode;
 			thisObj.cloneNode = _Node_prototype.cloneNode;
 		}
-		/*
-		NOT WORKING FOR IE < 8
-		TODO: do something with IE < 8
-		if(_Node_prototype.contains) {
-			thisObj.contains = _Node_prototype.contains;
-		}*/
+		if(_Node_prototype.contains)thisObj.contains = _Node_prototype.contains;
 	}
 	catch(e) {
 		//console.error(e.message)

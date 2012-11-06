@@ -924,8 +924,13 @@ if (!Object.defineProperty || definePropertyFallback) {
 }
 
 if(__GCC__LEGACY_BROWSERS_SUPPORT__ && __GCC__LEGACY_BROWSERS_SUPPORT__IELT9__ ) {
-	//[ielt8] Set `Object.defineProperty["ielt8"] = true` for IE < 8
-	if(_Element_prototype["ie"] && _browser_msie < 8)_Element_prototype["ielt8"] = Object.defineProperty["sham"] = true;
+	//[ielt8] Set `Object.defineProperty["ielt8"] = true` for IE < 9
+	if(_Element_prototype["ie"]) {
+		if(_browser_msie < 8) {
+			_Element_prototype["ielt8"] = true;
+		}
+		Object.defineProperty["sham"] = true;
+	}
 }
 
 // ES5 15.2.3.7
@@ -1138,13 +1143,12 @@ if([1,2].splice(0).length != 2) {
      * @return {Array}
      */
 	Array.prototype.splice = function(start, deleteCount) {
-        if(start === void 0 && deleteCount === void 0)return [];
+        if(!arguments.length)return [];
 
-		return _Array_splice_.apply(this, [
-					start === void 0 ? 0 : start,
-					deleteCount === void 0 ? (this.length - start) : deleteCount
-				].concat(_Array_slice_.call(arguments, 2))
-			);
+		if(arguments[0] == void 0/*undefined or null*/)arguments[0] = 0;
+		if(arguments.length === 1)arguments[1] = this.length - arguments[0];
+
+		return _Array_splice_.apply(this, arguments);
 	};
 }
 }//if __GCC__SCRIPT_BUGFIXING_ARRAY_PROTOTYPE_SPLICE__
@@ -1189,7 +1193,7 @@ _append(Array, {
 	 * @return {boolean}
 	 */
 	isArray : function(obj) {
-		return _toString_.call(obj) == '[object Array]'// test with Object.prototype.toString
+		return _toString_.call(obj) === '[object Array]'// test with Object.prototype.toString
 	}
 
 	/** toArray function
@@ -1947,11 +1951,10 @@ DOMStringCollection = function(getter, setter, object_this) {
 	/**
 	 * Event fired when any change apply to the object
 	 */
-	this._getter = getter;
-	this._setter = setter;
-	this._object_this = object_this;
-	this.length = 0;
-	this.value = "";
+	this._getter = _unsafe_Function_bind_.call(getter, object_this);
+	this._setter = _unsafe_Function_bind_.call(setter, object_this);
+	this["length"] = 0;
+	this["value"] = "";
 
 	this.DOMStringCollection_check_currentValue_and_Token("1");//"1" - fake token, need only for thisObj.value check
 };
@@ -1979,7 +1982,7 @@ DOMStringCollection_init = function(_DOMStringCollection, _string) {
 		thisObj["value"] = _string;//empty value should stringify to contain the attribute's whitespace
 	}			
 
-	if(isChange && thisObj._setter)thisObj._setter.call(thisObj._object_this, thisObj["value"]);
+	if(isChange && thisObj._setter)thisObj._setter(thisObj["value"]);
 };
 /**
  * @param {string} token
@@ -1995,7 +1998,7 @@ DOMStringCollection_init.remove_method_helper = function(find, p1, offset, strin
 
 _append(DOMStringCollection.prototype, {
 	DOMStringCollection_check_currentValue_and_Token : function(token) {
-		var string = this._getter.call(this._object_this);
+		var string = this._getter();
 		if(string != this["value"])DOMStringCollection_init(this, string);
 
 		if(token === void 0)_throwDOMException("WRONG_ARGUMENTS_ERR");
@@ -2025,7 +2028,7 @@ _append(DOMStringCollection.prototype, {
 		while(++i < l);
 
 		thisObj["value"] = v;
-		if(thisObj._setter)thisObj._setter.call(thisObj._object_this, thisObj["value"]);
+		if(thisObj._setter)thisObj._setter(thisObj["value"]);
 	},
 	"remove": function() {
 		var tokens = arguments
