@@ -1,4 +1,4 @@
-/** @license ES6/DOM4 polyfill for IE < 8 | @version 0.8 | MIT License | github.com/termi */
+/** @license ES6/DOM4 polyfill for IE < 8 | @version 0.8.8 | MIT License | github.com/termi */
 
 // ==ClosureCompiler==
 // @compilation_level ADVANCED_OPTIMIZATIONS
@@ -36,28 +36,47 @@ var __GCC__FIX_OBJECT_DEFINE_PROPERTY_SET_VALUE_NOT_IGNORING_SETTER__ = true;
 //]
 // [[[|||---=== GCC DEFINES END ===---|||]]]
 
-void function (global, _append) {
+void function (_append) {
+
+var global = this
+	, _document = global.document
+    , _tmp_
+;
 
 /** Browser sniffing
  * GCC W U NO SUPPORT @cc ?
  * @type {number} @const */
-var _browser_msie = window["eval"] && window["eval"]("/*@cc_on 1;@*/") && +((/msie (\d+)/i.exec(navigator.userAgent) || [])[1] || 0) || null;
-if(!(_browser_msie < 9))return;
+var _browser_msie = // paranoiac mode
+	"attachEvent" in _document
+	&& "all" in _document
+	&& "uniqueID" in _document.documentElement
+	&& +((/msie (\d+)/i.exec(navigator.userAgent) || [])[1] || 0)
+	|| null
+;
+
+if( !_browser_msie
+    || _browser_msie > 9
+) {
+    return;
+}
 
 /** @const @type {boolean} */
 var DEBUG = __GCC__IS_DEBUG__;
 
 
-if(!global["Element"])((global["Element"] =
-//Reprisent ActiveXObject as Node, Element and HTMLElement so `<element> instanceof Node` is working (!!!But no in IE9 with in "compatible mode")
-	__GCC__NODE_CONSTRUCTOR_AS_ACTIVX__ ? window["ActiveXObject"] : __GCC__NODE_CONSTRUCTOR_AS_DOM_ELEMENT__ ? document.createTextNode("") : {}
-).prototype)["ie"] = true;//fake prototype for IE < 8
+if( !global["Element"] ) {
+    (
+        (global["Element"] =
+			//Reprisent ActiveXObject as Node, Element and HTMLElement so `<element> instanceof Node` is working (!!!But no in IE9 with in "compatible mode")
+            __GCC__NODE_CONSTRUCTOR_AS_ACTIVX__ ? global["ActiveXObject"] : __GCC__NODE_CONSTRUCTOR_AS_DOM_ELEMENT__ ? _document.createTextNode("") : {}
+        ).prototype
+    )["ie"] = true;//fake prototype for IE < 8
+}
 if(!global["HTMLElement"])global["HTMLElement"] = global["Element"];//IE8
 if(!global["Node"])global["Node"] = global["Element"];//IE8
 
 
 
-var _temoObj;
 //Not sure if it wrong. TODO:: tests for this
 if(!global["DocumentFragment"]) {
 
@@ -65,9 +84,9 @@ if(!global["DocumentFragment"]) {
 		global["Document"]
         || global["HTMLDocument"]//For IE8
         || (//For IE < 8
-            _temoObj = function(){}
-            , _temoObj.prototype = {}
-            , _temoObj
+            _tmp_ = function(){}
+            , _tmp_.prototype = {}
+            , _tmp_
         );
 
 }
@@ -76,27 +95,48 @@ if(!global["Document"])global["Document"] = global["DocumentFragment"];
 
 
 global["_"] = {
-	"ielt9shims" : [],
-	"orig_" : global["_"]//Save original "_" - we will restore it in a.js
+	"ielt9shims": []
+	, "orig_": global["_"]//Save original "_" - we will restore it in a.js
+	, "isPlainObject": function(object) {
+		//Alternative from jQuery https://github.com/jquery/jquery/blob/master/src/core.js#L420
+
+		// Not plain objects:
+		// - Any object or value whose internal [[Class]] property is not "[object Object]"
+		// - DOM nodes or window - constructor is undefined (IE < 8) or internal [[Constructor]] property is not "[object Function]" (IE8)
+		// - IE6 For _Object_toString_.call(undefined) return "[object Object]"
+		// - IE < 9 For _Object_toString_.call(arguments) return "[object Object]"
+		return object
+			&& _Object_toString_.call(object) === "[object Object]"
+			&& (
+				(
+					typeof object.constructor === "function"
+					&& _Object_toString_.call(object.constructor) === "[object Function]"
+				)
+				|| object.__proto__ === null//Object.create(null).__proto__ === null
+			)
+			&& !_hasOwnProperty(object, "callee")//object is Arguments
+		;
+	}
+    , "apply": Function.prototype.apply
 };
 
 var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use in a.js
 
-	/** @const */
-  , document_createDocumentFragment = document.createDocumentFragment
+	, /** @const */
+	_document_createDocumentFragment = _document.createDocumentFragment
 
-	/** @const */
-  , document_createElement = document.createElement
+	, /** @const */
+	_document_createElement = _document.createElement
 
-	/** @const */
-  , document_createTextNode = document.createTextNode
+	, /** @const */
+	_document_createTextNode = _document.createTextNode
 
-	/** @const */
-  , _document_documentElement = document.documentElement
+	, /** @const */
+	_document_documentElement = _document.documentElement
 
-	/** @const */
-  , _throw = function(errStr) {
-        throw errStr instanceof Error ? errStr : new Error(errStr);
+	, /** @const */
+	_throw = function(errStr) {
+        throw typeof errStr == "object" && errStr instanceof Error ? errStr : new Error(errStr);
     }
 
 	/** @const */
@@ -142,7 +182,7 @@ var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use 
 	 * For system use only
 	 * More standart solution in a.js
 	 */
-  , _String_trim = String.prototype.trim || function () {//Cache origin trim function
+  , _String_trim_ = String.prototype.trim || function () {//Cache origin trim function
 		var	str = this.replace(RE_left_spaces, ''),
 			i = str.length;
 
@@ -152,42 +192,84 @@ var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use 
 	}
 
 	/** @const */
-  , _String_split = String.prototype.split
+  , _String_split_ = String.prototype.split
 
 	/** @const */
-  , _String_substr = String.prototype.substr
+  , _String_substr_ = String.prototype.substr
 
 	/** @const */
-  , _Array_slice = Array.prototype.slice
+	, _Array_slice_ = Array.prototype.slice
 
 	/** @const */
-  , _Function_apply = Function.prototype.apply
+	, _Array_splice_ = Array.prototype.splice
+
+	,
+	/** @const */
+	_toArray = function(iterable) {
+		var result
+			, length = iterable.length >>> 0
+			, i
+		;
+
+		try {
+			result = _Array_slice_.call(iterable);
+
+			if(result.length === length) {
+				return result;
+			}
+		}
+		catch(e){}
+
+		result = [];
+		for(i = 0 ; i < length ; i++) {
+			if( i in iterable ) {
+				result[i] = iterable[i];
+			}
+		}
+
+		return result;
+	}
 
 	/** @const */
-  , _Function_call = Function.prototype.call
+  , _Function_apply_ = Function.prototype.apply
 
-	/** Use native "bind" or unsafe bind for service and performance needs
+	/** @const */
+  , _Function_call_ = Function.prototype.call
+
+	/** Use native or unsafe but fast 'bind' for service and performance needs
 	 * @const
 	 * @param {Object} object
 	 * @param {...} var_args
 	 * @return {Function} */
-  , _unSafeBind = Function.prototype.bind || function(object, var_args) {
-		var __method = this,
-			args = _Array_slice.call(arguments, 1);
-		return function () {
-			return _Function_apply.call(__method, object, args.concat(_Array_slice.call(arguments)));
+  , _fastUnsafe_Function_bind_ = Function.prototype.bind || function(object, var_args) {
+		var __method = this
+			, args
+		;
+
+		if( arguments.length > 1 ) {
+			args = _Array_slice_.call(arguments, 1);
+			return function () {
+				return _Function_apply_.call(__method, object, args.concat(_Array_slice_.call(arguments)));
+			};
 		}
+
+		return function () {
+			return _Function_apply_.call(__method, object, arguments);
+		};
 	}
 
   , emptyObjectPrototype
 
 	/** @const */
-  , _hasOwnProperty = _unSafeBind.call(Function.prototype.call, Object.prototype.hasOwnProperty)
+	, _Object_toString_ = Object.prototype.toString
+
+	/** @const */
+  , _hasOwnProperty = _fastUnsafe_Function_bind_.call(_Function_call_, Object.prototype.hasOwnProperty)
 
   	/** @type {Node} */
-  , _testElement = document.createElement('p')
+  , _testElement = _document.createElement('p')
 
-  , _function_noop = function(){}
+  //, _function_noop = function(){}
 
   , _txtTextElement
 
@@ -213,13 +295,8 @@ var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use 
 	/** @type {boolean} */
   , _String_split_shim_isnonparticipating
 
-	/** @type {*} */
-  , _tmp_
-
 	/** @type {Function} */
   , function_tmp
-
-  , nodeList_methods_fromArray = ["every", "filter", "forEach", "indexOf", "join", "lastIndexOf", "map", "reduce", "reduceRight", "reverse", "slice", "some", "toString"]
 
   , faked_nodeList
 
@@ -273,17 +350,17 @@ var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use 
 			}
 		}
 		/**
-		@param {String} propertyName
-		@return String
-		*/
+		 * @param {String} propertyName
+		 * @return String
+		 */
 		, "getPropertyPriority" : function(propertyName) {
 			var reg = new RegExp(propertyName + STRING_FOR_RE_style_important, "i");
 			return ((this.cssText || "").match(reg) || [])[2] || "";
 		}
 		/**
-		@param {Number} index
-		@return String
-		*/
+		 * @param {Number} index
+		 * @return String
+		 */
 		, "item" : function(index) {
 			//TODO::
 		}
@@ -295,8 +372,8 @@ var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use 
 		'value': 'defaultValue'
 	}
 
-	// attribute referencing URI data values need special treatment in IE | From nwmatcher
-  , ATTRIBUTE_URIDATA = {
+	// attribute referencing URI data values and "disabled" attribute need special treatment in IE | From nwmatcher
+  , ATTRIBUTES_FROM_NODE_VALUE = {
 		'action': null,
 		'cite': null,
 		'codebase': null,
@@ -305,27 +382,46 @@ var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use 
 		'longdesc': null,
 		'lowsrc': null,
 		'src': null,
-		'usemap': null
-	}
-  , DEFAULT_ATTRIBUTES_MAP = {
-		'id': true,
-		'value': true,
-		'checked': true,
-		'disabled': true,
-		'ismap': true,
-		'multiple': true,
-		'readonly': true,
-		'selected': true
-	}
+		'usemap': null,
 
-  // boolean attributes should return attribute name instead of true/false | From nwmatcher
-  , ATTRIBUTE_BOOLEAN = {
+		'disabled': null
+	}
+  , ATTRIBUTES_DEFAULT_MAP = {
+		'id': null,
+		'value': null,
 		'checked': null,
-		'disabled': null,
 		'ismap': null,
 		'multiple': null,
 		'readonly': null,
 		'selected': null
+	}
+
+	, ATTRIBUTES_SPECIAL_MAP = {
+		'style': {
+			"get":	function() {
+				if( this.style && this.style.cssText ) {
+					return this.style.cssText;
+				}
+
+				return null;
+			}
+			, "set": function(val) {
+				if( this.style ) {
+					this.style.cssText = val;
+				}
+				return val;
+			}
+			, "remove": function() {
+				if( this.style && this.style.cssText ) {
+					this.style.cssText = "";
+					return true;
+				}
+				return false;
+			}
+			, "has": function() {
+				return !!(this.style && this.style.cssText);
+			}
+		}
 	}
 
 	// ------------------------------ ==================  Events  ================== ------------------------------
@@ -336,7 +432,7 @@ var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use 
   , _Event_prototype
 
 	/** @const @type {string} */
-  , _event_UUID_prop_name = "uuid"
+  , _event_UUID_prop_name = "uuid" + (Math.random() + "").substr(2)
 
 	/** @type {number} unique indentifier for event listener */
   , _event_UUID = 1//MUST be more then 0 | 0 - using for DOM0 events
@@ -350,7 +446,7 @@ var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use 
 	/** @const @type {string} */
   , _event_nativeEventPropName = "ietl9_event"
 
-	/** @const @type {Function */
+	/** @const @type {Function} */
   , _event_emptyFunction = function(){}
 
 	/** @const @type {Object} */
@@ -362,11 +458,14 @@ var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use 
 	/** @type {Array.<Node>} */
   , _event_captureHandlerNodes = []
 
+	/** @type {Object} */
+  //, customEventsMap
+
   , __is__DOMContentLoaded
 
 	// ------------------------------ ==================  HTML5 shiv  ================== ------------------------------
 
-  , html5_elements = 'abbr|article|aside|audio|canvas|command|datalist|details|figure|figcaption|footer|header|hgroup|keygen|mark|meter|nav|output|progress|section|source|summary|time|video'
+  , html5_elements = 'abbr|article|aside|audio|canvas|command|datalist|details|figure|figcaption|footer|header|hgroup|keygen|mark|meter|main|nav|output|progress|section|source|summary|time|video'
 
   , html5_elements_array = html5_elements.split('|')
 
@@ -392,7 +491,12 @@ var _ = global["_"]["ielt9shims"]//"_" - container for shims what should be use 
 //Get prototype for NodeList polyfill and prototype for "Empty" Object
 //Internet Explorer refuses to maintain the length property of a subclass created like this | http://dean.edwards.name/weblog/2006/11/hooray/
 // create an <iframe>
+/* TODO:: Этот код портит IE, не ломая, например события resize. Нужно разобраться почему
 _tmp_ = document.createElement("iframe");
+_tmp_.style.position = "absolute";
+_tmp_.style.width = "0";
+_tmp_.style.height = "0";
+_tmp_.style.visibility = "hidden";
 _tmp_.style.display = "none";
 (document.body || _document_documentElement).appendChild(_tmp_);
 
@@ -400,8 +504,8 @@ _tmp_.style.display = "none";
 _tmp_.contentWindow.document.write(
 	"<script>parent._.NodeList=Array;parent._.EMP=Object.prototype<\/script>"
 );
-faked_nodeList = global["_"]["NodeList"];
-delete global["_"]["NodeList"];
+//faked_nodeList = global["_"]["NodeList"];
+//delete global["_"]["NodeList"];
 
 // Supporting Object.create(null)
 emptyObjectPrototype = global["_"]["EMP"];
@@ -420,16 +524,14 @@ _.push(function() {
 		if(_prototype === null) {
 			arguments[0] = emptyObjectPrototype;
 		}
-		_origina_Object_create.apply(this, arguments);
+		return _origina_Object_create.apply(this, arguments);
 	}
 });
-
-
-
-document.compatMode === "CSS1Compat" ?
+*/
+_document.compatMode === "CSS1Compat" ?
 	((_getScrollX = function(){return _document_documentElement.scrollLeft}), (_getScrollY = function(){return _document_documentElement.scrollTop}))
 	:
-	((_getScrollX = function(){return document.body.scrollTop}), (_getScrollY = function(){return document.body.scrollLeft}))
+	((_getScrollX = function(){return _document.body.scrollTop}), (_getScrollY = function(){return _document.body.scrollLeft}))
 ;
 
 
@@ -569,13 +671,13 @@ return support;
 
 
 //Emulating HEAD for ie < 9
-document.head || (document.head = document.getElementsByTagName('head')[0]);
+_document.head || (_document.head = _document.getElementsByTagName('head')[0]);
 
-"defaultView" in document || (document.defaultView = document.parentWindow);
+"defaultView" in _document || (_document.defaultView = _document.parentWindow);
 
 if(DEBUG) {
 	//test DOMElement is an ActiveXObject
-	if(!(_Function_call.call(document_createElement, document, "div") instanceof ActiveXObject))
+	if(!(_Function_call_.call(_document_createElement, _document, "div") instanceof ActiveXObject))
 		console.error("DOMElement is not an ActiveXObject. Probably you in IE > 8 'compatible mode'. <element> instanceof [Node|Element|HTMLElement] wouldn't work");
 }
 
@@ -592,22 +694,39 @@ try {
 catch(e) { }
 if(!_tmp_) {
 	Function.prototype.apply = function(contexts, args) {
-		// 1. simple case, no args at all
-		if(!args) {
-			return _Function_apply.call(this, contexts);
-		}
+		var args_length;
+
+		// 1. simple case, no args at all: no args object or toInteger(length)
+		if( !args || !(args_length = +args.length) ) {
+			return _Function_call_.call(this, contexts);
+}
 
 		// 2. args is not an array-like object or just an array
-		if (
-			typeof args !== "object" // when args is not an object -> IE throw error for this case and would be right
-			|| args instanceof Array // if args is array -> IE can eat this case
-			|| !("length" in args)	 // if args is an abject but not array and also has no "length" prop -> IE throw error for this case and would be right
-			) {
-			return _Function_apply.call(this, contexts, args);
+		if( typeof args !== "object"			// when args is not an object -> IE throw error for this case and would be right
+			|| args_length < 0					// if args is an invalid array-like abject -> IE throw native error
+			|| (
+				"callee" in args
+				&& "caller" in args
+			)									// args is arguments
+			|| _Object_toString_.call(args) ==
+					"[object Array]"			// if args is array -> IE can eat this case
+		) {
+			return _Function_apply_.call(this, contexts, args);
 		}
 
-		// 3. args is array-like object
-		return _Function_apply.call(this, contexts, Array["from"](args));
+		// 3. try to reduce count of Array.from calls
+		switch( args_length ) {
+			case 1:	return _Function_call_.call(this, contexts, args[0]);
+			case 2:	return _Function_call_.call(this, contexts, args[0], args[1]);
+			case 3:	return _Function_call_.call(this, contexts, args[0], args[1], args[2]);
+			case 4:	return _Function_call_.call(this, contexts, args[0], args[1], args[2], args[3]);
+			case 5:	return _Function_call_.call(this, contexts, args[0], args[1], args[2], args[3], args[4]);
+			case 6:	return _Function_call_.call(this, contexts, args[0], args[1], args[2], args[3], args[4], args[5]);
+			case 7:	return _Function_call_.call(this, contexts, args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
+		}
+
+		// 4. args is array-like object
+		return _Function_apply_.call(this, contexts, _toArray(args));
 	};
 }
 
@@ -623,7 +742,7 @@ if(!_tmp_) {
 if("ab".substr(-1) !== "b") {
 	//String.prototype._itlt9_substr_ = String.prototype.substr;
 	String.prototype.substr = function(start, length) {
-		return _String_substr.call(this, start < 0 ? (start = this.length + start) < 0 ? 0 : start : start, length);
+		return _String_substr_.call(this, start < 0 ? ((start = this.length + start) < 0 ? 0 : start) : start, length);
 	}
 }
 
@@ -631,10 +750,15 @@ if("ab".substr(-1) !== "b") {
 [BUGFIX, IE lt 9, old safari] http://blog.stevenlevithan.com/archives/cross-browser-split
 More better solution:: http://xregexp.com/
 */
-if('te'.split(/(s)*/)[1] != void 0 ||
-   '1_1'.split(/(_)/).length != 3) {
+if('ab'.split(/(?:ab)*/).length !== 2
+	|| '.'.split(/(.?)(.?)/).length !== 4
+	|| 'tesst'.split(/(s)*/)[1] === "t"
+	|| ''.split(/.?/).length === 0
+	|| '.'.split(/()()/).length > 1
+) {
    _String_split_shim_isnonparticipating = /()??/.exec("")[1] === void 0; // NPCG: nonparticipating capturing group
 
+	//http://jsperf.com/js-split
 	String.prototype.split = function (separator, limit) {
 		var str = this;
 		// if `separator` is not a regex, use the native `split`
@@ -643,14 +767,14 @@ if('te'.split(/(s)*/)[1] != void 0 ||
 			//If separator is undefined, then the result array contains just one String, which is the this value (converted to a String). If limit is not undefined, then the output array is truncated so that it contains no more than limit elements.
 			if(separator === void 0 && limit === 0)return [];
 
-			return _String_split.call(str, separator, limit);
+			return _String_split_.call(str, separator, limit);
 		}
 
 		var output = []
-			, flags = (separator.ignoreCase ? "i" : "") +
-					(separator.multiline  ? "m" : "") +
-                    (separator.extended   ? "x" : "") + // Proposed for ES6
-                    (separator.sticky     ? "y" : "") // Firefox 3+
+			, flags = (separator["ignoreCase"] ? "i" : "") +
+					(separator["multiline"] ? "m" : "") +
+                    (separator["extended"] ? "x" : "") + // Proposed for ES6
+                    (separator["sticky"]   ? "y" : "") // Firefox 3+
 			, lastLastIndex = 0
             // Make `global` and avoid `lastIndex` issues by working with a copy
 			, separator2
@@ -676,7 +800,8 @@ if('te'.split(/(s)*/)[1] != void 0 ||
          */
         limit = limit === void 0 ?
             -1 >>> 0 : // Math.pow(2, 32) - 1
-            limit >>> 0; // ToUint32(limit)
+            limit >>> 0 // ToUint32(limit)
+		;
 
 		if (!limit) {
 			return [];
@@ -742,22 +867,22 @@ if('te'.split(/(s)*/)[1] != void 0 ||
 if(!global["DOMException"]) {
 	_tmp_ = (global["DOMException"] = function() { }).prototype = new Error;
 	_tmp_.INDEX_SIZE_ERR = 1;
-	//p.DOMSTRING_SIZE_ERR = 2; // historical
+	//_tmp_.DOMSTRING_SIZE_ERR = 2; // historical
 	_tmp_.HIERARCHY_REQUEST_ERR = 3;
 	_tmp_.WRONG_DOCUMENT_ERR = 4;
 	_tmp_.INVALID_CHARACTER_ERR = 5;
-	//p.NO_DATA_ALLOWED_ERR = 6; // historical
+	//_tmp_.NO_DATA_ALLOWED_ERR = 6; // historical
 	_tmp_.NO_MODIFICATION_ALLOWED_ERR = 7;
 	_tmp_.NOT_FOUND_ERR = 8;
 	_tmp_.NOT_SUPPORTED_ERR = 9;
-	//p.INUSE_ATTRIBUTE_ERR = 10; // historical
+	//_tmp_.INUSE_ATTRIBUTE_ERR = 10; // historical
 	_tmp_.INVALID_STATE_ERR = 11;
 	_tmp_.SYNTAX_ERR = 12;
 	_tmp_.INVALID_MODIFICATION_ERR = 13;
 	_tmp_.NAMESPACE_ERR = 14;
 	_tmp_.INVALID_ACCESS_ERR = 15;
-	//p.VALIDATION_ERR = 16; // historical
-	_tmp_.TYPE_MISMATCH_ERR = 17;
+	//_tmp_.VALIDATION_ERR = 16; // historical
+	//_tmp_.TYPE_MISMATCH_ERR = 17; // historical https://www.w3.org/Bugs/Public/show_bug.cgi?id=19898 ([Bug 19898] Deprecate TYPE_MISMATCH_ERR in favor of TypeError)
 }
 
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Exception  ==================================  */
@@ -847,6 +972,7 @@ _EventInitFunctions = {
 		thisObj.relatedTarget = _relatedTarget;
 	}
 };
+
 _Event_prototype = function_tmp.prototype = {
 	constructor : function_tmp,
 
@@ -928,15 +1054,12 @@ _ielt9_Event.prototype = function_tmp;
 
 
 function fixEvent(event) {
-	if("__isFixed" in event)return;
+	if( "__isFixed" in event || event["isTrusted"] === false )return;
 
 	var thisObj = this,
 		_button = ("button" in event) && event.button;
 
-	// один объект события может передаваться по цепочке разным обработчикам
-	// при этом кроссбраузерная обработка будет вызвана только 1 раз
-	// Снизу, в функции commonHandle,, мы должны проверять на !event["__isFixed"]
-	event["__isFixed"] = true;// пометить событие как обработанное
+	event["__isFixed"] = true;// mark event as fixed
 
 	//http://javascript.gakaa.com/event-detail.aspx
 	//http://www.w3.org/TR/2011/WD-DOM-Level-3-Events-20110531/#event-type-click
@@ -950,14 +1073,14 @@ function fixEvent(event) {
 
 	if(!event["defaultPrevented"])event["defaultPrevented"] = false;
 
-	if(!event.target)event.target = event.srcElement || document;// добавить target для IE
+	if(!event.target)event.target = event.srcElement || _document;// target for IE
 	/*
 	if ( event.target && event.target.nodeType in {3 : void 0, 4 : void 0} ) {
 		event.target = event.target.parentNode;
 	}
 	*/
 
-	// добавить relatedTarget в IE, если это нужно
+	// add relatedTarget в IE, if needs
 	if(event.relatedTarget === void 0 && event.fromElement)
 		event.relatedTarget = event.fromElement == event.target ? event.toElement : event.fromElement;
 	/*
@@ -966,30 +1089,27 @@ function fixEvent(event) {
 		event.type == 'mouseover' ? event.fromElement : null;
 	*/
 
-	// вычислить pageX/pageY для IE
+	// calculate pageX/pageY for IE
 	if("clientX" in event && event.pageX == null) {
-		/*event.pageX = event.clientX + (_document_documentElement.scrollLeft || body && body.scrollLeft || 0) - (_document_documentElement.clientLeft || 0);
-		event.pageY = event.clientY + (_document_documentElement.scrollTop || body && body.scrollTop || 0) - (_document_documentElement.clientTop || 0);*/
-		//Новая вервия нуждающаяся в проверки
 		event.pageX = event.clientX + _getScrollX() - (_document_documentElement.clientLeft || 0);
 		event.pageY = event.clientY + _getScrollY() - (_document_documentElement.clientTop || 0);
 	}
 
 	//Add 'which' for click: 1 == left; 2 == middle; 3 == right
-	//Unfortunately the event.button property is not set for click events. It is however set for mouseup/down/move ... but not click | http://bugs.jquery.com/ticket/4164 <- It is fixing now
 	if(!event.which && _button)event.which = _button & 1 ? 1 : _button & 2 ? 3 : _button & 4 ? 2 : 0;
 
 	"timeStamp" in event || (event.timeStamp = +new _Native_Date());
 
 	"eventPhase" in event || (event.eventPhase = (event.target == thisObj) ? 2 : 3); // "AT_TARGET" = 2, "BUBBLING_PHASE" = 3
 
-	"currentTarget" in event || (event.currentTarget = thisObj);
+	//"currentTarget" in event || (event.currentTarget = thisObj);
 
+	event.keyCode || (event.keyCode = event.charCode || event.which);
 
-	// событие DOMAttrModified
+	// DOMAttrModified
 	//  TODO:: недоделано
 	// TODO:: Привести event во всех случаях (для всех браузеров) в одинаковый вид с newValue, prevValue, propName и т.д.
-	if(!event.attrName && event.propertyName)event.attrName = _String_split.call(event.propertyName, '.')[0];//IE При изменении style.width в propertyName передаст именно style.width, а не style, как нам надо
+	if(!event.attrName && event.propertyName)event.attrName = _String_split_.call(event.propertyName, '.')[0];//IE При изменении style.width в propertyName передаст именно style.width, а не style, как нам надо
 
 	return event;
 }
@@ -1013,20 +1133,33 @@ if(  __GCC__UNSTABLE_FUNCTIONS__ ) {
 	}
 }
 
-// вспомогательный универсальный обработчик. Вызывается в контексте элемента всегда this = element
+/**
+ *
+ * @param nativeEvent
+ * @this {Node}
+ */
 function commonHandler(nativeEvent) {
-	if(fixEvent === void 0) {//фильтруем редко возникающую ошибку, когда событие отрабатывает после unload'а страницы.
+	if( fixEvent === void 0 ) {//фильтруем редко возникающую ошибку, когда событие отрабатывает после unload'а страницы.
 		return;
 	}
 
-	var thisObj = this,
-		_ = thisObj["_"],
-		errors,
-		errorsMessages,
-		_event,
-		handlersKey;
+	var thisObj = this
+		, _ = thisObj["_"]
+		, errors
+		, errorsMessages
+		, _event
+		, handlersKey
 
-	if(_["__stop_events__"])return;
+		, handlers
+		, localHandlersArray
+		, handler
+		, context
+		, handlerUUID
+	;
+
+	if( _["__stop_events__"] ) {
+		return;
+	}
 
 	if(    __GCC__UNSTABLE_FUNCTIONS__    && !_event_globalIsCaptureIndicator && nativeEvent.bubbles !== false && nativeEvent.type in _event_needCapturing && thisObj != global) {
 		_event_captureHandlerNodes.push(this);
@@ -1037,27 +1170,29 @@ function commonHandler(nativeEvent) {
 		errorsMessages = [];
 		handlersKey = _event_eventsUUID + (_event_globalIsCaptureIndicator ? "-" : "");
 
-		if((!_ || !_[handlersKey])) {
-			if(!("__dom0__" in nativeEvent))return;
-			else {
+		if( !_ || !_[handlersKey] ) {
+			if( !("__dom0__" in nativeEvent) ) {
+				return;
+			}
+			else { // commonHandler called via dispatchEvent
 				_ || (_ = {});
 				_[handlersKey] || (_[handlersKey] = {});
 			}
 		}
 
-		// получить объект события и проверить, подготавливали мы его для IE или нет
-		nativeEvent || (nativeEvent = window.event);
+		// get event in IE
+		nativeEvent || (nativeEvent = global.event);
 
-		if("__custom_event" in nativeEvent) {
+		if( "__custom_event" in nativeEvent ) {// this is not a native event
 			_event = nativeEvent;
 		}
-		else if(!(_event = nativeEvent["__customEvent__"])) {
-			if(nativeEvent.bubbles == void 0) {
+		else if( !(_event = nativeEvent["__customEvent__"]) ) {
+			if( nativeEvent.bubbles == void 0 ) {
 				nativeEvent.bubbles = true;
 				//TODO::
 				//nativeEvent.bubbles = bubbleEventMap[nativeEvent.type]
 			}
-			if(nativeEvent.cancelable == void 0) {
+			if( nativeEvent.cancelable == void 0 ) {
 				nativeEvent.cancelable = true;
 				//TODO::
 				//nativeEvent.bubbles = cancelableEventMap[nativeEvent.type]
@@ -1066,25 +1201,39 @@ function commonHandler(nativeEvent) {
 			// save event properties in fake 'event' object to allow store 'event' and use it in future
 			_event = nativeEvent["__customEvent__"] = new _ielt9_Event(nativeEvent);
 			_event.initEvent(nativeEvent.type, nativeEvent.bubbles, nativeEvent.cancelable);
+			_event.isTrusted = nativeEvent.isTrusted !== false;
 			fixEvent.call(this, _event);
-			_event.isTrusted = true;
-			_event["__custom_event"] = void 0;
+			_event["__custom_event"] = null;
 		}
 
 		_event[_event_nativeEventPropName] = nativeEvent;
-		nativeEvent.currentTarget = thisObj;//TODO:: check it
+		_event.currentTarget = thisObj;//TODO:: check it
 
 		//if(!("__isFixed" in nativeEvent))nativeEvent = fixEvent.call(thisObj, nativeEvent);
-
-		var handlers = _[handlersKey][_event.type];
-		if("__dom0__" in nativeEvent) {
-			(handlers || (handlers = []))[0] = nativeEvent["__dom0__"];
+		if( "__dom0__" in nativeEvent ) {
+			handler = nativeEvent["__dom0__"];
 		}
 
-		if(handlers) {
-			for(var g in handlers)if(_hasOwnProperty(handlers, g)) {
-				var handler = handlers[g],
-					context;
+		if( (handlers = _[handlersKey][_event.type]) || handler ) {
+			//make a copy of handlers array. Due in ant handler there may be a call of removeEventListener witch reduce handlers array length
+			localHandlersArray = handlers ? _Array_slice_.call(handlers) : [];
+
+			//save dom0 event handler in temporary local handlers array
+			if( handler ) {
+				localHandlersArray.unshift(handler)
+			}
+		}
+
+		if( localHandlersArray && localHandlersArray.length ) {
+			while( handler = localHandlersArray.shift() ) {
+				if( !handler
+					|| (// while calling any handler it could call removeEventListener for the same event type
+						(handlerUUID = handler[_event_UUID_prop_name])//check out that handler have "uuid" property. "uuid" would be undefined only for "dom0" handlers
+						&& !(("_" + handlerUUID) in handlers)//check out that handler still in node event handlers array
+					)
+				) {
+					continue;
+				}
 
 				if(typeof handler === "object") {
 					context = handler;
@@ -1092,57 +1241,71 @@ function commonHandler(nativeEvent) {
 				}
 
 				try {
-					//Передаём контекст и объект event, результат сохраним в event['result'] для передачи значения дальше по цепочке
+					// Call handler with needed context and fixed event as a parameter, result saved in event['result']
 					if( handler &&
-						(
-							_event['result'] = _Function_call.call(handler, context || thisObj, _event)
-						)
-						=== false
-					  ) {//Если вернели false - остановим обработку функций
-						_event.preventDefault();
+						( _event['result'] = _Function_call_.call(handler, context || thisObj, _event) )	=== false
+					) { // If handler return false
+						if( _event.defaultPrevented === false && _event.returnValue !== false ) {//tiny optimisation  TODO:: tests
+							_event.preventDefault();
+						}
+
 						_event.stopPropagation();
 					}
 				}
 				catch(e) {
-					errors.push(e);//Все исключения - добавляем в массив, при этом не прерывая цепочку обработчиков.
+					errors.push(e);// Collect all exceptions without interrupting events queue call
 					errorsMessages.push(e.message);
-					if(console)console.error(e);
+					if(DEBUG && console) {
+						console.error(e);
+					}
 				}
 
-				if(_event["__stopNow"])break;//Мгновенная остановка обработки событий
+				if( _event["__stopNow"] ) {// Immediate stop propagation
+					break;
+				}
 			}
-			handlers[0] = void 0;//cleanup
-			delete handlers[0];
 
 			//return changed properties in native 'event' object
 			nativeEvent.returnValue = _event.returnValue;
 			nativeEvent.cancelBubble = _event.cancelBubble;
 			//TODO:: check out that properties need to be returned in native 'event' object or _extend(nativeEvent, event);
 
-			if(errors.length == 1) {//Если была только одна ошибка - кидаем ее дальше
+			if( errors.length == 1 ) {// If there was only one error - throw it on
 				_throw(errors[0])
 			}
-			else if(errors.length > 1) {//Иначе делаем общий объект Error со списком ошибок в свойстве errors и кидаем его
+			else if( errors.length > 1 ) {// Otherwise, do a common object with a list of errors Error in property errors and throw it
 				var e = new Error("Multiple errors thrown : " + _event.type + " : " + " : " + errorsMessages.join("|"));
-				e.errors = errors;
+				e["errors"] = errors;
 				_throw(e);
 			}
 		}
 	}
 
-	if(thisObj === document && !_event.cancelBubble && _event.eventPhase === 3) {
+	if( thisObj === _document && !_event.cancelBubble && _event.eventPhase === 3 ) {
 		//Emelate bubbling from document to defaultView (window) | 2 from 2
 		commonHandler.call(thisObj.defaultView, _event);
 		nativeEvent.cancelBubble = true;//to prevent dubble event fire on window object. First emulated, second native bubbling
 	}
+
+	//cleanup
+	_ielt9_Event.destroyLinkToNativeEvent.call(_event);
+	nativeEvent["__customEvent__"] = nativeEvent = _event = handlers = handler = null;
 }
 
-if(!document.addEventListener) {
-	_Node_prototype.addEventListener = _document_documentElement.addEventListener = global.addEventListener = document.addEventListener = function(_type, _handler, useCapture) {
+if( !_testElement.addEventListener ) {
+	(global["Text"] && global["Text"].prototype ||_Node_prototype).addEventListener =
+		_Node_prototype.addEventListener =
+			_document_documentElement.addEventListener =
+				global.addEventListener = _document.addEventListener =
+	function(_type, _handler, useCapture) {
 		//TODO:: useCapture == true
-		if(typeof _handler != "function" &&
-		   !(typeof _handler === "object" && _handler.handleEvent)//Registering an EventListener with a function object that also has a handleEvent property -> Call EventListener as a function
-		  ) {
+
+		if(
+			!(
+			typeof _handler === "function"
+		   	|| typeof _handler === "object"//Registering an EventListener with a function object that also has a handleEvent property -> Call EventListener as a function
+			)
+		) {
 			return;
 		}
 
@@ -1150,72 +1313,77 @@ if(!document.addEventListener) {
 			if(!_event_needCapturing[_type]) {
 				_event_needCapturing[_type] = true;
 				//window.addEventListener(_type, windowCaptureHandler, true);
-				window.addEventListener(_type, windowCaptureHandler);
+				global.addEventListener(_type, windowCaptureHandler);
 			}
 		}
 
 		var /** @type {Node} */
-			thisObj = this,
+			thisObj = this
 			/** @type {Object} */
-			_ = thisObj["_"],
+			, _ = thisObj["_"]
 			/** @type {Function} */
-			_callback,
+			, _callback
 			/** @type {boolean} */
-			_useInteractive = false,
+			, doNotAttach = false
 			/** @type {string} */
-			handlersKey = _event_eventsUUID + (    __GCC__UNSTABLE_FUNCTIONS__     && useCapture ? "-" : "");
+			, handlersKey = _event_eventsUUID + (    __GCC__UNSTABLE_FUNCTIONS__     && useCapture ? "-" : "")
+		;
 
-		if(thisObj == global && (!("_" in document) || !(handlersKey in document["_"]) || !(_type in document["_"][handlersKey]))) {
+		if(thisObj == global && (!("_" in _document) || !(handlersKey in _document["_"]) || !(_type in _document["_"][handlersKey]))) {
 			//Emulate bubbling from document to defaultView (window) | 1 from 2
-			document.addEventListener(_type, _event_emptyFunction, useCapture);
+			_document.addEventListener(_type, _event_emptyFunction, useCapture);
 		}
 
-		if(!_)_ = thisObj["_"] = {};
+		if(!_) {
+			_ = thisObj["_"] = {};
+		}
 		//_ = _[_event_phase] || (_[_event_phase] = {});
 
 		switch(_type) {
 			case "DOMContentLoaded":
-				if (document.readyState == 'complete')return;
+				if (_document.readyState == 'complete')return;
 
-				if(thisObj === global)thisObj = document;
+				if(thisObj === global) {
+					thisObj = _document;
+				}
 
-				_useInteractive = true;
+				doNotAttach = true;
 
 				if(!__is__DOMContentLoaded) {
 					__is__DOMContentLoaded = true;
 
 					function poll() {
-						try { document.documentElement.doScroll('left'); } catch(e) { setTimeout(poll, 50); return; }
+						try { _document_documentElement.doScroll('left'); } catch(e) { setTimeout(poll, 50); return; }
 						commonHandler.call(thisObj, {"type" : _type, "isTrusted" : true, "__custom_event" : void 0});
 					}
 
-					if ("createEventObject" in document && "doScroll" in document.documentElement) {
+					if ("createEventObject" in _document && "doScroll" in _document_documentElement) {
 						try { if(!global.frameElement)poll() } catch(e) { }
 					}
 				}
 			break;
 			case "load":
-				if("tagName" in thisObj && thisObj.tagName.toUpperCase() === "SCRIPT") {//[script:onload]
+				if("tagName" in thisObj && "SCRIPT|IFRAME".indexOf(thisObj.tagName.toUpperCase()) != -1) {//[script:onload]
 					//FROM https://github.com/jrburke/requirejs/blob/master/require.js
 					//Probably IE. IE (at least 6-8) do not fire
 					//script onload right after executing the script, so
 					//we cannot tie the anonymous define call to a name.
 					//However, IE reports the script as being in "interactive"
 					//readyState at the time of the define call.
-					_useInteractive = true;
+					doNotAttach = true;
 
 					//Need to use old school onreadystate here since
 					//when the event fires and the node is not attached
 					//to the DOM, the evt.srcElement is null, so use
 					//a closure to remember the node.
 					thisObj.onreadystatechange = function (evt) {
-						evt = evt || window.event;
+						evt = evt || global.event;
 						//Script loaded but not executed.
 						//Clear loaded handler, set the real one that
 						//waits for script execution.
 						if (thisObj.readyState === 'loaded') {
 							thisObj.onreadystatechange = null;
-							thisObj.attachEvent("onreadystatechange", _unSafeBind.call(commonHandler, thisObj, {"type" : _type}));
+							thisObj.attachEvent("onreadystatechange", _fastUnsafe_Function_bind_.call(commonHandler, thisObj, {"type" : _type}));
 						}
 					};
 					_type = "readystatechange";
@@ -1234,63 +1402,99 @@ if(!document.addEventListener) {
 		*/
 
 
-		// исправляем небольшой глюк IE с передачей объекта window
-		if(thisObj.setInterval && (thisObj != global && !thisObj["frameElement"]))thisObj = global;
-
-		//Назначить функции-обработчику уникальный номер. По нему обработчик можно будет легко найти в списке events[type].
-		if(!_handler[_event_UUID_prop_name])_handler[_event_UUID_prop_name] = ++_event_UUID;
-
-		//Инициализовать служебную структуру events и обработчик _[handleUUID].
-		//Основная его задача - передать вызов универсальному обработчику commonHandle с правильным указанием текущего элемента this.
-		//Как и events, _[handleUUID] достаточно инициализовать один раз для любых событий.
-		if(!(_callback = _[_event_handleUUID])) {
-			_callback = _[_event_handleUUID] = _unSafeBind.call(commonHandler, thisObj);
+		// fix little IE bug with window object as this object
+		if( thisObj.setInterval && (thisObj != global && !thisObj["frameElement"]) ) {
+			thisObj = global;
 		}
 
-		//Если обработчиков такого типа событий не существует - инициализуем events[type] и вешаем
-		// commonHandle как обработчик на elem для запуска браузером по событию type.
-		if(!_[handlersKey])_[handlersKey] = {};
-		if(!_[handlersKey][_type]) {
-			_[handlersKey][_type] = {};
+		// Set unique number to handler function
+		if( !_handler[_event_UUID_prop_name] ) {
+			_handler[_event_UUID_prop_name] = ++_event_UUID;
+		}
 
-			if(!_useInteractive)//[script:onload]
+		if( !(_callback = _[_event_handleUUID]) ) {
+			_callback = _[_event_handleUUID] = _fastUnsafe_Function_bind_.call(commonHandler, thisObj);
+		}
+
+		if( !_[handlersKey] ) {
+			_[handlersKey] = {};
+		}
+
+		if( !(_type in _[handlersKey]) ) {
+			_ = _[handlersKey][_type] = [];
+
+			if( !doNotAttach ) {//[script:onload]
 				thisObj.attachEvent('on' + _type, _callback);
+			}
+		}
+		else {
+			_ = _[handlersKey][_type];
 		}
 
-		//Добавляем пользовательский обработчик в список elem[handlersKey][type] под заданным номером.
-		//Так как номер устанавливается один раз, и далее не меняется - это приводит к ряду интересных фич.
-		// Например, запуск add с одинаковыми аргументами добавит событие только один раз.
-		_[handlersKey][_type][_handler[_event_UUID_prop_name]] = _handler;
+		// We need to be sure, that one handler added with the same type name twice would be added only in first time
+		if( !("_" + _handler[_event_UUID_prop_name] in _) ) {
+			_.push(_handler);
+			_["_" + _handler[_event_UUID_prop_name]] = null;
+		}
 	};
 
 	_Node_prototype.addEventListener["__shim__"] = true;
 
-	_Node_prototype.removeEventListener = _document_documentElement.removeEventListener = global.removeEventListener = document.removeEventListener = function(_type, _handler, useCapture) {
+	(global["Text"] && global["Text"].prototype ||_Node_prototype).removeEventListener =
+		_Node_prototype.removeEventListener =
+			_document_documentElement.removeEventListener =
+				global.removeEventListener = _document.removeEventListener =
+	function(_type, _handler, useCapture) {
 		var /** @type {Node} */
-			thisObj = this,
+			thisObj = this
 			/** @type {Object} */
-			_ = thisObj["_"],
+			, _ = thisObj["_"]
 			/** @type {string} */
-			handlersKey = _event_eventsUUID + (    __GCC__UNSTABLE_FUNCTIONS__     && useCapture ? "-" : ""),
+			, handlersKey = _event_eventsUUID + (    __GCC__UNSTABLE_FUNCTIONS__     && useCapture ? "-" : "")
 			/** @type {Function} */
-			_callback,
+			, _callback
 			/** @type {Array} */
-			handlers,
+			, handlers
 			/** @type {String} */
-			any;
+			, any
+			/** @type {number} */
+			, handlerIndex
+			/** @type {Function} */
+			, handler
+		;
 
-		if(typeof _handler != "function" || !_handler[_event_UUID_prop_name] || !_)return;
-		if(    __GCC__UNSTABLE_FUNCTIONS__     && useCapture && !(_type in _event_needCapturing))return;
-		if(!(_callback = _[_event_handleUUID]))return;
+		if( typeof _handler !== "function"
+			&& !(typeof _handler === "object" && _handler.handleEvent)
+			|| !_handler[_event_UUID_prop_name]
+			|| !_
+		) {
+			return;
+		}
+		if(    __GCC__UNSTABLE_FUNCTIONS__     && useCapture && !(_type in _event_needCapturing)) {
+			return;
+		}
+		if( !(_callback = _[_event_handleUUID]) ) {
+			return;
+		}
 
 		//_ = _[_event_phase] || (_[_event_phase] = {});
 		//if(!_)return;
 		//Get handlers list
 		handlers = _[handlersKey] && _[handlersKey][_type];
-		//Delete handler by ID
-		delete handlers[_handler[_event_UUID_prop_name]];
+		//Find and delete handler
+		handlerIndex = 0;
+		while( handler = handlers[handlerIndex++] ) {
+			if( handler === _handler ) {
+				_Array_splice_.call(handlers, handlerIndex - 1, 1);
+				delete handlers["_" + _handler[_event_UUID_prop_name]];
+				break;
+			}
+		}
+
 		//Check handlers list for emptiness
-		for(any in handlers)if(_hasOwnProperty(handlers, any))return;
+		if( handlers.length ) {
+			return;
+		}
 
 		//If handlers list is empty - detach native event handler
 		thisObj.detachEvent("on" + _type, _callback);
@@ -1298,17 +1502,23 @@ if(!document.addEventListener) {
 		delete _[handlersKey][_type];
 
 		//If no any handlers on that element
-		for(any in _[handlersKey])if(_hasOwnProperty(_[handlersKey], any))return;
+		for( any in _[handlersKey] ) {
+			if( _hasOwnProperty(_[handlersKey], any) ) {
+				return;
+			}
+		}
+
 		// delete container of handlers containers
 		delete _[handlersKey];
+		delete _[_event_handleUUID];
 	};
 
 	_Node_prototype.removeEventListener["__shim__"] = true;
 
-	document.attachEvent("onmousedown", function(){
+	_document.attachEvent("onmousedown", function(){
 		fixEvent._clickButton = event.button;
 	});
-	document.attachEvent("onclick", function(){
+	_document.attachEvent("onclick", function(){
 		fixEvent._clickButton = void 0;
 	});
 }
@@ -1330,13 +1540,23 @@ UNSPECIFIED_EVENT_TYPE_ERR: Raised if the Event's type was not specified by init
  * @this {Element} is the target of the event.
  * @return {boolean} The return value is false if at least one of the event handlers which handled this event called preventDefault. Otherwise it returns true.
  */
-if(!document.dispatchEvent) {
-	_Node_prototype.dispatchEvent = _document_documentElement.dispatchEvent = global.dispatchEvent = document.dispatchEvent = function(_event) {
-		if(!_event.type)return true;
+if( !_testElement.dispatchEvent ) {
+	(global["Text"] && global["Text"].prototype ||_Node_prototype).dispatchEvent =
+		_Node_prototype.dispatchEvent =
+			_document_documentElement.dispatchEvent =
+				global.dispatchEvent = _document.dispatchEvent =
+	function(_event) {
+		if( !_event.type ) {
+			return true;
+		}
 
 		//reinit event
-		if(!_event.returnValue)_event.returnValue = true;
-	  	if(_event.cancelBubble)_event.cancelBubble = false;
+		if( !_event.returnValue ) {
+			_event.returnValue = true;
+		}
+	  	if( _event.cancelBubble ) {
+			_event.cancelBubble = false;
+		}
         delete _event["__stopNow"];
 
 		/**
@@ -1349,43 +1569,71 @@ if(!document.dispatchEvent) {
 		}
 		catch(e) {
 			//Shim for Custome events in IE < 9
-			if(e["number"] === -2147024809 ||//"invalid argument."
-			   thisObj === global ||	  	 //window has no 'fireEvent' method
-			   (e["number"] === -2146827850 && !(_event.bubbles = false))) {//has no such method ("fireEvent")
+			if( e["number"] === -2147024809		//"invalid argument."
+				|| thisObj === global			//window has no 'fireEvent' method
+				|| (e["number"] === -2146827850
+					&& !(_event.bubbles = false))//has no such method ("fireEvent")
+			) {
 				_event["__custom_event"] = true;
-				var node = _event.target = thisObj,
-					dom0event = "on" + _event.type,
-					result;
+				var node = _event.target = thisObj
+					, dom0event = "on" + _event.type
+					, result
+				;
 
-				//Всплываем событие
-				while(!_event.cancelBubble && node) {//Если мы вызвали stopPropogation() - больше не всплываем событие
-					if((dom0event in node && typeof node[dom0event] == "function" && (_event["__dom0__"] = node[dom0event])) ||
-					   ("_" in node && _event_eventsUUID in node["_"]))//Признак того, что на элемент могли навесить событие
-						commonHandler.call(node, _event);
-					//Если у события отключено всплытие - не всплываем его
-					node = _event.bubbles ? (node === document ? document.defaultView : node.parentNode) : null;
-					if("__dom0__" in _event)_event["__dom0__"] = void 0;
+				// Emulate event bubbling
+				while( !_event.cancelBubble && node ) {// stopPropogation() set cancelBubble to false
+					if( (
+							dom0event in node
+							&& typeof node[dom0event] == "function"
+							&& (_event["__dom0__"] = node[dom0event])
+						) // we have at least dom0 event
+						|| (
+							"_" in node
+							&& _event_eventsUUID in node["_"]
+						) // Node has events container
+					) {
+						commonHandler.call(node, _event);// fire event handlers
+					}
+
+					// If event has bubbles==false do not bubble it
+					node = //find next node
+						_event.bubbles ?
+							(node === _document ?
+								_document.defaultView
+								:
+								node.parentNode
+							)
+							:
+							null
+					;
+
+					if("__dom0__" in _event) {
+						_event["__dom0__"] = void 0;// clean
+						delete _event["__dom0__"];
+					}
 				}
 
 				result = !_event.cancelBubble;
-				_event = null;
+				_event = node = null;// clean
 
 				return result;
 			}
-			else _throw(e);
+			else {
+				_throw(e);
+			}
 		}
 	};
 
 	_Node_prototype.dispatchEvent["__shim__"] = true;
 }
 
-if(!document.createEvent) {/*IE < 9 ONLY*/
+if( !_document.createEvent ) {
 	/**
 	 * https://developer.mozilla.org/en/DOM/document.createEvent
 	 * Not using. param {string} eventType is a string that represents the type of event to be created. Possible event types include "UIEvents", "MouseEvents", "MutationEvents", and "HTMLEvents". See https://developer.mozilla.org/en/DOM/document.createEvent#Notes section for details.
 	 */
-	document.createEvent = function() {
-		return new _ielt9_Event(document.createEventObject());
+	_document.createEvent = function() {
+		return new _ielt9_Event(_document.createEventObject());
 	}
 }
 
@@ -1400,20 +1648,27 @@ _.push(function() {
 	var _InputElement_prototype = global["HTMLInputElement"] && global["HTMLInputElement"].prototype || _Element_prototype
 		, _TextAreaElement_prototype = global["HTMLTextAreaElement"] && global["HTMLTextAreaElement"].prototype
 		, _setSelectionRange = function (start, end/*, selectionDirection*/) {
-			if(start == void 0)return;
-			if(end == void 0)end = start;
+			if( start == void 0 ) {
+				return;
+			}
+			if( end == void 0 ) {
+				end = start;
+			}
 
 			var thisObj = this
 				, nodeName = thisObj.nodeName.toUpperCase()
 				, selRange
 			;
 
-			if(nodeName != "INPUT" && nodeName != "TEXTAREA")return;
+			if( nodeName != "INPUT" && nodeName != "TEXTAREA" ) {
+				return;
+			}
 
 			selRange = thisObj.createTextRange();
 			selRange.collapse(true);
 			selRange.moveStart('character', start);
-			selRange.moveEnd('character', end - start);
+			//selRange.moveEnd('character', end - start);
+			selRange.moveEnd('character', end);
 			selRange.select();
 		}
 		/**
@@ -1433,18 +1688,24 @@ _.push(function() {
 				, current__stop_events__2
 			;
 
-			if(nodeName != "INPUT" && nodeName != "TEXTAREA")return;
+			if( nodeName != "INPUT" && nodeName != "TEXTAREA" ) {
+				return;
+			}
 
-			curElement = document.activeElement;
-			selection = document["selection"];
+			//http://code.google.com/p/ie7-js/issues/detail?id=361
+			//(document.activeElement causes JavaScript error when script is used inside iframe)
+			if(typeof _document.activeElement != 'unknown') {
+				curElement = _document.activeElement;
+			}
+			selection = _document["selection"];
 
 			if(thisObj["_"]) {
 				current__stop_events__1 = thisObj["_"]["__stop_events__"];
-				thisObj["_"]["__stop_events__"] = true;
+				thisObj["_"]["__stop_events__"] = true;//flag to prevent "focus" and "blur" events
 			}
-			if(curElement["_"]) {
+			if(curElement && curElement["_"]) {
 				current__stop_events__2 = curElement["_"]["__stop_events__"];
-				curElement["_"]["__stop_events__"] = true;
+				curElement["_"]["__stop_events__"] = true;//flag to prevent "focus" and "blur" events
 			}
 
 			try {
@@ -1488,7 +1749,7 @@ _.push(function() {
 			if(thisObj["_"] && !current__stop_events__1) {
 				delete thisObj["_"]["__stop_events__"];
 			}
-			if(curElement["_"] && !current__stop_events__2) {
+			if(curElement && curElement["_"] && !current__stop_events__2) {
 				delete curElement["_"]["__stop_events__"];
 			}
 
@@ -1519,14 +1780,20 @@ _.push(function() {
 		}
 	;
 	Object.defineProperties(_InputElement_prototype, properties);
-	if(_TextAreaElement_prototype)Object.defineProperties(_TextAreaElement_prototype, properties);
+	if( _TextAreaElement_prototype ) {
+		Object.defineProperties(_TextAreaElement_prototype, properties);
+	}
 });
+
+if( _browser_msie < 8 ) {
+    _Element_prototype["ielt8"] = true;
+}
 
 /*  =======================================================================================  */
 /*  ================================  NodeList.prototype  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
 /** @constructor */
-function _NodeList() {}
+/*function _NodeList() {}
 _NodeList.prototype = new Array;
 
 _tmp_ = new _NodeList;
@@ -1542,18 +1809,7 @@ else {//IE8 quirk mode, IE lt 8
 _NodeList.prototype["item"] = function(index) {
 	return this[index];
 };
-
-//Inherit NodeList from Array
-function extendNodeListPrototype(nodeListProto) {
-	if(nodeListProto && nodeListProto !== Array.prototype) {
-		for(var key in nodeList_methods_fromArray)if(_hasOwnProperty(key, nodeList_methods_fromArray)) {
-			if(!nodeListProto[key])nodeListProto[key] = function() {
-				return _Function_apply.call(Array.prototype[key], Array["from"](this), arguments);
-			}
-		}
-	}
-}
-if(document.querySelectorAll)extendNodeListPrototype(document.querySelectorAll("#z").constructor.prototype);
+*/
 /*  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  NodeList.prototype  ==================================  */
 /*  ======================================================================================  */
 
@@ -1562,7 +1818,7 @@ if(document.querySelectorAll)extendNodeListPrototype(document.querySelectorAll("
 
 // IE - contains fails if argument is textnode
 if(__GCC__UNSTABLE_FUNCTIONS__) {
-	_txtTextElement = _Function_call.call(document_createTextNode, document, "");
+	_txtTextElement = _Function_call_.call(_document_createTextNode, _document, "");
 	_testElement.appendChild(_txtTextElement);
 
 	try {
@@ -1576,19 +1832,19 @@ if(__GCC__UNSTABLE_FUNCTIONS__) {
 			         if (node === other) return true;
 			    }) || false;
 			}
-			else return _Function_call.call(_Node_contains, this, other);
+			else return _Function_call_.call(_Node_contains, this, other);
 		};
 	}
 }
 
 // IE8 hurr durr doctype is null
-if (document.doctype === null && _browser_msie > 7)//TODO:: this fix for IE < 8
+if (_document.doctype === null && _browser_msie > 7)//TODO:: this fix for IE < 8
 	_.push(function() {
-		var documentShim_doctype = document.childNodes[0];
+		var documentShim_doctype = _document.childNodes[0];
 		Object.defineProperty(documentShim_doctype, "nodeType", {
 			get: function () { return 10 }
 		});
-	    Object.defineProperty(document, "doctype", {configurable : true, enumerable : false, get : function () { return documentShim_doctype } });
+	    Object.defineProperty(_document, "doctype", {configurable : true, enumerable : false, get : function () { return documentShim_doctype } });
 	});
 
 // IE8 hates you and your f*ing text nodes
@@ -1596,20 +1852,31 @@ if (document.doctype === null && _browser_msie > 7)//TODO:: this fix for IE < 8
 // Extend Text.prototype and HTMLDocument.prototype with shims
 // TODO:: Do something with IE < 8
 if(!_Node_prototype.contains)_Node_prototype.contains = _Node_contains;
-if (!_Function_call.call(document_createTextNode, document, "").contains){
+if (!_Function_call_.call(_document_createTextNode, _document, "").contains){
 	if(global["Text"] && global["Text"].prototype) {//IE8
-	    _.push(_unSafeBind.call(_append, null, Text.prototype, _Node_prototype));
+	    _.push(_fastUnsafe_Function_bind_.call(_append, null, Text.prototype, _Node_prototype));
 	}
-	else {//IE < 8 TODO:: tests
-		document.createTextNode = function(text) {
-			text = _Function_call.call(document_createTextNode, this, text);
+	else if((//IE < 8 doesn't allow add 'contains' property to TextNode
+		function(){
+			var tmp;
+			try{
+				tmp = _Function_call_.call(_document_createTextNode, this, "a");
+				tmp.contains = function(){}
+			}
+			catch(e){return false}
+
+			return true;
+		}
+	)()) {
+		_document.createTextNode = function(text) {
+			text = _Function_call_.call(_document_createTextNode, this, text);
 			text.contains = _Node_prototype.contains;
 			return text;
 		}
 	}
 }
-if (!_Function_call.call(document_createDocumentFragment, document).contains && global["HTMLDocument"] && global["HTMLDocument"].prototype) {
-    _.push(_unSafeBind.call(_append, null, global["HTMLDocument"].prototype, _Node_prototype));
+if (!_Function_call_.call(_document_createDocumentFragment, _document).contains && global["HTMLDocument"] && global["HTMLDocument"].prototype) {
+    _.push(_fastUnsafe_Function_bind_.call(_append, null, global["HTMLDocument"].prototype, _Node_prototype));
 }
 
 
@@ -1648,7 +1915,7 @@ _.push(function() {
 			, _doc
 		;
 
-		if((_doc = elem.ownerDocument) !== document) {
+		if((_doc = elem.ownerDocument) !== _document) {
 			_body = _doc && _doc.body;
 			_documentElement = _doc && _doc.documentElement;
 			if(!_body || !_documentElement) {
@@ -1656,7 +1923,7 @@ _.push(function() {
 			}
 		}
 		else {
-			_body = document.body;
+			_body = _document.body;
 			_documentElement = _document_documentElement;
 		}
 
@@ -1769,6 +2036,14 @@ _.push(function() {
 //TODO::window.innerWidth & window.innerHeight http://www.javascripter.net/faq/browserw.htm
 //TODO::https://developer.mozilla.org/en/DOM/window.outerHeight
 
+/*
+	ep = window.Element.prototype;
+	np = window.Node.prototype;
+
+	ep.getchildElementCount = ep.getpreviousElementSibling = ep.getnextElementSibling = ep.getlastElementChild = ep.getfirstElementChild = ep.getclassList = ep.getchildren =
+	ep.getcontrol = ep.getlabels = ep.getselectionStart = ep.setselectionStart = ep.getselectionEnd = ep.setselectionEnd = ep.getreversed = np.gettextContent = np.settextContent =
+	np.g1 = np.g2 = np.g3 = np.g4 = np.g7 = np.g8=np.g9=np.g10=np.g11=np.g16=ep.getoffsetTop=ep.getoffsetLeft= np.__ielt8__element_init__ = function(){ return {} };
+*/
 
 //[IE lt 9, old browsers] Traversal for IE < 9 and other
 if(_testElement.childElementCount == void 0)_.push(function() {
@@ -1839,7 +2114,7 @@ try {
 
 
 /* is this stuff defined? */
-if(!document.ELEMENT_NODE) {
+if(!_document.ELEMENT_NODE) {
 	_tmp_ = {
 		ELEMENT_NODE : 1,
 		//ATTRIBUTE_NODE : 2,// historical
@@ -1854,7 +2129,7 @@ if(!document.ELEMENT_NODE) {
 		DOCUMENT_FRAGMENT_NODE : 11
 		//NOTATION_NODE : 12// historical
 	};
-	_append(document, _tmp_);
+	_append(_document, _tmp_);
 	_append(_Node_prototype, _tmp_);
 	_append(global["Node"], _tmp_);
 }
@@ -1890,7 +2165,7 @@ if(!("textContent" in _testElement))
 
 //https://developer.mozilla.org/en/Document_Object_Model_(DOM)/Node.isEqualNode
 if(!("isEqualNode" in _testElement)) {
-	document.isEqualNode = _document_documentElement.isEqualNode = _Node_prototype.isEqualNode = function(node) {
+	_document.isEqualNode = _document_documentElement.isEqualNode = _Node_prototype.isEqualNode = function(node) {
 		var i, len;
 
 	    if(node === null ||
@@ -1942,12 +2217,12 @@ if(!("isEqualNode" in _testElement)) {
 /*
 http://www.alistapart.com/articles/crossbrowserscripting
 */
-if(!document.importNode) {
-	document.importNode = function(node, allChildren) {
+if(!_document.importNode) {
+	_document.importNode = function(node, allChildren) {
 		/* find the node type to import */
 		switch (node.nodeType) {
 			case 1://document.ELEMENT_NODE:
-				var newNode = document.createElement(node.nodeName),//create a new element
+				var newNode = _document.createElement(node.nodeName),//create a new element
 					attrs = node.attributes,
 					attr,
 					_childNodes,
@@ -1965,27 +2240,27 @@ if(!document.importNode) {
 				if (allChildren && (_childNodes = node.childNodes) && _childNodes.length > 0)
 					/* recursively get all of the child nodes */
 					for (i = 0, il = _childNodes.length; i < il;)
-						newNode.appendChild(document.importNode(_childNodes[i++], allChildren));
+						newNode.appendChild(_document.importNode(_childNodes[i++], allChildren));
 				return newNode;
 			break;
 
 			case 3://document.TEXT_NODE:
 			case 4://document.CDATA_SECTION_NODE:
 			case 8://document.COMMENT_NODE:
-				return document.createTextNode(node.nodeValue);
+				return _document.createTextNode(node.nodeValue);
 			break;
 		}
 		_throwDOMException("NOT_SUPPORTED_ERR");
 		return null;
 	};
-	document.importNode["shim"] = true;
+	_document.importNode["shim"] = true;
 }
 
 _tmp_ = 'compareDocumentPosition';
-if(!(_tmp_ in document)) {
+if(!(_tmp_ in _document)) {
 	var __name,
 		__n1 = __name || 'DOCUMENT_POSITION_';//Use '__name || ' only for GCC not to inline __n1 param. In this case __name MUST be undefined
-	_document_documentElement[_tmp_] = document[_tmp_] = _Node_prototype[_tmp_] = function(b) {
+	_document_documentElement[_tmp_] = _document[_tmp_] = _Node_prototype[_tmp_] = function(b) {
 		var a = this;
 
 		//compareDocumentPosition from http://ejohn.org/blog/comparing-document-position/
@@ -1999,18 +2274,18 @@ if(!(_tmp_ in document)) {
 			0 : 0;
 	};
 	__name = 'DISCONNECTED';
-	_document_documentElement[__n1 + __name] = document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x01;
+	_document_documentElement[__n1 + __name] = _document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x01;
 	__name = 'PRECEDING';
-	_document_documentElement[__n1 + __name] = document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x02;
+	_document_documentElement[__n1 + __name] = _document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x02;
 	__name = 'FOLLOWING';
-	_document_documentElement[__n1 + __name] = document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x04;
+	_document_documentElement[__n1 + __name] = _document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x04;
 	__name = 'CONTAINS';
-	_document_documentElement[__n1 + __name] = document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x08;
+	_document_documentElement[__n1 + __name] = _document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x08;
 	__name = 'CONTAINED_BY';
-	_document_documentElement[__n1 + __name] = document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x10;
+	_document_documentElement[__n1 + __name] = _document[__n1 + __name] = _Node_prototype[__n1 + __name] = 0x10;
 }
 
-if(!global.getComputedStyle) {//IE < 9
+if( !global.getComputedStyle ) {//IE < 9
 	/**
 	 * @link https://developer.mozilla.org/en/DOM/window.getComputedStyle
 	 * getCurrentStyle - функция возвращяет текущий стиль элемента
@@ -2021,82 +2296,102 @@ if(!global.getComputedStyle) {//IE < 9
 	 */
 	global.getComputedStyle = function(element, pseudoElt) {
         var _currentStyle = element.currentStyle || element.runtimeStyle;
-		if(!("getPropertyValue" in _currentStyle)) {
-			element.runtimeStyle.getPropertyValue = _CSSStyleDeclaration_prototype_methods["getPropertyValue"].bind(element);
+		if( !("getPropertyValue" in _currentStyle) ) {
+			element.runtimeStyle.getPropertyValue = _fastUnsafe_Function_bind_.call(_CSSStyleDeclaration_prototype_methods["getPropertyValue"], element);
 
-			element.runtimeStyle.setProperty = element.runtimeStyle.removeProperty = function() {
-				_throwDOMException("NO_MODIFICATION_ALLOWED_ERR");
-			};
+			element.runtimeStyle.setProperty = element.runtimeStyle.removeProperty = global.getComputedStyle._fake_removeProperty;
 
-			element.runtimeStyle.getPropertyPriority = function(propertyName) {
-				//TODO: tests
-				return "";
-			};
+			element.runtimeStyle.getPropertyPriority = global.getComputedStyle._fake_getPropertyPriority;
+
 			element.runtimeStyle.item = _CSSStyleDeclaration_prototype_methods["item"];
 		}
 
 		var propDescription
 			, _CSSStyleDeclProt
+			, tmp
 		;
-		if((_CSSStyleDeclProt = global["CSSStyleDeclaration"]) && (_CSSStyleDeclProt = _CSSStyleDeclProt.prototype) && (!("float" in _currentStyle) || !("opacity" in _currentStyle))) {
-			if(!("float" in _currentStyle)) {//TODO:: testing
+
+		if( (_CSSStyleDeclProt = global["CSSStyleDeclaration"])
+			&& (_CSSStyleDeclProt = _CSSStyleDeclProt.prototype)
+			&& (!("float" in _currentStyle) || !("opacity" in _currentStyle))
+		) {
+			if( !("float" in _currentStyle) ) {//TODO:: testing
 				propDescription = Object.getOwnPropertyDescriptor(_CSSStyleDeclProt, "float");
-				if(propDescription) {
+				if( propDescription ) {
 					delete _CSSStyleDeclProt["float"];
 				}
+				tmp = _fastUnsafe_Function_bind_.call(global.getComputedStyle._getCurrentFloatValue, element);
 				Object.defineProperty(element.runtimeStyle, "float", {
-					value : {
-						valueOf : _unSafeBind.call(function(){
-							return this.runtimeStyle.styleFloat || this.style.styleFloat
-						}, element)
+					"value" : {
+						valueOf : tmp
+						, toString: tmp
 					}
+					, "configurable": true
+					, "writable": true
 				});
-				if(propDescription) {
+				if( propDescription ) {
 					Object.defineProperty(_CSSStyleDeclProt, "float", propDescription);
 				}
 			}
 
-			if(!("opacity" in _currentStyle)) {//TODO:: testing
+			if( !("opacity" in _currentStyle) ) {//TODO:: testing
 				propDescription = Object.getOwnPropertyDescriptor(_CSSStyleDeclProt, "opacity");
-				if(propDescription) {
+				if( propDescription && "opacity" in _CSSStyleDeclProt ) {
 					delete _CSSStyleDeclProt["opacity"];
 				}
+				tmp = _fastUnsafe_Function_bind_.call(global.getComputedStyle._getCurrentOpacityValue, element);
 				Object.defineProperty(element.runtimeStyle, "opacity", {
-					value : {
-						valueOf : _unSafeBind.call(function(){
-							return this.runtimeStyle["msOpacity"] || this.style["msOpacity"] || style_getOpacityFromMSFilter.call(this.style) || style_getOpacityFromMSFilter.call(this.runtimeStyle);
-						}, element)
+					"value" : {
+						valueOf : tmp
+						, toString: tmp
 					}
+					, "configurable": true
+					, "writable": true
 				});
-				if(propDescription) {
+				if( propDescription ) {
 					Object.defineProperty(_CSSStyleDeclProt, "opacity", propDescription);
 				}
 			}
 		}
 		else {
-			if(!("float" in _currentStyle)) {
+			if( !("float" in _currentStyle) ) {
+				tmp = _fastUnsafe_Function_bind_.call(global.getComputedStyle._getCurrentFloatValue, element);
 				element.runtimeStyle["float"] = {
-					valueOf : _unSafeBind.call(function(){
-						return this.runtimeStyle.styleFloat || this.style.styleFloat
-					}, element)
+					valueOf : tmp
+					, toString: tmp
 				}
 			}
-			if(!("opacity" in _currentStyle)) {
+			if( !("opacity" in _currentStyle) ) {
+				tmp = _fastUnsafe_Function_bind_.call(global.getComputedStyle._getCurrentOpacityValue, element);
 				element.runtimeStyle["opacity"] = {
-					valueOf : _unSafeBind.call(function(){
-						return this.runtimeStyle["msOpacity"] || this.style["msOpacity"] || style_getOpacityFromMSFilter.call(this.style) || style_getOpacityFromMSFilter.call(this.runtimeStyle);
-					}, element)
+					valueOf : tmp
+					, toString: tmp
 				}
 			}
 		}
 
+		tmp = propDescription = _CSSStyleDeclProt = null;
+
 		return element.currentStyle;
-	}
+	};
+	global.getComputedStyle._getCurrentOpacityValue = function() {
+		return this["runtimeStyle"]["msOpacity"] || this["style"]["msOpacity"] || style_getOpacityFromMSFilter.call(this["style"]) || style_getOpacityFromMSFilter.call(this["runtimeStyle"]);
+	};
+	global.getComputedStyle._getCurrentFloatValue = function(){
+		return this["runtimeStyle"]["styleFloat"] || this["style"]["styleFloat"];
+	};
+	global.getComputedStyle._fake_removeProperty = function() {
+		_throwDOMException("NO_MODIFICATION_ALLOWED_ERR");
+	};
+	global.getComputedStyle._fake_getPropertyPriority = function(propertyName) {
+		//TODO: tests
+		return "";
+	};
 }
 
 //HTML5 shiv for IE < 9
-document.createDocumentFragment = function() {
-	var df = _Function_call.call(document_createDocumentFragment, this);
+_document.createDocumentFragment = function() {
+	var df = _Function_call_.call(_document_createDocumentFragment, this);
 
 	if(global["DocumentFragment"] === global["Document"]) {
 		//TODO:: if DocumentFragment is a fake DocumentFragment -> append each instance with Document methods
@@ -2124,13 +2419,13 @@ if(__GCC__INCLUDE_DOMPARSER_SHIM__) {
 				if(!type || type == "text/html" || /xml$/.test(type)) {
 					markup = prepareTextForIFrame(markup);
 
-					var iframe = document.createElement('iframe');
+					var iframe = _document.createElement('iframe');
 					iframe.style.display = 'none';
 					iframe.src = 'javascript:document.write("' + markup + '")';
-					document.body.appendChild(iframe);
+					_document.body.appendChild(iframe);
 					newHTMLDocument = iframe.contentDocument || iframe.contentWindow.document;
 
-					newHTMLDocument["__destroy__"] = function() {
+					newHTMLDocument["__destroy__"] = _fastUnsafe_Function_bind_.call(function() {
 						var _doc = this.contentWindow.document;
 						_doc.documentElement.innerHTML = "";
 						_doc["_"] = _doc.documentElement["_"] = null;
@@ -2142,15 +2437,18 @@ if(__GCC__INCLUDE_DOMPARSER_SHIM__) {
 						 catch(e){}
 						 })
 						 */
-						document.body.removeChild(this);
-					}.bind(iframe);
+						_document.body.removeChild(this);
+					}, iframe);
 
 					markup = iframe = null;
 
 					//TODO::
 					//shimDocument(newHTMLDocument);
-					newHTMLDocument.querySelector = document.querySelector;
-					newHTMLDocument.querySelectorAll = document.querySelectorAll;
+					newHTMLDocument.querySelector = _document.querySelector;
+					newHTMLDocument.querySelectorAll = _document.querySelectorAll;
+
+					if( _document["find"] )newHTMLDocument["find"] = _document["find"];
+					if( _document["findAll"] )newHTMLDocument["findAll"] = _document["findAll"];
 
 					return newHTMLDocument;
 				}
@@ -2173,7 +2471,7 @@ supportsUnknownElements = ((_testElement.innerHTML = '<x-x></x-x>'), _testElemen
 html5_elements = "|" + html5_elements + "|";
 
 function shivedCreateElement(nodeName) {
-	var node = this["__orig__createElement__"](nodeName);
+	var node = (this["__orig__createElement__"] || _document_createElement)(nodeName);// issue #3
 
 	if(ielt9_elements.test(nodeName))return node;
 
@@ -2210,21 +2508,21 @@ function html5_document(doc) { // pass in a document as an argument
 	return doc; // return document, great for safeDocumentFragment = html5_document(document.createDocumentFragment());
 } // critique: array could exist outside the function for improved performance?
 
-safeFragment = html5_document(_Function_call.call(document_createDocumentFragment, document));
+safeFragment = html5_document(_Function_call_.call(_document_createDocumentFragment, _document));
 
 if(!supportsUnknownElements) {
-	 html5_document(document);
+	 html5_document(_document);
 	 //style
-	document.head.insertAdjacentHTML("beforeend", "<br><style>" +//<br> need for all IE
+	_document.head.insertAdjacentHTML("beforeend", "<br><style>" +//<br> need for all IE
 		// corrects block display not defined in IE6/7/8/9
-		"article,aside,figcaption,figure,footer,header,hgroup,nav,section{display:block}" +
+		"article,aside,figcaption,figure,footer,header,hgroup,nav,section,main{display:block}" +
 		// adds styling not present in IE6/7/8/9
 		"mark{background:#FF0;color:#000}" +
 	"</style>");
 }
 
 //Test for broken 'cloneNode'
-if(_Function_call.call(document_createElement, document, "x-x").cloneNode().outerHTML.indexOf("<:x-x>") === 0) {
+if(_Function_call_.call(_document_createElement, _document, "x-x").cloneNode().outerHTML.indexOf("<:x-x>") === 0) {
 	safeElement = safeFragment.appendChild("createElement" in safeFragment && safeFragment.createElement("div") || safeFragment.ownerDocument.createElement("div"));
 	_nativeCloneNode =
 		_browser_msie === 8 ?
@@ -2251,14 +2549,14 @@ if(_Function_call.call(document_createElement, document, "x-x").cloneNode().oute
 			nodeBody;
 
 		if(ielt9_elements.test(element.nodeName)) {//HTML4 element?
-			result = _Function_call.call(element["__nativeCloneNode__"] || _nativeCloneNode, element, include_all);
+			result = _Function_call_.call(element["__nativeCloneNode__"] || _nativeCloneNode, element, include_all);
 		}
 		else {//HTML5 element?
 			safeElement.innerHTML = "";//Очистим от предыдущих элементов
 
 			// set HTML5-safe element's innerHTML as input element's outerHTML
 			if(include_all)nodeBody = element.outerHTML;
-			else nodeBody = element.outerHTML.replace(element.innerHTML, "");
+			else nodeBody = element.outerHTML.replace(/<(\w+)([^>]*)>[\W\w]*$/, '<$1$2></$1>');//RegExp from http://www.jonathantneal.com/blog/a-close-shiv/
 
 			safeElement.innerHTML = nodeBody.replace(/^\<\:/, "<").replace(/\<\/\:([\w\-]*\>)$/, "<$1");
 
@@ -2367,6 +2665,16 @@ var /** @type {boolean} */
 	/** @const */
   , originalScrollBy = global.scrollBy
 
+		// boolean attributes should return attribute name instead of true/false | From nwmatcher
+	, ATTRIBUTES_BOOLEAN = {
+		'checked': null,
+		'disabled': null,
+		'ismap': null,
+		'multiple': null,
+		'readonly': null,
+		'selected': null
+	}
+
 ;
 
 
@@ -2376,8 +2684,9 @@ while(--_tmp_ >= 0)
 ielt9BehaviorRule += "}";
 
 function createBehaviorStyle(styleId, tags, behaviorRule) {
-	var style = document.getElementById(styleId),
-		add = "";
+	var style = _document.getElementById(styleId)
+		, add = ""
+	;
 
 	if(style){
 		add = style.getAttribute("data-url") || "";
@@ -2388,15 +2697,15 @@ function createBehaviorStyle(styleId, tags, behaviorRule) {
 		behaviorRule.replace(" url(", " url(" + add + ") url(");
 	}
 
-	style = document_createElement("style");
+	style = _document_createElement("style");
 	style.id = styleId;
 	style.type = 'text/css';
 	style.setAttribute("data-url", behaviorRule.replace("{behavior:", "").replace(")}", ")"));
 	style.styleSheet.cssText = tags + behaviorRule;
-	document.head.appendChild(style);
+	_document.head.appendChild(style);
 }
 
-if(noDocumentReadyState)document.readyState = "uninitialized";
+if(noDocumentReadyState)_document.readyState = "uninitialized";
 
 
 _Node_prototype["ielt8"] = true;
@@ -2497,14 +2806,14 @@ var
   }
   /** @type {Object} @const */
   , urnAttributeGetFunction = function(node, attr) {
-      return _Function_call.call(node["__getAttribute__"] || node.getAttribute, node, attr, 2);
+      return _Function_call_.call(node["__getAttribute__"] || node.getAttribute, node, attr, 2);
     }
   /** @type {Object} @const */
   , attributeSpecialSpecified = {"coords" : 1, "id" : 1, "name" : 1}
 
   , _NodeList_from = function(iterable) {
       var length = iterable.length >>> 0,
-        result = new _NodeList;
+        result = [];//new _NodeList;
 
       for(var key = 0 ; key < length ; key++) {
         if(key in iterable)
@@ -2522,20 +2831,20 @@ var
 		attribute = attribute.toLowerCase();
 		var result;
 
-		if (ATTRIBUTES_CUSTOM[attribute] !== void 0) {
+		if( ATTRIBUTES_CUSTOM[attribute] !== void 0 ) {
 			result = node[ATTRIBUTES_CUSTOM[attribute]];
 		}
 		else {
 			result =
-			// specific URI data attributes (parameter 2 to fix IE bug)
-			ATTRIBUTE_URIDATA[attribute] !== void 0 ?
-				node["__getAttribute__"](attribute, 2)
-				:
-				// boolean attributes should return name instead of true/false
-				ATTRIBUTE_BOOLEAN[attribute] !== void 0 ?
-					node["__getAttribute__"](attribute) ? attribute : null
+				// specific URI data attributes (parameter 2 to fix IE bug)
+				ATTRIBUTES_FROM_NODE_VALUE[attribute] !== void 0 ?
+					node["__getAttribute__"](attribute, 2)
 					:
-					((node = node.getAttributeNode(attribute)) && node.value)
+					// boolean attributes should return name instead of true/false
+					ATTRIBUTES_BOOLEAN[attribute] !== void 0 ?
+						node["__getAttribute__"](attribute) ? attribute : null
+						:
+						((node = node.getAttributeNode(attribute)) && node.value)
 			;
 		}
 
@@ -2573,7 +2882,7 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
 
   var /** @type {boolean} */isMatchesSelector = !!preResult
     , /** @type {Node} */root = isMatchesSelector && (roots = {}) || (!roots ? document :
-                                "length" in roots ? //fast and unsafe isArray
+                                "length" in roots && !("nodeType" in roots) && !("childNodes" in roots) ? //fast and unsafe isArrayLikeObject
                                   roots[0] :
                                   roots)
     , /** @type {Node} */nextRoot
@@ -2618,7 +2927,7 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
   }
 
   if(css3Attr = selectorArr[5]) {
-    css3Attr = _String_split.call(css3Attr, "][");
+    css3Attr = _String_split_.call(css3Attr, "][");
     kr = -1;
     while(css3Attr_add = css3Attr[++kr]) {
       css3Attr_add = css3Attr[kr] = css3Attr_add.match(RE__queryOneSelector__attrMatcher);
@@ -2667,7 +2976,7 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
       needCheck_tag = false;
     }
     else {
-        preResult = document.getElementsByName(id);
+        preResult = _document.getElementsByName(id);
         elementsById_Cache = [];
         kr = -1;
         while(child = preResult[++kr]) {
@@ -2704,7 +3013,7 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
           if(elementsById_Cache.length) {
             kr = -1;
             while(child = elementsById_Cache[++kr]) {
-              if(root === document || root.contains(child)){
+              if(root === _document || root.contains(child)){
                 preResult.push(child);
                 elementsById_Cache.splice(kr--, 1);
               }
@@ -2929,7 +3238,7 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
                 case 15://'read-only':
                 case 16://'read-write':
                   child_nodeName || (child_nodeName = child.nodeName.toUpperCase());
-                  match = (child_nodeName == "INPUT" || child_nodeName == "TEXTAREA" || _Function_call.call(child, child["__getAttribute__"] || child.getAttribute, "contenteditable") !== null) && !child.readonly;
+                  match = (child_nodeName == "INPUT" || child_nodeName == "TEXTAREA" || _Function_call_.call(child, child["__getAttribute__"] || child.getAttribute, "contenteditable") !== null) && !child.readonly;
                   if(css3PseudoOperatorType == 16)match = !match;
                 break;
                 /*TODO::
@@ -2961,6 +3270,8 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
   }
   while(root = roots[++rootIndex]);
 
+	root = roots = preResult = child = globalResult = null;//clean
+
   return result;
 }
 
@@ -2976,7 +3287,7 @@ function queryOneSelector(selector, roots, globalResult, globalResultAsSparseArr
 function queryManySelector(selector, onlyOne, root) {
   root || (root = this);
 
-  selector = _String_trim.call(selector.replace(RE__queryManySelector__doubleSpaces, "$1"));
+  selector = _String_trim_.call(selector.replace(RE__queryManySelector__doubleSpaces, "$1"));
 
   var result = []
       , rule
@@ -2988,7 +3299,7 @@ function queryManySelector(selector, onlyOne, root) {
       , fail = false
       , need_SparseArray
       , nodeSortingNeeds
-      , forseNo_need_SparseArray = !!document.querySelector["__noorder__"] || !!document.querySelectorAll["__noorder__"]
+      , forseNo_need_SparseArray = !!_document.querySelector["__noorder__"] || !!_document.querySelectorAll["__noorder__"]
       , rules = selector
           .replace(RE__querySelector__arrtSpaceSeparated_toSafe, "@=")
           .replace(RE__queryOneSelector__pseudoNthChildPlus, "-child\\($1%$2\\)")
@@ -3052,9 +3363,9 @@ function _matchesSelector(selector) {
   if(!selector)return false;
   if(selector === "*")return true;
   if(this === _document_documentElement && selector === ":root")return true;
-  if(this === document.body && selector.toUpperCase() === "BODY")return true;
+  if(this === _document.body && selector.toUpperCase() === "BODY")return true;
 
-  //selector = _String_trim.call(selector.replace(RE__queryManySelector__doubleSpaces, "$1"));
+  //selector = _String_trim_.call(selector.replace(RE__queryManySelector__doubleSpaces, "$1"));
 
   var thisObj = this,
     isSimpleSelector,
@@ -3062,7 +3373,7 @@ function _matchesSelector(selector) {
     match = false,
     i;
 
-  selector = _String_trim.call(selector);
+  selector = _String_trim_.call(selector);
 
   if(isSimpleSelector = selector.match(RE__selector__easySelector)) {
     switch (selector.charAt(0)) {
@@ -3076,7 +3387,7 @@ function _matchesSelector(selector) {
     }
   }
   else if(!RE_matchSelector__isSimpleSelector.test(selector)) {//easy selector
-    tmp = queryOneSelector(selector, null, false, null, thisObj, true);
+    tmp = queryOneSelector(selector, null, false, null, [thisObj], true);
 
     return tmp[0] === thisObj;
   }
@@ -3102,36 +3413,36 @@ if(!_document_documentElement[_tmp_]) {
 }
 
 _tmp_ = "querySelectorAll";
-if(!document[_tmp_]) {
+if(!_document[_tmp_]) {
 	/**
 	* @param {!string} selector
 	* @param {(Node|Array.<Node>)=} nodesRef
 	* @this {Document|Node}
 	* @return {Array.<Node>}
 	*/
-	_Element_prototype[_tmp_] = _document_documentElement[_tmp_] = document[_tmp_] = function(selector, nodesRef) {
+	_Element_prototype[_tmp_] = _document_documentElement[_tmp_] = _document[_tmp_] = function(selector, nodesRef) {
 		return queryManySelector.call(this, selector, false, nodesRef);
 	}
 }
 
 _tmp_ = "querySelector";
-if(!document[_tmp_]) {
+if(!_document[_tmp_]) {
 	/**
 	* @param {!string} selector
 	* @param {(Node|Array.<Node>)=} nodesRef
 	* @this {Document|Node}
 	* @return {Node}
 	*/
-	_Element_prototype[_tmp_] = _document_documentElement[_tmp_] = document[_tmp_] = function(selector, nodesRef) {
+	_Element_prototype[_tmp_] = _document_documentElement[_tmp_] = _document[_tmp_] = function(selector, nodesRef) {
 		return queryManySelector.call(this, selector, true, nodesRef)[0] || null;
 	}
 }
 
 _tmp_ = "getElementsByClassName";
-if(!document[_tmp_]) {
+if(!_document[_tmp_]) {
 	//getElementsByClassName shim
 	//based on https://gist.github.com/1383091
-	_Element_prototype[_tmp_] = _document_documentElement[_tmp_] = document[_tmp_] = function(klas) {
+	_Element_prototype[_tmp_] = _document_documentElement[_tmp_] = _document[_tmp_] = function(klas) {
 		klas = new RegExp(klas.replace(RE__getElementsByClassName, STRING_FOR_RE__getElementsByClassName));
 
 		var nodes = this.all,
@@ -3150,15 +3461,15 @@ if(!document[_tmp_]) {
 }
 //SHIM export
 
-DEFAULT_ATTRIBUTES_MAP.elementsToCheck = {};
-DEFAULT_ATTRIBUTES_MAP.checkIfAttributeDefault = function(node, attrName) {
+ATTRIBUTES_DEFAULT_MAP.elementsToCheck = {};
+ATTRIBUTES_DEFAULT_MAP.checkIfAttributeDefault = function(node, attrName) {
 	if(attrName in this) {
-		return this[attrName];
+		return true;
 	}
 
 	var nodeName = node.nodeName;
-	if(!(node = DEFAULT_ATTRIBUTES_MAP.elementsToCheck[nodeName])) {
-		node = DEFAULT_ATTRIBUTES_MAP.elementsToCheck[nodeName] = document_createElement(nodeName);
+	if(!(node = ATTRIBUTES_DEFAULT_MAP.elementsToCheck[nodeName])) {
+		node = ATTRIBUTES_DEFAULT_MAP.elementsToCheck[nodeName] = _document_createElement(nodeName);
 	}
 
 	return this[attrName] = (node.getAttribute(attrName) !== null);
@@ -3170,20 +3481,24 @@ _Element_prototype.setAttribute = function(name, val, flag) {
 
 		flag = 1;
 
+		if( lowerName in ATTRIBUTES_SPECIAL_MAP ) {
+			return ATTRIBUTES_SPECIAL_MAP[lowerName]["set"].call(this, val);
+		}
+
 		if(ATTRIBUTES_CUSTOM[lowerName] !== void 0) {
 			name = ATTRIBUTES_CUSTOM[lowerName];
 		}
-		else if(ATTRIBUTE_URIDATA[lowerName] !== void 0) {
+		else if(ATTRIBUTES_FROM_NODE_VALUE[lowerName] !== void 0) {
 			flag = 2;
 		}
-		else if(lowerName.indexOf("data-") !== 0 && !DEFAULT_ATTRIBUTES_MAP.checkIfAttributeDefault(this, lowerName)) {
+		else if(lowerName.indexOf("-") === -1 && !ATTRIBUTES_DEFAULT_MAP.checkIfAttributeDefault(this, lowerName)) {
 			name = name.toUpperCase();
 		}
 
 		val = val + "";
 	}
 
-	return Function.prototype.call.call(this["__setAttribute__"], this, name, val, flag);
+	return _Function_call_.call(this["__setAttribute__"], this, name, val, flag);
 };
 _Element_prototype.getAttribute = function(name, flag) {
 	var upperName
@@ -3196,21 +3511,25 @@ _Element_prototype.getAttribute = function(name, flag) {
 		flag = 1;
 	}
 
+	if( (result = ATTRIBUTES_SPECIAL_MAP[lowerName]) !== void 0 ) {
+		return result["get"].call(this);
+	}
+
+	if(ATTRIBUTES_FROM_NODE_VALUE[lowerName] !== void 0) {
+		return _Function_call_.call(this["__getAttribute__"], this, name, 2);
+	}
 
 	if(ATTRIBUTES_CUSTOM[lowerName] !== void 0) {
 		upperName = ATTRIBUTES_CUSTOM[lowerName];
 	}
-	else if(ATTRIBUTE_URIDATA[lowerName] !== void 0) {
-		return _Function_call.call(this["__getAttribute__"], this, name, 2);
-	}
-	else if(lowerName.indexOf("data-") !== 0 && !DEFAULT_ATTRIBUTES_MAP.checkIfAttributeDefault(this, lowerName)) {
+	else if(lowerName.indexOf("-") === -1 && !ATTRIBUTES_DEFAULT_MAP.checkIfAttributeDefault(this, lowerName)) {
 		upperName = name.toUpperCase();
 	}
 	else {
 		upperName = name;
 	}
 
-    result = _Function_call.call(this["__getAttribute__"], this, upperName, flag);
+    result = _Function_call_.call(this["__getAttribute__"], this, upperName, flag);
 	if(result !== null) {
         if(needAttributeShim)result += "";
     }
@@ -3226,30 +3545,38 @@ _Element_prototype.getAttribute = function(name, flag) {
 	return result;
 };
 _Element_prototype.removeAttribute = function(name, flag) {
-    var upperName
+	var upperName
 		, lowerName
-        , result
     ;
 
 	if(flag == void 0) {
 		flag = 1;
 		lowerName = name.toLowerCase();
 
+		if( lowerName in ATTRIBUTES_SPECIAL_MAP ) {
+			return ATTRIBUTES_SPECIAL_MAP[lowerName]["remove"].call(this);
+		}
+
 		if(ATTRIBUTES_CUSTOM[lowerName] !== void 0) {
 			upperName = ATTRIBUTES_CUSTOM[lowerName];
 		}
-		else if(ATTRIBUTE_URIDATA[lowerName] !== void 0) {
+		else if(ATTRIBUTES_FROM_NODE_VALUE[lowerName] !== void 0) {
 			flag = 2;
 		}
-		else if(lowerName.indexOf("data-") !== 0 && !DEFAULT_ATTRIBUTES_MAP.checkIfAttributeDefault(this, lowerName)) {
+		else if(lowerName.indexOf("-") === -1 && !ATTRIBUTES_DEFAULT_MAP.checkIfAttributeDefault(this, lowerName)) {
 			upperName = name.toUpperCase();
 		}
 	}
 
-	return _Function_call.call(this["__removeAttribute__"], this, upperName || name, flag);
+	return _Function_call_.call(this["__removeAttribute__"], this, upperName || name, flag);
 };
 
 if(!_Node_prototype.hasAttribute)_Node_prototype.hasAttribute = function(name) {
+	var lowerName = (name + "").toLowerCase();
+	if( lowerName in ATTRIBUTES_SPECIAL_MAP ) {
+		return ATTRIBUTES_SPECIAL_MAP[lowerName]["has"].call(this);
+	}
+
 	return this.getAttribute(name) !== null;
 };
 
@@ -3299,21 +3626,11 @@ _Node_prototype["__ielt8__element_init__"] = function __ielt8__element_init__() 
 	"querySelector" in thisObj || ((thisObj.querySelectorAll = _Element_prototype.querySelectorAll),
 								   (thisObj.querySelector = _Element_prototype.querySelector));
 
-	"matchesSelector" in thisObj || ((thisObj.matchesSelector = _matchesSelector),
-								     (thisObj["matches"] = _matchesSelector));
+	"matchesSelector" in thisObj || (thisObj.matchesSelector = thisObj["matches"] = _matchesSelector);
 
 	"hasAttribute" in thisObj || (thisObj.hasAttribute = _Element_prototype.hasAttribute);
 
 	"setSelectionRange" in thisObj || (thisObj.setSelectionRange = _Element_prototype.setSelectionRange);
-
-	if(this.setAttribute != _Element_prototype.setAttribute) {
-        this["__setAttribute__"] = this.setAttribute;
-        this["__getAttribute__"] = this.getAttribute;
-        this["__removeAttribute__"] = this.removeAttribute;
-		this.setAttribute = _Element_prototype.setAttribute;
-		this.getAttribute = _Element_prototype.getAttribute;
-		this.removeAttribute = _Element_prototype.removeAttribute;
-	}
 
 	/*TODO::
 	if(!("getPropertyValue" in this.style)) {
@@ -3323,8 +3640,17 @@ _Node_prototype["__ielt8__element_init__"] = function __ielt8__element_init__() 
 	}
 	*/
 
-	//Unsafe (with "OBJECT" tag, for example) set's
+	//Unsafe with "OBJECT" and "EMBED" tags
 	try {
+		if(this.setAttribute != _Element_prototype.setAttribute) {
+			this["__setAttribute__"] = this.setAttribute;
+			this["__getAttribute__"] = this.getAttribute;
+			this["__removeAttribute__"] = this.removeAttribute;
+			this.setAttribute = _Element_prototype.setAttribute;
+			this.getAttribute = _Element_prototype.getAttribute;
+			this.removeAttribute = _Element_prototype.removeAttribute;
+		}
+
 		if(thisObj.cloneNode !== _Node_prototype.cloneNode) {
 			thisObj["__nativeCloneNode__"] = thisObj.cloneNode;
 			thisObj.cloneNode = _Node_prototype.cloneNode;
@@ -3350,7 +3676,7 @@ __ielt8_Node_behavior_apply = _Node_prototype["__ielt8_Node_behavior_apply"] = f
 //If we already oweride cloneNode -> safe it
 origCloneNode = _Node_prototype["cloneNode"];
 _Node_prototype["cloneNode"] = function(deep) {
-	var el = _Function_call.call(origCloneNode || this["__nativeCloneNode__"], this, deep);
+	var el = _Function_call_.call(origCloneNode || this["__nativeCloneNode__"], this, deep);
 
 	__ielt8_Node_behavior_apply(el);
 
@@ -3376,12 +3702,12 @@ if ([].unshift(0) != 1) {
 /*  ======================================================================================  */
 /*  ================================  Document  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  */
 
-prevCreateElement = document.createElement;
-document.createElement = function(tagName) {
+prevCreateElement = _document.createElement;
+_document.createElement = function(tagName) {
 
-	var el = _Function_call.call(prevCreateElement, document, tagName);
+	var el = _Function_call_.call(prevCreateElement, _document, tagName);
 
-	_tmp_ = ieltbehaviorRules.length;
+	var _tmp_ = ieltbehaviorRules.length;
 	while(--_tmp_ >= 0) try {
 		el.addBehavior(ieltbehaviorRules[_tmp_])
 	}
@@ -3427,10 +3753,10 @@ if(!global.XMLHttpRequest)global.XMLHttpRequest = function() {
 
 if(!("pageXOffset" in global) && global.attachEvent) {
 	global.pageXOffset = global.pageYOffset = 0;
-	_emulate_scrollX_scrollY = document.compatMode === "CSS1Compat" ?
-			function() { global.scrollX = global.pageXOffset = document.body.parentNode.scrollLeft; global.scrollY = global.pageYOffset = document.body.parentNode.scrollTop }
+	_emulate_scrollX_scrollY = _document.compatMode === "CSS1Compat" ?
+			function() { global.scrollX = global.pageXOffset = _document.body.parentNode.scrollLeft; global.scrollY = global.pageYOffset = _document.body.parentNode.scrollTop }
 			:
-			function() { global.scrollX = global.pageXOffset = document.body.scrollLeft; global.scrollY = global.pageYOffset = document.body.scrollTop };
+			function() { global.scrollX = global.pageXOffset = _document.body.scrollLeft; global.scrollY = global.pageYOffset = _document.body.scrollTop };
 
 	global.attachEvent("onscroll", _emulate_scrollX_scrollY);
 
@@ -3451,13 +3777,13 @@ if(!("pageXOffset" in global) && global.attachEvent) {
 
 
 function _DOMContentLoaded() {
-	document.removeEventListener('DOMContentLoaded', _DOMContentLoaded);
+	_document.removeEventListener('DOMContentLoaded', _DOMContentLoaded);
 
-	if(noDocumentReadyState)document.readyState = "interactive";
+	if(noDocumentReadyState)_document.readyState = "interactive";
 
 	if(_emulate_scrollX_scrollY)_emulate_scrollX_scrollY();
 
-	if(!("classList" in document.body.firstChild)) {
+	if(!("classList" in _document.body.firstChild)) {
 		if(DEBUG && console) {
 			console.error("Cannot handle htc behavior. Maybe *.htc file not allowed or not exists");
 		}
@@ -3467,12 +3793,12 @@ function _DOMContentLoaded() {
 function _onload() {
 	global.detachEvent('onload', _onload);
 
-	if(noDocumentReadyState)document.readyState = "complete";
+	if(noDocumentReadyState)_document.readyState = "complete";
 
 	if(_emulate_scrollX_scrollY)_emulate_scrollX_scrollY();
 }
 
-document.addEventListener('DOMContentLoaded', _DOMContentLoaded);//Emulated method
+_document.addEventListener('DOMContentLoaded', _DOMContentLoaded);//Emulated method
 global.attachEvent('onload', _onload);//Native method
 
 
@@ -3485,7 +3811,7 @@ createBehaviorStyle(__STYLE_ID, __SUPPORTED__TAG_NAMES__, ielt9BehaviorRule);
 ielt9BehaviorRule = _tmp_ = null;
 
 
-}(window, /** @const */function(obj, extention) {
+}.call(window, /** @const */function(obj, extention) {
 		for(var key in extention)
 			if(Object.prototype.hasOwnProperty.call(extention, key) && !Object.prototype.hasOwnProperty.call(obj, key))
 				obj[key] = extention[key];
